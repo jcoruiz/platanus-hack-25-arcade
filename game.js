@@ -19,7 +19,23 @@ new Phaser.Game(config);
 let player, cursors, enemies, projectiles, xpOrbs, graphics;
 let gameOver = false, levelingUp = false;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0;
+let waveTimer = 0, bossTimer = 0;
+let nextWaveTime = 60000, nextBossTime = 120000;
+let warningActive = false;
 let scene;
+
+// Enemy types configuration
+const enemyTypes = [
+  { name: 'green', color: 0x00ff00, hpMult: 1.0, speedMult: 1.0, damageMult: 1.0, xp: 5, unlockTime: 0 },
+  { name: 'blue', color: 0x0088ff, hpMult: 1.5, speedMult: 0.95, damageMult: 1.2, xp: 8, unlockTime: 20000 },
+  { name: 'cyan', color: 0x00ffff, hpMult: 2.0, speedMult: 1.05, damageMult: 1.4, xp: 10, unlockTime: 40000 },
+  { name: 'yellow', color: 0xffff00, hpMult: 2.5, speedMult: 0.9, damageMult: 1.6, xp: 15, unlockTime: 60000 },
+  { name: 'orange', color: 0xff8800, hpMult: 3.0, speedMult: 1.1, damageMult: 1.8, xp: 20, unlockTime: 90000 },
+  { name: 'red', color: 0xff0000, hpMult: 4.0, speedMult: 0.85, damageMult: 2.0, xp: 25, unlockTime: 120000 },
+  { name: 'purple', color: 0xff00ff, hpMult: 5.0, speedMult: 1.15, damageMult: 2.5, xp: 35, unlockTime: 150000 }
+];
+
+let unlockedTypes = [];
 
 // Player stats
 let stats = {
@@ -31,7 +47,8 @@ let stats = {
   projectileCount: 1,
   xp: 0,
   level: 1,
-  xpToNext: 10
+  xpToNext: 10,
+  enemiesKilled: 0
 };
 
 // Difficulty scaling
@@ -64,11 +81,19 @@ function preload() {
   g.generateTexture('player', 24, 24);
   g.clear();
 
-  // Enemy texture (red circle)
-  g.fillStyle(0xff0000, 1);
-  g.fillCircle(10, 10, 10);
-  g.generateTexture('enemy', 20, 20);
-  g.clear();
+  // Enemy textures (one for each type)
+  enemyTypes.forEach(type => {
+    g.fillStyle(type.color, 1);
+    g.fillCircle(10, 10, 10);
+    g.generateTexture(`enemy_${type.name}`, 20, 20);
+    g.clear();
+
+    // Boss texture (3x size)
+    g.fillStyle(type.color, 1);
+    g.fillCircle(30, 30, 30);
+    g.generateTexture(`boss_${type.name}`, 60, 60);
+    g.clear();
+  });
 
   // Projectile texture (orange circle)
   g.fillStyle(0xff8800, 1);
@@ -89,6 +114,9 @@ function create() {
   scene = this;
   graphics = this.add.graphics();
 
+  // Initialize unlocked types with first type
+  unlockedTypes = [enemyTypes[0]];
+
   // Create physics groups
   enemies = this.physics.add.group();
   projectiles = this.physics.add.group();
@@ -107,6 +135,9 @@ function create() {
   this.physics.add.overlap(player, enemies, hitPlayer, null, this);
   this.physics.add.overlap(player, xpOrbs, collectXP, null, this);
 
+  // Enemy-to-enemy collisions (they push each other)
+  this.physics.add.collider(enemies, enemies);
+
   // Create UI
   createUI(this);
 
@@ -120,7 +151,7 @@ function create() {
   playTone(this, 440, 0.1);
 }
 
-function update(time, delta) {
+function update(_time, delta) {
   if (gameOver || levelingUp) return;
 
   gameTime += delta;
@@ -165,12 +196,37 @@ function update(time, delta) {
     spawnEnemy();
   }
 
+  // Unlock new enemy types based on time
+  updateUnlockedTypes();
+
   // Scale difficulty every 30 seconds
   if (Math.floor(gameTime / 30000) > Math.floor((gameTime - delta) / 30000)) {
     difficulty.spawnRate = Math.max(500, difficulty.spawnRate * 0.9);
     difficulty.enemyHp *= 1.15;
     difficulty.enemyDamage *= 1.1;
     difficulty.enemySpeed = Math.min(120, difficulty.enemySpeed * 1.05);
+  }
+
+  // Wave system (every 60 seconds)
+  waveTimer += delta;
+  if (waveTimer >= nextWaveTime - 3000 && waveTimer < nextWaveTime && !warningActive) {
+    showWarning('⚠️ WAVE INCOMING!', 0xffff00);
+    playTone(scene, 600, 0.3);
+  }
+  if (waveTimer >= nextWaveTime) {
+    waveTimer = 0;
+    spawnWave();
+  }
+
+  // Boss system (every 120 seconds)
+  bossTimer += delta;
+  if (bossTimer >= nextBossTime - 5000 && bossTimer < nextBossTime && !warningActive) {
+    showWarning('🔥 BOSS APPROACHING!', 0xff0000);
+    playTone(scene, 150, 0.5);
+  }
+  if (bossTimer >= nextBossTime) {
+    bossTimer = 0;
+    spawnBoss();
   }
 
   // Move enemies toward player
@@ -244,12 +300,20 @@ function spawnEnemy() {
   else if (side === 2) { x = -20; y = Math.random() * 600; }
   else { x = 820; y = Math.random() * 600; }
 
-  // Create using the group
-  const enemy = enemies.create(x, y, 'enemy');
+  // Select random enemy type from unlocked types
+  const type = unlockedTypes[Math.floor(Math.random() * unlockedTypes.length)];
+
+  // Create using the group with appropriate texture
+  const enemy = enemies.create(x, y, `enemy_${type.name}`);
   enemy.body.setCircle(10);
-  enemy.setData('hp', difficulty.enemyHp);
-  enemy.setData('maxHp', difficulty.enemyHp);
-  enemy.setData('speed', difficulty.enemySpeed);
+
+  // Apply type multipliers to difficulty base stats
+  enemy.setData('hp', difficulty.enemyHp * type.hpMult);
+  enemy.setData('maxHp', difficulty.enemyHp * type.hpMult);
+  enemy.setData('speed', difficulty.enemySpeed * type.speedMult);
+  enemy.setData('damage', difficulty.enemyDamage * type.damageMult);
+  enemy.setData('xpValue', type.xp);
+  enemy.setData('type', type.name);
 }
 
 function hitEnemy(proj, enemy) {
@@ -262,15 +326,18 @@ function hitEnemy(proj, enemy) {
 
   if (hp <= 0) {
     playTone(scene, 660, 0.1);
-    dropXP(enemy.x, enemy.y);
+    const xpValue = enemy.getData('xpValue') || 5;
+    dropXP(enemy.x, enemy.y, xpValue);
     enemy.destroy();
+    stats.enemiesKilled++;
   }
 }
 
-function hitPlayer(playerObj, enemy) {
+function hitPlayer(_playerObj, enemy) {
   if (!enemy.active) return;
 
-  stats.hp -= difficulty.enemyDamage;
+  const damage = enemy.getData('damage') || difficulty.enemyDamage;
+  stats.hp -= damage;
   playTone(scene, 220, 0.15);
   enemy.destroy();
 
@@ -279,17 +346,19 @@ function hitPlayer(playerObj, enemy) {
   }
 }
 
-function dropXP(x, y) {
+function dropXP(x, y, xpValue) {
   // Create using the group
   const orb = xpOrbs.create(x, y, 'xp');
   orb.body.setCircle(5);
+  orb.setData('xpValue', xpValue);
   // XP orbs stay forever until collected
 }
 
-function collectXP(playerObj, orb) {
+function collectXP(_playerObj, orb) {
   if (!orb.active) return;
+  const xpValue = orb.getData('xpValue') || 5;
   orb.destroy();
-  stats.xp += 5;
+  stats.xp += xpValue;
 
   if (stats.xp >= stats.xpToNext) {
     levelUp();
@@ -301,6 +370,9 @@ function levelUp() {
   stats.level++;
   stats.xp -= stats.xpToNext;
   stats.xpToNext = Math.floor(stats.xpToNext * 1.2);
+
+  // Pause physics
+  scene.physics.pause();
 
   playTone(scene, 1200, 0.2);
 
@@ -367,6 +439,9 @@ function showUpgradeMenu() {
       overlay.destroy();
       title.destroy();
       scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
+
+      // Resume physics
+      scene.physics.resume();
 
       levelingUp = false;
     });
@@ -455,9 +530,59 @@ function drawUIBars() {
   graphics.lineStyle(2, 0xffffff, 1);
   graphics.strokeRect(330, 10, 180, 20);
 
-  // Draw enemy HP bars
+  // Find active boss
+  let boss = null;
   enemies.children.entries.forEach(enemy => {
-    if (!enemy.active) return;
+    if (enemy.active && enemy.getData('isBoss')) {
+      boss = enemy;
+    }
+  });
+
+  // Draw boss HP bar at top center
+  if (boss) {
+    const hp = boss.getData('hp');
+    const maxHp = boss.getData('maxHp');
+    const barWidth = 600;
+    const barHeight = 25;
+    const x = 100;
+    const y = 50;
+
+    // Boss label
+    graphics.fillStyle(0xffffff, 1);
+    scene.add.text(400, 40, '⚔️ BOSS ⚔️', {
+      fontSize: '20px',
+      fontFamily: 'Arial',
+      color: '#ff0000',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(200);
+
+    // Background
+    graphics.fillStyle(0x440000, 1);
+    graphics.fillRect(x, y, barWidth, barHeight);
+
+    // Foreground
+    graphics.fillStyle(0xff0000, 1);
+    graphics.fillRect(x, y, barWidth * (hp / maxHp), barHeight);
+
+    // Border
+    graphics.lineStyle(3, 0xffff00, 1);
+    graphics.strokeRect(x, y, barWidth, barHeight);
+
+    // HP text
+    graphics.fillStyle(0xffffff, 1);
+    scene.add.text(400, 62, `${Math.ceil(hp)} / ${Math.ceil(maxHp)}`, {
+      fontSize: '14px',
+      fontFamily: 'Arial',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(200);
+  }
+
+  // Draw enemy HP bars (smaller for regular enemies)
+  enemies.children.entries.forEach(enemy => {
+    if (!enemy.active || enemy.getData('isBoss')) return;
     const hp = enemy.getData('hp');
     const maxHp = enemy.getData('maxHp');
     const barWidth = 20;
@@ -506,7 +631,7 @@ function endGame() {
     color: '#ffff00'
   }).setOrigin(0.5);
 
-  scene.add.text(400, 400, `Enemies Killed: ${Math.floor(stats.xp / 5)}`, {
+  scene.add.text(400, 400, `Enemies Killed: ${stats.enemiesKilled}`, {
     fontSize: '28px',
     fontFamily: 'Arial',
     color: '#00ff00'
@@ -536,6 +661,9 @@ function restartGame() {
   gameTime = 0;
   shootTimer = 0;
   spawnTimer = 0;
+  waveTimer = 0;
+  bossTimer = 0;
+  warningActive = false;
 
   stats = {
     hp: 100,
@@ -546,7 +674,8 @@ function restartGame() {
     projectileCount: 1,
     xp: 0,
     level: 1,
-    xpToNext: 10
+    xpToNext: 10,
+    enemiesKilled: 0
   };
 
   difficulty = {
@@ -557,6 +686,108 @@ function restartGame() {
   };
 
   scene.scene.restart();
+}
+
+function updateUnlockedTypes() {
+  enemyTypes.forEach(type => {
+    if (gameTime >= type.unlockTime && !unlockedTypes.includes(type)) {
+      unlockedTypes.push(type);
+    }
+  });
+}
+
+function spawnWave() {
+  warningActive = false;
+  playTone(scene, 800, 0.2);
+
+  // Spawn 15-20 enemies
+  const count = 15 + Math.floor(Math.random() * 6);
+  const angleStep = (Math.PI * 2) / count;
+
+  for (let i = 0; i < count; i++) {
+    const angle = i * angleStep;
+    const distance = 400;
+    const x = 400 + Math.cos(angle) * distance;
+    const y = 300 + Math.sin(angle) * distance;
+
+    // Select random type from unlocked
+    const type = unlockedTypes[Math.floor(Math.random() * unlockedTypes.length)];
+
+    const enemy = enemies.create(x, y, `enemy_${type.name}`);
+    enemy.body.setCircle(10);
+    enemy.setData('hp', difficulty.enemyHp * type.hpMult * 1.5);
+    enemy.setData('maxHp', difficulty.enemyHp * type.hpMult * 1.5);
+    enemy.setData('speed', difficulty.enemySpeed * type.speedMult);
+    enemy.setData('damage', difficulty.enemyDamage * type.damageMult);
+    enemy.setData('xpValue', type.xp);
+    enemy.setData('type', type.name);
+  }
+}
+
+function spawnBoss() {
+  warningActive = false;
+  playTone(scene, 100, 0.4);
+
+  // Select highest unlocked type for boss
+  const type = unlockedTypes[unlockedTypes.length - 1];
+
+  // Spawn boss from random edge
+  const side = Math.floor(Math.random() * 4);
+  let x, y;
+
+  if (side === 0) { x = 400; y = -50; }
+  else if (side === 1) { x = 400; y = 650; }
+  else if (side === 2) { x = -50; y = 300; }
+  else { x = 850; y = 300; }
+
+  const boss = enemies.create(x, y, `boss_${type.name}`);
+  boss.body.setCircle(30);
+  boss.setData('hp', difficulty.enemyHp * type.hpMult * 10);
+  boss.setData('maxHp', difficulty.enemyHp * type.hpMult * 10);
+  boss.setData('speed', difficulty.enemySpeed * type.speedMult * 0.7);
+  boss.setData('damage', difficulty.enemyDamage * type.damageMult * 2);
+  boss.setData('xpValue', type.xp * 10);
+  boss.setData('type', type.name);
+  boss.setData('isBoss', true);
+}
+
+function showWarning(text, color) {
+  warningActive = true;
+
+  // Create warning overlay
+  const warning = scene.add.graphics();
+  warning.fillStyle(color, 0.3);
+  warning.fillRect(0, 250, 800, 100);
+  warning.setDepth(50);
+
+  // Warning text
+  const warningText = scene.add.text(400, 300, text, {
+    fontSize: '48px',
+    fontFamily: 'Arial',
+    color: '#ffffff',
+    stroke: '#000000',
+    strokeThickness: 6
+  }).setOrigin(0.5).setDepth(51);
+
+  // Flash animation
+  scene.tweens.add({
+    targets: [warning, warningText],
+    alpha: 0,
+    duration: 500,
+    delay: 2500,
+    onComplete: () => {
+      warning.destroy();
+      warningText.destroy();
+    }
+  });
+
+  scene.tweens.add({
+    targets: [warning, warningText],
+    alpha: 0.3,
+    duration: 300,
+    yoyo: true,
+    repeat: 4
+  });
 }
 
 function playTone(sceneRef, frequency, duration) {
