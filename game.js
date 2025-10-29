@@ -1,432 +1,578 @@
-// Platanus Hack 25: Snake Game
-// Navigate the snake around the "PLATANUS HACK ARCADE" title made of blocks!
-
-// =============================================================================
-// ARCADE BUTTON MAPPING - COMPLETE TEMPLATE
-// =============================================================================
-// Reference: See button-layout.webp at hack.platan.us/assets/images/arcade/
-//
-// Maps arcade button codes to keyboard keys for local testing.
-// Each arcade code can map to multiple keyboard keys (array values).
-// The arcade cabinet sends codes like 'P1U', 'P1A', etc. when buttons are pressed.
-//
-// To use in your game:
-//   if (key === 'P1U') { ... }  // Works on both arcade and local (via keyboard)
-//
-// CURRENT GAME USAGE (Snake):
-//   - P1U/P1D/P1L/P1R (Joystick) → Snake Direction
-//   - P1A (Button A) or START1 (Start Button) → Restart Game
-// =============================================================================
-
-const ARCADE_CONTROLS = {
-  // ===== PLAYER 1 CONTROLS =====
-  // Joystick - Left hand on WASD
-  'P1U': ['w'],
-  'P1D': ['s'],
-  'P1L': ['a'],
-  'P1R': ['d'],
-
-  // Action Buttons - Right hand on home row area (ergonomic!)
-  // Top row (ABC): U, I, O  |  Bottom row (XYZ): J, K, L
-  'P1A': ['u'],
-  'P1B': ['i'],
-  'P1C': ['o'],
-  'P1X': ['j'],
-  'P1Y': ['k'],
-  'P1Z': ['l'],
-
-  // Start Button
-  'START1': ['1', 'Enter'],
-
-  // ===== PLAYER 2 CONTROLS =====
-  // Joystick - Right hand on Arrow Keys
-  'P2U': ['ArrowUp'],
-  'P2D': ['ArrowDown'],
-  'P2L': ['ArrowLeft'],
-  'P2R': ['ArrowRight'],
-
-  // Action Buttons - Left hand (avoiding P1's WASD keys)
-  // Top row (ABC): R, T, Y  |  Bottom row (XYZ): F, G, H
-  'P2A': ['r'],
-  'P2B': ['t'],
-  'P2C': ['y'],
-  'P2X': ['f'],
-  'P2Y': ['g'],
-  'P2Z': ['h'],
-
-  // Start Button
-  'START2': ['2']
-};
-
-// Build reverse lookup: keyboard key → arcade button code
-const KEYBOARD_TO_ARCADE = {};
-for (const [arcadeCode, keyboardKeys] of Object.entries(ARCADE_CONTROLS)) {
-  if (keyboardKeys) {
-    // Handle both array and single value
-    const keys = Array.isArray(keyboardKeys) ? keyboardKeys : [keyboardKeys];
-    keys.forEach(key => {
-      KEYBOARD_TO_ARCADE[key] = arcadeCode;
-    });
-  }
-}
+// Bullet Heaven - Vampire Survivors style arcade game
+// Survive endless waves, level up, and get stronger!
 
 const config = {
   type: Phaser.AUTO,
   width: 800,
   height: 600,
-  backgroundColor: '#000000',
-  scene: {
-    create: create,
-    update: update
-  }
+  backgroundColor: '#0a0a0a',
+  physics: {
+    default: 'arcade',
+    arcade: { debug: false }
+  },
+  scene: { preload, create, update }
 };
 
-const game = new Phaser.Game(config);
+new Phaser.Game(config);
 
-// Game variables
-let snake = [];
-let snakeSize = 15;
-let direction = { x: 1, y: 0 };
-let nextDirection = { x: 1, y: 0 };
-let food;
-let score = 0;
-let scoreText;
-let titleBlocks = [];
-let gameOver = false;
-let moveTimer = 0;
-let moveDelay = 100;  // Faster initial speed (was 150ms)
-let graphics;
+// Game state
+let player, cursors, enemies, projectiles, xpOrbs, graphics;
+let gameOver = false, levelingUp = false;
+let gameTime = 0, shootTimer = 0, spawnTimer = 0;
+let scene;
 
-// Pixel font patterns (5x5 grid for each letter)
-const letters = {
-  P: [[1,1,1,1],[1,0,0,1],[1,1,1,1],[1,0,0,0],[1,0,0,0]],
-  L: [[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,1,1,1]],
-  A: [[0,1,1,0],[1,0,0,1],[1,1,1,1],[1,0,0,1],[1,0,0,1]],
-  T: [[1,1,1,1],[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]],
-  N: [[1,0,0,1],[1,1,0,1],[1,0,1,1],[1,0,0,1],[1,0,0,1]],
-  U: [[1,0,0,1],[1,0,0,1],[1,0,0,1],[1,0,0,1],[1,1,1,1]],
-  S: [[0,1,1,1],[1,0,0,0],[0,1,1,0],[0,0,0,1],[1,1,1,0]],
-  H: [[1,0,0,1],[1,0,0,1],[1,1,1,1],[1,0,0,1],[1,0,0,1]],
-  C: [[0,1,1,1],[1,0,0,0],[1,0,0,0],[1,0,0,0],[0,1,1,1]],
-  K: [[1,0,0,1],[1,0,1,0],[1,1,0,0],[1,0,1,0],[1,0,0,1]],
-  '2': [[1,1,1,0],[0,0,0,1],[0,1,1,0],[1,0,0,0],[1,1,1,1]],
-  '5': [[1,1,1,1],[1,0,0,0],[1,1,1,0],[0,0,0,1],[1,1,1,0]],
-  ':': [[0,0,0,0],[0,1,0,0],[0,0,0,0],[0,1,0,0],[0,0,0,0]],
-  R: [[1,1,1,0],[1,0,0,1],[1,1,1,0],[1,0,1,0],[1,0,0,1]],
-  D: [[1,1,1,0],[1,0,0,1],[1,0,0,1],[1,0,0,1],[1,1,1,0]],
-  E: [[1,1,1,1],[1,0,0,0],[1,1,1,0],[1,0,0,0],[1,1,1,1]]
+// Player stats
+let stats = {
+  hp: 100,
+  maxHp: 100,
+  speed: 150,
+  damage: 10,
+  fireRate: 500,
+  projectileCount: 1,
+  xp: 0,
+  level: 1,
+  xpToNext: 10
 };
 
-// Bold font for ARCADE (filled/solid style)
-const boldLetters = {
-  A: [[1,1,1,1,1],[1,1,0,1,1],[1,1,1,1,1],[1,1,0,1,1],[1,1,0,1,1]],
-  R: [[1,1,1,1,0],[1,1,0,1,1],[1,1,1,1,0],[1,1,0,1,1],[1,1,0,1,1]],
-  C: [[1,1,1,1,1],[1,1,0,0,0],[1,1,0,0,0],[1,1,0,0,0],[1,1,1,1,1]],
-  D: [[1,1,1,1,0],[1,1,0,1,1],[1,1,0,1,1],[1,1,0,1,1],[1,1,1,1,0]],
-  E: [[1,1,1,1,1],[1,1,0,0,0],[1,1,1,1,0],[1,1,0,0,0],[1,1,1,1,1]]
+// Difficulty scaling
+let difficulty = {
+  spawnRate: 2000,
+  enemyHp: 20,
+  enemyDamage: 10,
+  enemySpeed: 80
 };
+
+// UI elements
+let ui = {};
+
+// Upgrade options
+const upgrades = [
+  { name: 'Damage', desc: '+20% Damage', icon: '🗡️', apply: () => stats.damage *= 1.2 },
+  { name: 'Fire Rate', desc: '-15% Fire Delay', icon: '⚡', apply: () => stats.fireRate *= 0.85 },
+  { name: 'Speed', desc: '+15% Move Speed', icon: '👟', apply: () => stats.speed *= 1.15 },
+  { name: 'Max HP', desc: '+20 Max HP', icon: '❤️', apply: () => { stats.maxHp += 20; stats.hp += 20; } },
+  { name: 'Multi Shot', desc: '+1 Projectile', icon: '🔫', apply: () => stats.projectileCount++ }
+];
+
+function preload() {
+  // Create simple textures programmatically
+  const g = this.add.graphics();
+
+  // Player texture (green circle)
+  g.fillStyle(0x00ff00, 1);
+  g.fillCircle(12, 12, 12);
+  g.generateTexture('player', 24, 24);
+  g.clear();
+
+  // Enemy texture (red circle)
+  g.fillStyle(0xff0000, 1);
+  g.fillCircle(10, 10, 10);
+  g.generateTexture('enemy', 20, 20);
+  g.clear();
+
+  // Projectile texture (orange circle)
+  g.fillStyle(0xff8800, 1);
+  g.fillCircle(4, 4, 4);
+  g.generateTexture('projectile', 8, 8);
+  g.clear();
+
+  // XP orb texture (cyan circle)
+  g.fillStyle(0x00ffff, 1);
+  g.fillCircle(5, 5, 5);
+  g.generateTexture('xp', 10, 10);
+  g.clear();
+
+  g.destroy();
+}
 
 function create() {
-  const scene = this;
+  scene = this;
   graphics = this.add.graphics();
 
-  // Build "PLATANUS HACK ARCADE" in cyan - centered and grid-aligned
-  // PLATANUS: 8 letters × (4 cols + 1 spacing) = 40 blocks, but last letter no spacing = 39 blocks × 15px = 585px
-  let x = Math.floor((800 - 585) / 2 / snakeSize) * snakeSize;
-  let y = Math.floor(180 / snakeSize) * snakeSize;
-  'PLATANUS'.split('').forEach(char => {
-    x = drawLetter(char, x, y, 0x00ffff);
+  // Create physics groups
+  enemies = this.physics.add.group();
+  projectiles = this.physics.add.group();
+  xpOrbs = this.physics.add.group();
+
+  // Create player
+  player = this.physics.add.image(400, 300, 'player');
+  player.setCollideWorldBounds(true);
+  player.body.setCircle(12);
+
+  // Input
+  cursors = this.input.keyboard.createCursorKeys();
+
+  // Collisions
+  this.physics.add.overlap(projectiles, enemies, hitEnemy, null, this);
+  this.physics.add.overlap(player, enemies, hitPlayer, null, this);
+  this.physics.add.overlap(player, xpOrbs, collectXP, null, this);
+
+  // Create UI
+  createUI(this);
+
+  // Keyboard for restart
+  const rKey = this.input.keyboard.addKey('R');
+  rKey.on('down', () => {
+    if (gameOver) restartGame();
   });
 
-  // HACK: 4 letters × (4 cols + 1 spacing) = 20 blocks, but last letter no spacing = 19 blocks × 15px = 285px
-  x = Math.floor((800 - 285) / 2 / snakeSize) * snakeSize;
-  y = Math.floor(280 / snakeSize) * snakeSize;
-  'HACK'.split('').forEach(char => {
-    x = drawLetter(char, x, y, 0x00ffff);
-  });
-
-  // ARCADE: 6 letters × (5 cols + 1 spacing) = 36 blocks, but last letter no spacing = 35 blocks × 15px = 525px
-  x = Math.floor((800 - 525) / 2 / snakeSize) * snakeSize;
-  y = Math.floor(380 / snakeSize) * snakeSize;
-  'ARCADE'.split('').forEach(char => {
-    x = drawLetter(char, x, y, 0xff00ff, true);
-  });
-
-  // Score display
-  scoreText = this.add.text(16, 16, 'Score: 0', {
-    fontSize: '24px',
-    fontFamily: 'Arial, sans-serif',
-    color: '#00ff00'
-  });
-
-  // Instructions
-  this.add.text(400, 560, 'Use Joystick to Move | Avoid Walls, Yourself & The Title!', {
-    fontSize: '16px',
-    fontFamily: 'Arial, sans-serif',
-    color: '#888888',
-    align: 'center'
-  }).setOrigin(0.5);
-
-  // Initialize snake (start top left)
-  snake = [
-    { x: 75, y: 60 },
-    { x: 60, y: 60 },
-    { x: 45, y: 60 }
-  ];
-
-  // Spawn initial food
-  spawnFood();
-
-  // Keyboard and Arcade Button input
-  this.input.keyboard.on('keydown', (event) => {
-    // Normalize keyboard input to arcade codes for easier testing
-    const key = KEYBOARD_TO_ARCADE[event.key] || event.key;
-
-    // Restart game (arcade buttons only)
-    if (gameOver && (key === 'P1A' || key === 'START1')) {
-      restartGame(scene);
-      return;
-    }
-
-    // Direction controls (keyboard keys get mapped to arcade codes)
-    if (key === 'P1U' && direction.y === 0) {
-      nextDirection = { x: 0, y: -1 };
-    } else if (key === 'P1D' && direction.y === 0) {
-      nextDirection = { x: 0, y: 1 };
-    } else if (key === 'P1L' && direction.x === 0) {
-      nextDirection = { x: -1, y: 0 };
-    } else if (key === 'P1R' && direction.x === 0) {
-      nextDirection = { x: 1, y: 0 };
-    }
-  });
-
+  // Start sound
   playTone(this, 440, 0.1);
 }
 
-function drawLetter(char, startX, startY, color, useBold = false) {
-  const pattern = useBold ? boldLetters[char] : letters[char];
-  if (!pattern) return startX + 30;
+function update(time, delta) {
+  if (gameOver || levelingUp) return;
 
-  for (let row = 0; row < pattern.length; row++) {
-    for (let col = 0; col < pattern[row].length; col++) {
-      if (pattern[row][col]) {
-        const blockX = startX + col * snakeSize;
-        const blockY = startY + row * snakeSize;
-        titleBlocks.push({ x: blockX, y: blockY, color: color });
-      }
-    }
+  gameTime += delta;
+  shootTimer += delta;
+  spawnTimer += delta;
+
+  // Player movement
+  player.body.setVelocity(0, 0);
+  let moving = false;
+
+  if (cursors.left.isDown) {
+    player.body.setVelocityX(-stats.speed);
+    moving = true;
   }
-  return startX + (pattern[0].length + 1) * snakeSize;
-}
-
-function update(_time, delta) {
-  if (gameOver) return;
-
-  moveTimer += delta;
-  if (moveTimer >= moveDelay) {
-    moveTimer = 0;
-    direction = nextDirection;
-    moveSnake(this);
+  if (cursors.right.isDown) {
+    player.body.setVelocityX(stats.speed);
+    moving = true;
   }
-
-  drawGame();
-}
-
-function moveSnake(scene) {
-  const head = snake[0];
-  const newHead = {
-    x: head.x + direction.x * snakeSize,
-    y: head.y + direction.y * snakeSize
-  };
-
-  // Check wall collision
-  if (newHead.x < 0 || newHead.x >= 800 || newHead.y < 0 || newHead.y >= 600) {
-    endGame(scene);
-    return;
+  if (cursors.up.isDown) {
+    player.body.setVelocityY(-stats.speed);
+    moving = true;
+  }
+  if (cursors.down.isDown) {
+    player.body.setVelocityY(stats.speed);
+    moving = true;
   }
 
-  // Check self collision
-  for (let segment of snake) {
-    if (segment.x === newHead.x && segment.y === newHead.y) {
-      endGame(scene);
-      return;
-    }
+  // Normalize diagonal movement
+  if (moving && player.body.velocity.x !== 0 && player.body.velocity.y !== 0) {
+    player.body.velocity.normalize().scale(stats.speed);
   }
 
-  // Check title block collision
-  for (let block of titleBlocks) {
-    if (newHead.x === block.x && newHead.y === block.y) {
-      endGame(scene);
-      return;
-    }
+  // Auto shoot
+  if (shootTimer >= stats.fireRate) {
+    shootTimer = 0;
+    shoot();
   }
 
-  snake.unshift(newHead);
-
-  // Check food collision
-  if (newHead.x === food.x && newHead.y === food.y) {
-    score += 10;
-    scoreText.setText('Score: ' + score);
-    spawnFood();
-    playTone(scene, 880, 0.1);
-
-    if (moveDelay > 50) {  // Faster max speed (was 80ms)
-      moveDelay -= 2;
-    }
-  } else {
-    snake.pop();
+  // Spawn enemies
+  if (spawnTimer >= difficulty.spawnRate) {
+    spawnTimer = 0;
+    spawnEnemy();
   }
-}
 
-function spawnFood() {
-  let valid = false;
-  let attempts = 0;
-
-  while (!valid && attempts < 100) {
-    attempts++;
-    const gridX = Math.floor(Math.random() * 53) * snakeSize;
-    const gridY = Math.floor(Math.random() * 40) * snakeSize;
-
-    // Check not on snake
-    let onSnake = false;
-    for (let segment of snake) {
-      if (segment.x === gridX && segment.y === gridY) {
-        onSnake = true;
-        break;
-      }
-    }
-
-    // Check not on title blocks
-    let onTitle = false;
-    for (let block of titleBlocks) {
-      if (gridX === block.x && gridY === block.y) {
-        onTitle = true;
-        break;
-      }
-    }
-
-    if (!onSnake && !onTitle) {
-      food = { x: gridX, y: gridY };
-      valid = true;
-    }
+  // Scale difficulty every 30 seconds
+  if (Math.floor(gameTime / 30000) > Math.floor((gameTime - delta) / 30000)) {
+    difficulty.spawnRate = Math.max(500, difficulty.spawnRate * 0.9);
+    difficulty.enemyHp *= 1.15;
+    difficulty.enemyDamage *= 1.1;
+    difficulty.enemySpeed = Math.min(120, difficulty.enemySpeed * 1.05);
   }
-}
 
-function drawGame() {
-  graphics.clear();
-
-  // Draw title blocks
-  titleBlocks.forEach(block => {
-    graphics.fillStyle(block.color, 1);
-    graphics.fillRect(block.x, block.y, snakeSize - 2, snakeSize - 2);
+  // Move enemies toward player
+  enemies.children.entries.forEach(enemy => {
+    if (!enemy.active) return;
+    const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+    const speed = enemy.getData('speed');
+    enemy.body.setVelocity(
+      Math.cos(angle) * speed,
+      Math.sin(angle) * speed
+    );
   });
 
-  // Draw snake
-  snake.forEach((segment, index) => {
-    if (index === 0) {
-      graphics.fillStyle(0x00ff00, 1);
-    } else {
-      graphics.fillStyle(0x00aa00, 1);
-    }
-    graphics.fillRect(segment.x, segment.y, snakeSize - 2, snakeSize - 2);
-  });
+  // Update UI
+  updateUI();
 
-  // Draw food
-  graphics.fillStyle(0xff0000, 1);
-  graphics.fillRect(food.x, food.y, snakeSize - 2, snakeSize - 2);
+  // Draw UI bars
+  drawUIBars();
 }
 
-function endGame(scene) {
-  gameOver = true;
-  playTone(scene, 220, 0.5);
+function shoot() {
+  const target = findClosestEnemy();
+  if (!target) return;
 
+  playTone(scene, 880, 0.05);
+
+  // Calculate angles for multiple projectiles
+  const baseAngle = Phaser.Math.Angle.Between(player.x, player.y, target.x, target.y);
+  const spread = stats.projectileCount > 1 ? 0.3 : 0;
+  const startOffset = -(stats.projectileCount - 1) * spread / 2;
+
+  for (let i = 0; i < stats.projectileCount; i++) {
+    const angle = baseAngle + startOffset + i * spread;
+    const vx = Math.cos(angle) * 300;
+    const vy = Math.sin(angle) * 300;
+
+    // Create using the group (important!)
+    const proj = projectiles.create(player.x, player.y, 'projectile');
+    proj.body.setCircle(4);
+    proj.body.setVelocity(vx, vy);
+
+    // Auto-destroy after 2 seconds
+    scene.time.delayedCall(2000, () => {
+      if (proj && proj.active) proj.destroy();
+    });
+  }
+}
+
+function findClosestEnemy() {
+  let closest = null;
+  let minDist = Infinity;
+
+  enemies.children.entries.forEach(enemy => {
+    if (!enemy.active) return;
+    const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
+    if (dist < minDist) {
+      minDist = dist;
+      closest = enemy;
+    }
+  });
+
+  return closest;
+}
+
+function spawnEnemy() {
+  const side = Math.floor(Math.random() * 4);
+  let x, y;
+
+  if (side === 0) { x = Math.random() * 800; y = -20; }
+  else if (side === 1) { x = Math.random() * 800; y = 620; }
+  else if (side === 2) { x = -20; y = Math.random() * 600; }
+  else { x = 820; y = Math.random() * 600; }
+
+  // Create using the group
+  const enemy = enemies.create(x, y, 'enemy');
+  enemy.body.setCircle(10);
+  enemy.setData('hp', difficulty.enemyHp);
+  enemy.setData('maxHp', difficulty.enemyHp);
+  enemy.setData('speed', difficulty.enemySpeed);
+}
+
+function hitEnemy(proj, enemy) {
+  if (!enemy.active || !proj.active) return;
+
+  proj.destroy();
+
+  const hp = enemy.getData('hp') - stats.damage;
+  enemy.setData('hp', hp);
+
+  if (hp <= 0) {
+    playTone(scene, 660, 0.1);
+    dropXP(enemy.x, enemy.y);
+    enemy.destroy();
+  }
+}
+
+function hitPlayer(playerObj, enemy) {
+  if (!enemy.active) return;
+
+  stats.hp -= difficulty.enemyDamage;
+  playTone(scene, 220, 0.15);
+  enemy.destroy();
+
+  if (stats.hp <= 0) {
+    endGame();
+  }
+}
+
+function dropXP(x, y) {
+  // Create using the group
+  const orb = xpOrbs.create(x, y, 'xp');
+  orb.body.setCircle(5);
+  // XP orbs stay forever until collected
+}
+
+function collectXP(playerObj, orb) {
+  if (!orb.active) return;
+  orb.destroy();
+  stats.xp += 5;
+
+  if (stats.xp >= stats.xpToNext) {
+    levelUp();
+  }
+}
+
+function levelUp() {
+  levelingUp = true;
+  stats.level++;
+  stats.xp -= stats.xpToNext;
+  stats.xpToNext = Math.floor(stats.xpToNext * 1.2);
+
+  playTone(scene, 1200, 0.2);
+
+  showUpgradeMenu();
+}
+
+function showUpgradeMenu() {
   // Semi-transparent overlay
   const overlay = scene.add.graphics();
-  overlay.fillStyle(0x000000, 0.7);
+  overlay.fillStyle(0x000000, 0.85);
+  overlay.fillRect(0, 0, 800, 600);
+  overlay.setDepth(100);
+
+  // Title
+  const title = scene.add.text(400, 100, 'LEVEL UP!', {
+    fontSize: '48px',
+    fontFamily: 'Arial',
+    color: '#ffff00',
+    stroke: '#000000',
+    strokeThickness: 6
+  }).setOrigin(0.5).setDepth(101);
+
+  // Shuffle and pick 3 upgrades
+  const shuffled = [...upgrades].sort(() => Math.random() - 0.5).slice(0, 3);
+
+  shuffled.forEach((upgrade, i) => {
+    const x = 150 + i * 250;
+    const y = 300;
+
+    // Button background
+    const btn = scene.add.graphics();
+    btn.fillStyle(0x333333, 1);
+    btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
+    btn.lineStyle(3, 0x00ff00, 1);
+    btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
+    btn.setDepth(101);
+    btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 80, 180, 160), Phaser.Geom.Rectangle.Contains);
+
+    // Icon
+    scene.add.text(x, y - 30, upgrade.icon, {
+      fontSize: '48px'
+    }).setOrigin(0.5).setDepth(102);
+
+    // Name
+    scene.add.text(x, y + 20, upgrade.name, {
+      fontSize: '20px',
+      fontFamily: 'Arial',
+      color: '#ffffff'
+    }).setOrigin(0.5).setDepth(102);
+
+    // Description
+    scene.add.text(x, y + 50, upgrade.desc, {
+      fontSize: '14px',
+      fontFamily: 'Arial',
+      color: '#cccccc'
+    }).setOrigin(0.5).setDepth(102);
+
+    // Click handler
+    btn.on('pointerdown', () => {
+      upgrade.apply();
+      playTone(scene, 1000, 0.1);
+
+      // Clean up menu
+      overlay.destroy();
+      title.destroy();
+      scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
+
+      levelingUp = false;
+    });
+
+    // Hover effect
+    btn.on('pointerover', () => {
+      btn.clear();
+      btn.fillStyle(0x444444, 1);
+      btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
+      btn.lineStyle(3, 0x00ff00, 1);
+      btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
+    });
+
+    btn.on('pointerout', () => {
+      btn.clear();
+      btn.fillStyle(0x333333, 1);
+      btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
+      btn.lineStyle(3, 0x00ff00, 1);
+      btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
+    });
+  });
+}
+
+function createUI() {
+  // HP Bar label
+  ui.hpText = scene.add.text(10, 10, 'HP:', {
+    fontSize: '16px',
+    fontFamily: 'Arial',
+    color: '#ffffff'
+  });
+
+  // XP Bar label
+  ui.xpText = scene.add.text(300, 10, 'XP:', {
+    fontSize: '16px',
+    fontFamily: 'Arial',
+    color: '#ffffff'
+  });
+
+  // Level
+  ui.levelText = scene.add.text(550, 10, 'Level: 1', {
+    fontSize: '16px',
+    fontFamily: 'Arial',
+    color: '#ffff00'
+  });
+
+  // Timer
+  ui.timeText = scene.add.text(700, 10, '0:00', {
+    fontSize: '16px',
+    fontFamily: 'Arial',
+    color: '#00ffff'
+  });
+}
+
+function updateUI() {
+  ui.levelText.setText(`Level: ${stats.level}`);
+
+  const minutes = Math.floor(gameTime / 60000);
+  const seconds = Math.floor((gameTime % 60000) / 1000);
+  ui.timeText.setText(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+}
+
+function drawUIBars() {
+  graphics.clear();
+
+  // HP Bar background
+  graphics.fillStyle(0x440000, 1);
+  graphics.fillRect(50, 10, 200, 20);
+
+  // HP Bar foreground
+  graphics.fillStyle(0xff0000, 1);
+  graphics.fillRect(50, 10, 200 * (stats.hp / stats.maxHp), 20);
+
+  // HP Bar border
+  graphics.lineStyle(2, 0xffffff, 1);
+  graphics.strokeRect(50, 10, 200, 20);
+
+  // XP Bar background
+  graphics.fillStyle(0x004444, 1);
+  graphics.fillRect(330, 10, 180, 20);
+
+  // XP Bar foreground
+  graphics.fillStyle(0x00ffff, 1);
+  graphics.fillRect(330, 10, 180 * (stats.xp / stats.xpToNext), 20);
+
+  // XP Bar border
+  graphics.lineStyle(2, 0xffffff, 1);
+  graphics.strokeRect(330, 10, 180, 20);
+
+  // Draw enemy HP bars
+  enemies.children.entries.forEach(enemy => {
+    if (!enemy.active) return;
+    const hp = enemy.getData('hp');
+    const maxHp = enemy.getData('maxHp');
+    const barWidth = 20;
+    const barHeight = 3;
+    const x = enemy.x - barWidth / 2;
+    const y = enemy.y - 20;
+
+    graphics.fillStyle(0x440000, 1);
+    graphics.fillRect(x, y, barWidth, barHeight);
+    graphics.fillStyle(0xff0000, 1);
+    graphics.fillRect(x, y, barWidth * (hp / maxHp), barHeight);
+  });
+}
+
+function endGame() {
+  gameOver = true;
+  playTone(scene, 150, 0.5);
+
+  // Overlay
+  const overlay = scene.add.graphics();
+  overlay.fillStyle(0x000000, 0.8);
   overlay.fillRect(0, 0, 800, 600);
 
-  // Game Over title with glow effect
-  const gameOverText = scene.add.text(400, 300, 'GAME OVER', {
+  // Game Over text
+  scene.add.text(400, 200, 'GAME OVER', {
     fontSize: '64px',
-    fontFamily: 'Arial, sans-serif',
+    fontFamily: 'Arial',
     color: '#ff0000',
-    align: 'center',
-    stroke: '#ff6666',
+    stroke: '#000000',
     strokeThickness: 8
   }).setOrigin(0.5);
 
-  // Pulsing animation for game over text
-  scene.tweens.add({
-    targets: gameOverText,
-    scale: { from: 1, to: 1.1 },
-    alpha: { from: 1, to: 0.8 },
-    duration: 800,
-    yoyo: true,
-    repeat: -1,
-    ease: 'Sine.easeInOut'
-  });
+  // Stats
+  const minutes = Math.floor(gameTime / 60000);
+  const seconds = Math.floor((gameTime % 60000) / 1000);
 
-  // Score display
-  scene.add.text(400, 400, 'SCORE: ' + score, {
-    fontSize: '36px',
-    fontFamily: 'Arial, sans-serif',
-    color: '#00ffff',
-    align: 'center',
-    stroke: '#000000',
-    strokeThickness: 4
+  scene.add.text(400, 300, `Time Survived: ${minutes}:${seconds.toString().padStart(2, '0')}`, {
+    fontSize: '28px',
+    fontFamily: 'Arial',
+    color: '#00ffff'
   }).setOrigin(0.5);
 
-  // Restart instruction with subtle animation
-  const restartText = scene.add.text(400, 480, 'Press Button A or START to Restart', {
+  scene.add.text(400, 350, `Level Reached: ${stats.level}`, {
+    fontSize: '28px',
+    fontFamily: 'Arial',
+    color: '#ffff00'
+  }).setOrigin(0.5);
+
+  scene.add.text(400, 400, `Enemies Killed: ${Math.floor(stats.xp / 5)}`, {
+    fontSize: '28px',
+    fontFamily: 'Arial',
+    color: '#00ff00'
+  }).setOrigin(0.5);
+
+  // Restart text
+  const restartText = scene.add.text(400, 500, 'Press R to Restart', {
     fontSize: '24px',
-    fontFamily: 'Arial, sans-serif',
-    color: '#ffff00',
-    align: 'center',
-    stroke: '#000000',
-    strokeThickness: 3
+    fontFamily: 'Arial',
+    color: '#ffffff'
   }).setOrigin(0.5);
 
-  // Blinking animation for restart text
+  // Blink animation
   scene.tweens.add({
     targets: restartText,
-    alpha: { from: 1, to: 0.3 },
+    alpha: 0.3,
     duration: 600,
     yoyo: true,
-    repeat: -1,
-    ease: 'Sine.easeInOut'
+    repeat: -1
   });
 }
 
-function restartGame(scene) {
-  snake = [
-    { x: 75, y: 60 },
-    { x: 60, y: 60 },
-    { x: 45, y: 60 }
-  ];
-  direction = { x: 1, y: 0 };
-  nextDirection = { x: 1, y: 0 };
-  score = 0;
+function restartGame() {
+  // Reset state
   gameOver = false;
-  moveDelay = 100;  // Match new faster initial speed
-  scoreText.setText('Score: 0');
-  spawnFood();
+  levelingUp = false;
+  gameTime = 0;
+  shootTimer = 0;
+  spawnTimer = 0;
+
+  stats = {
+    hp: 100,
+    maxHp: 100,
+    speed: 150,
+    damage: 10,
+    fireRate: 500,
+    projectileCount: 1,
+    xp: 0,
+    level: 1,
+    xpToNext: 10
+  };
+
+  difficulty = {
+    spawnRate: 2000,
+    enemyHp: 20,
+    enemyDamage: 10,
+    enemySpeed: 80
+  };
+
   scene.scene.restart();
 }
 
-function playTone(scene, frequency, duration) {
-  const audioContext = scene.sound.context;
-  const oscillator = audioContext.createOscillator();
-  const gainNode = audioContext.createGain();
+function playTone(sceneRef, frequency, duration) {
+  const ctx = sceneRef.sound.context;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
 
-  oscillator.connect(gainNode);
-  gainNode.connect(audioContext.destination);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
 
-  oscillator.frequency.value = frequency;
-  oscillator.type = 'square';
+  osc.frequency.value = frequency;
+  osc.type = 'square';
 
-  gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+  gain.gain.setValueAtTime(0.1, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
 
-  oscillator.start(audioContext.currentTime);
-  oscillator.stop(audioContext.currentTime + duration);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + duration);
 }
