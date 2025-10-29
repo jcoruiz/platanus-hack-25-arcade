@@ -19,7 +19,7 @@ new Phaser.Game(config);
 let player, cursors, enemies, projectiles, xpOrbs, obstacles, weaponChests, graphics;
 let areaDamageCircle = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false;
-let gameTime = 0, shootTimer = 0, spawnTimer = 0;
+let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
 let nextWaveTime = 60000, nextBossTime = 120000;
 let warningActive = false;
@@ -101,6 +101,8 @@ let stats = {
   maxHp: 100,
   speed: 150,
   knockback: 100,
+  hpRegen: 0,
+  xpMultiplier: 1.0,
   xp: 0,
   level: 1,
   xpToNext: 10,
@@ -127,7 +129,9 @@ function getWeapon(id) {
 const playerUpgrades = [
   { id: 'speed', name: 'Speed', desc: '+15% Move Speed', icon: '👟', maxLevel: 8, apply: () => { stats.speed *= 1.15; upgradeLevels['speed'] = (upgradeLevels['speed'] || 0) + 1; } },
   { id: 'maxhp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: 10, apply: () => { stats.maxHp += 20; stats.hp += 20; upgradeLevels['maxhp'] = (upgradeLevels['maxhp'] || 0) + 1; } },
-  { id: 'knockback', name: 'Knockback', desc: '+30% Enemy Pushback', icon: '💨', maxLevel: 6, apply: () => { stats.knockback *= 1.3; upgradeLevels['knockback'] = (upgradeLevels['knockback'] || 0) + 1; } }
+  { id: 'knockback', name: 'Knockback', desc: '+30% Enemy Pushback', icon: '💨', maxLevel: 6, apply: () => { stats.knockback *= 1.3; upgradeLevels['knockback'] = (upgradeLevels['knockback'] || 0) + 1; } },
+  { id: 'hpregen', name: 'HP Regen', desc: '+10 HP/min', icon: '💚', maxLevel: 10, apply: () => { stats.hpRegen += 10; upgradeLevels['hpregen'] = (upgradeLevels['hpregen'] || 0) + 1; } },
+  { id: 'xpboost', name: 'XP Boost', desc: '+50% XP Gain', icon: '⭐', maxLevel: 8, apply: () => { stats.xpMultiplier += 0.5; upgradeLevels['xpboost'] = (upgradeLevels['xpboost'] || 0) + 1; } }
 ];
 
 const projectileUpgrades = [
@@ -164,10 +168,14 @@ function preload() {
   // Create simple textures programmatically
   const g = this.add.graphics();
 
-  // Player texture (green circle)
-  g.fillStyle(0x00ff00, 1);
-  g.fillCircle(12, 12, 12);
-  g.generateTexture('player', 24, 24);
+  // Player texture (banana shape)
+  g.fillStyle(0xffff00, 1);
+  g.fillEllipse(16, 16, 10, 24);
+  g.fillStyle(0xffdd00, 1);
+  g.fillEllipse(18, 16, 6, 20);
+  g.fillStyle(0x885500, 1);
+  g.fillRect(14, 4, 4, 6);
+  g.generateTexture('player', 32, 32);
   g.clear();
 
   // Enemy textures (one for each type)
@@ -253,7 +261,7 @@ function create() {
   // Create player at center of world
   player = this.physics.add.image(1200, 900, 'player');
   player.setCollideWorldBounds(true);
-  player.body.setCircle(12);
+  player.body.setCircle(16);
 
   // Camera follows player
   this.cameras.main.startFollow(player);
@@ -295,6 +303,14 @@ function update(_time, delta) {
   gameTime += delta;
   shootTimer += delta;
   spawnTimer += delta;
+  regenTimer += delta;
+
+  // HP Regeneration (every 1 second)
+  if (regenTimer >= 1000 && stats.hpRegen > 0) {
+    regenTimer = 0;
+    const healAmount = stats.hpRegen / 60;
+    stats.hp = Math.min(stats.maxHp, stats.hp + healAmount);
+  }
 
   // Player movement
   player.body.setVelocity(0, 0);
@@ -542,8 +558,9 @@ function dropXP(x, y, xpValue) {
 
 function collectXP(_playerObj, orb) {
   if (!orb.active) return;
-  const xpValue = orb.getData('xpValue') || 5;
+  const baseXpValue = orb.getData('xpValue') || 5;
   orb.destroy();
+  const xpValue = baseXpValue * stats.xpMultiplier;
   stats.xp += xpValue;
 
   if (stats.xp >= stats.xpToNext) {
@@ -1216,6 +1233,7 @@ function restartGame() {
   gameTime = 0;
   shootTimer = 0;
   spawnTimer = 0;
+  regenTimer = 0;
   waveTimer = 0;
   bossTimer = 0;
   warningActive = false;
@@ -1258,6 +1276,8 @@ function restartGame() {
     maxHp: 100,
     speed: 150,
     knockback: 100,
+    hpRegen: 0,
+    xpMultiplier: 1.0,
     xp: 0,
     level: 1,
     xpToNext: 10,
