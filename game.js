@@ -1928,7 +1928,7 @@ function updateAreaDamage(delta) {
 
     // Play damage sound once per tick if any enemy was hit
     if (hitAnyEnemy) {
-      playTone(scene, 900, 0.08);
+      playTone(scene, 300, 0.06);
     }
   }
 }
