@@ -25,6 +25,14 @@ let nextWaveTime = 60000, nextBossTime = 120000;
 let warningActive = false;
 let scene;
 
+// Menu selection state
+let selectedIndex = 0;
+let menuOptions = [];
+let menuKeys = [];
+
+// Upgrade level tracking
+let upgradeLevels = {};
+
 // Enemy types configuration
 const enemyTypes = [
   { name: 'green', color: 0x00ff00, hpMult: 1.0, speedMult: 1.0, damageMult: 1.0, xp: 5, unlockTime: 0 },
@@ -55,7 +63,7 @@ const weaponTypes = [
     name: 'Bola Orbital',
     desc: 'Bola que gira alrededor del jugador y daña enemigos',
     unlocked: false,
-    count: 1,
+    count: 2,
     rotSpeed: 2,
     radius: 80,
     damage: 15
@@ -66,7 +74,7 @@ const weaponTypes = [
     desc: 'Daña continuamente a enemigos cercanos',
     unlocked: false,
     radius: 150,
-    dps: 5,
+    dps: 10,
     tickRate: 500,
     lastTick: 0
   },
@@ -117,39 +125,39 @@ function getWeapon(id) {
 
 // Upgrade options (organized by category)
 const playerUpgrades = [
-  { name: 'Speed', desc: '+15% Move Speed', icon: '👟', apply: () => stats.speed *= 1.15 },
-  { name: 'Max HP', desc: '+20 Max HP', icon: '❤️', apply: () => { stats.maxHp += 20; stats.hp += 20; } },
-  { name: 'Knockback', desc: '+30% Enemy Pushback', icon: '💨', apply: () => stats.knockback *= 1.3 }
+  { id: 'speed', name: 'Speed', desc: '+15% Move Speed', icon: '👟', maxLevel: 8, apply: () => { stats.speed *= 1.15; upgradeLevels['speed'] = (upgradeLevels['speed'] || 0) + 1; } },
+  { id: 'maxhp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: 10, apply: () => { stats.maxHp += 20; stats.hp += 20; upgradeLevels['maxhp'] = (upgradeLevels['maxhp'] || 0) + 1; } },
+  { id: 'knockback', name: 'Knockback', desc: '+30% Enemy Pushback', icon: '💨', maxLevel: 6, apply: () => { stats.knockback *= 1.3; upgradeLevels['knockback'] = (upgradeLevels['knockback'] || 0) + 1; } }
 ];
 
 const projectileUpgrades = [
-  { name: 'Multi Shot', desc: '+1 Projectile', icon: '🔫', weaponId: 'projectile', apply: () => getWeapon('projectile').count++ },
-  { name: 'Fire Rate', desc: '-100ms Fire Delay', icon: '⚡', weaponId: 'projectile', apply: () => getWeapon('projectile').fireRate = Math.max(200, getWeapon('projectile').fireRate - 100) },
-  { name: 'Projectile Damage', desc: '+5 Damage', icon: '🗡️', weaponId: 'projectile', apply: () => getWeapon('projectile').damage += 5 },
-  { name: 'Penetration', desc: '+1 Enemy Pierced', icon: '⚔️', weaponId: 'projectile', apply: () => getWeapon('projectile').penetration++ }
+  { id: 'multishot', name: 'Multi Shot', desc: '+1 Projectile', icon: '🔫', weaponId: 'projectile', maxLevel: 10, apply: () => { getWeapon('projectile').count++; upgradeLevels['multishot'] = (upgradeLevels['multishot'] || 0) + 1; } },
+  { id: 'firerate', name: 'Fire Rate', desc: '-15% Fire Delay', icon: '⚡', weaponId: 'projectile', maxLevel: 8, apply: () => { getWeapon('projectile').fireRate = Math.max(150, getWeapon('projectile').fireRate * 0.85); upgradeLevels['firerate'] = (upgradeLevels['firerate'] || 0) + 1; } },
+  { id: 'projdamage', name: 'Projectile Damage', desc: '+5 Damage', icon: '🗡️', weaponId: 'projectile', maxLevel: 10, apply: () => { getWeapon('projectile').damage += 5; upgradeLevels['projdamage'] = (upgradeLevels['projdamage'] || 0) + 1; } },
+  { id: 'penetration', name: 'Penetration', desc: '+1 Enemy Pierced', icon: '⚔️', weaponId: 'projectile', maxLevel: 5, apply: () => { getWeapon('projectile').penetration++; upgradeLevels['penetration'] = (upgradeLevels['penetration'] || 0) + 1; } }
 ];
 
 const orbitingBallUpgrades = [
-  { name: 'More Balls', desc: '+1 Orbiting Ball', icon: '⚪', weaponId: 'orbitingBall', apply: () => getWeapon('orbitingBall').count++ },
-  { name: 'Rotation Speed', desc: '+0.5 Rotation Speed', icon: '🌀', weaponId: 'orbitingBall', apply: () => getWeapon('orbitingBall').rotSpeed += 0.5 },
-  { name: 'Orbit Radius', desc: '+20 Orbit Distance', icon: '🔵', weaponId: 'orbitingBall', apply: () => getWeapon('orbitingBall').radius += 20 },
-  { name: 'Ball Damage', desc: '+8 Ball Damage', icon: '💥', weaponId: 'orbitingBall', apply: () => getWeapon('orbitingBall').damage += 8 }
+  { id: 'moreballs', name: 'More Balls', desc: '+1 Orbiting Ball', icon: '⚪', weaponId: 'orbitingBall', maxLevel: 10, apply: () => { getWeapon('orbitingBall').count++; upgradeLevels['moreballs'] = (upgradeLevels['moreballs'] || 0) + 1; } },
+  { id: 'rotspeed', name: 'Rotation Speed', desc: '+0.5 Rotation Speed', icon: '🌀', weaponId: 'orbitingBall', maxLevel: 10, apply: () => { getWeapon('orbitingBall').rotSpeed += 0.5; upgradeLevels['rotspeed'] = (upgradeLevels['rotspeed'] || 0) + 1; } },
+  { id: 'orbitradius', name: 'Orbit Radius', desc: '+20 Orbit Distance', icon: '🔵', weaponId: 'orbitingBall', maxLevel: 5, apply: () => { getWeapon('orbitingBall').radius += 20; upgradeLevels['orbitradius'] = (upgradeLevels['orbitradius'] || 0) + 1; } },
+  { id: 'balldamage', name: 'Ball Damage', desc: '+8 Ball Damage', icon: '💥', weaponId: 'orbitingBall', maxLevel: 10, apply: () => { getWeapon('orbitingBall').damage += 8; upgradeLevels['balldamage'] = (upgradeLevels['balldamage'] || 0) + 1; } }
 ];
 
 const areaDamageUpgrades = [
-  { name: 'Area Radius', desc: '+30 Area Range', icon: '🔴', weaponId: 'areaDamage', apply: () => getWeapon('areaDamage').radius += 30 },
-  { name: 'Area DPS', desc: '+3 Damage/Second', icon: '🔥', weaponId: 'areaDamage', apply: () => getWeapon('areaDamage').dps += 3 }
+  { id: 'arearadius', name: 'Area Radius', desc: '+30 Area Range', icon: '🔴', weaponId: 'areaDamage', maxLevel: 5, apply: () => { getWeapon('areaDamage').radius += 30; upgradeLevels['arearadius'] = (upgradeLevels['arearadius'] || 0) + 1; } },
+  { id: 'areadps', name: 'Area DPS', desc: '+3 Damage/Second', icon: '🔥', weaponId: 'areaDamage', maxLevel: 10, apply: () => { getWeapon('areaDamage').dps += 3; upgradeLevels['areadps'] = (upgradeLevels['areadps'] || 0) + 1; } }
 ];
 
 // Rare upgrades (more powerful versions)
 const rareUpgrades = [
-  { name: 'Triple Shot', desc: '+3 Projectiles', icon: '🔫🔫', weaponId: 'projectile', apply: () => getWeapon('projectile').count += 3 },
-  { name: 'Rapid Fire', desc: '-200ms Fire Delay', icon: '⚡⚡', weaponId: 'projectile', apply: () => getWeapon('projectile').fireRate = Math.max(100, getWeapon('projectile').fireRate - 200) },
-  { name: 'Massive Damage', desc: '+30 Projectile Damage', icon: '🗡️🗡️', weaponId: 'projectile', apply: () => getWeapon('projectile').damage += 30 },
-  { name: 'Double Balls', desc: '+2 Orbiting Balls', icon: '⚪⚪', weaponId: 'orbitingBall', apply: () => getWeapon('orbitingBall').count += 2 },
-  { name: 'Mega Ball Damage', desc: '+25 Ball Damage', icon: '💥💥', weaponId: 'orbitingBall', apply: () => getWeapon('orbitingBall').damage += 25 },
-  { name: 'Huge Area', desc: '+100 Area Range', icon: '🔴🔴', weaponId: 'areaDamage', apply: () => getWeapon('areaDamage').radius += 100 },
-  { name: 'Devastating DPS', desc: '+15 Damage/Second', icon: '🔥🔥', weaponId: 'areaDamage', apply: () => getWeapon('areaDamage').dps += 15 }
+  { id: 'rare_tripleshot', name: 'Triple Shot', desc: '+3 Projectiles', icon: '🔫🔫', weaponId: 'projectile', maxLevel: 2, apply: () => { getWeapon('projectile').count += 3; upgradeLevels['rare_tripleshot'] = (upgradeLevels['rare_tripleshot'] || 0) + 1; } },
+  { id: 'rare_rapidfire', name: 'Rapid Fire', desc: '-40% Fire Delay', icon: '⚡⚡', weaponId: 'projectile', maxLevel: 3, apply: () => { getWeapon('projectile').fireRate = Math.max(100, getWeapon('projectile').fireRate * 0.6); upgradeLevels['rare_rapidfire'] = (upgradeLevels['rare_rapidfire'] || 0) + 1; } },
+  { id: 'rare_massdmg', name: 'Massive Damage', desc: '+30 Projectile Damage', icon: '🗡️🗡️', weaponId: 'projectile', maxLevel: 3, apply: () => { getWeapon('projectile').damage += 30; upgradeLevels['rare_massdmg'] = (upgradeLevels['rare_massdmg'] || 0) + 1; } },
+  { id: 'rare_doubleballs', name: 'Double Balls', desc: '+2 Orbiting Balls', icon: '⚪⚪', weaponId: 'orbitingBall', maxLevel: 2, apply: () => { getWeapon('orbitingBall').count += 2; upgradeLevels['rare_doubleballs'] = (upgradeLevels['rare_doubleballs'] || 0) + 1; } },
+  { id: 'rare_megaballdmg', name: 'Mega Ball Damage', desc: '+25 Ball Damage', icon: '💥💥', weaponId: 'orbitingBall', maxLevel: 3, apply: () => { getWeapon('orbitingBall').damage += 25; upgradeLevels['rare_megaballdmg'] = (upgradeLevels['rare_megaballdmg'] || 0) + 1; } },
+  { id: 'rare_hugearea', name: 'Huge Area', desc: '+100 Area Range', icon: '🔴🔴', weaponId: 'areaDamage', maxLevel: 2, apply: () => { getWeapon('areaDamage').radius += 100; upgradeLevels['rare_hugearea'] = (upgradeLevels['rare_hugearea'] || 0) + 1; } },
+  { id: 'rare_devastdps', name: 'Devastating DPS', desc: '+15 Damage/Second', icon: '🔥🔥', weaponId: 'areaDamage', maxLevel: 3, apply: () => { getWeapon('areaDamage').dps += 15; upgradeLevels['rare_devastdps'] = (upgradeLevels['rare_devastdps'] || 0) + 1; } }
 ];
 
 function preload() {
@@ -599,6 +607,11 @@ function showUpgradeMenu() {
     availableUpgrades.push(...areaDamageUpgrades);
   }
 
+  // Filter out upgrades that have reached max level
+  availableUpgrades = availableUpgrades.filter(u =>
+    (upgradeLevels[u.id] || 0) < u.maxLevel
+  );
+
   // Semi-transparent overlay
   const overlay = scene.add.graphics();
   overlay.fillStyle(0x000000, 0.85);
@@ -617,6 +630,39 @@ function showUpgradeMenu() {
 
   // Shuffle and pick 3 upgrades
   const shuffled = [...availableUpgrades].sort(() => Math.random() - 0.5).slice(0, 3);
+
+  // Reset menu state
+  selectedIndex = 0;
+  menuOptions = [];
+
+  const selectUpgrade = (upgrade) => {
+    upgrade.apply();
+    playTone(scene, 1000, 0.1);
+
+    // Clean up menu
+    overlay.destroy();
+    title.destroy();
+    scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
+
+    // Remove keyboard listeners
+    menuKeys.forEach(k => k.removeAllListeners());
+    menuKeys = [];
+
+    // Resume physics
+    scene.physics.resume();
+    levelingUp = false;
+  };
+
+  const updateSelection = () => {
+    menuOptions.forEach((option, i) => {
+      const isSelected = i === selectedIndex;
+      option.btn.clear();
+      option.btn.fillStyle(isSelected ? 0x555555 : 0x333333, 1);
+      option.btn.fillRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
+      option.btn.lineStyle(3, isSelected ? 0xffff00 : 0x00ff00, 1);
+      option.btn.strokeRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
+    });
+  };
 
   shuffled.forEach((upgrade, i) => {
     const x = 150 + i * 250;
@@ -651,39 +697,44 @@ function showUpgradeMenu() {
       color: '#cccccc'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
 
+    // Store option reference
+    menuOptions.push({ btn, upgrade, x, y });
+
     // Click handler
-    btn.on('pointerdown', () => {
-      upgrade.apply();
-      playTone(scene, 1000, 0.1);
-
-      // Clean up menu
-      overlay.destroy();
-      title.destroy();
-      scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
-
-      // Resume physics
-      scene.physics.resume();
-
-      levelingUp = false;
-    });
+    btn.on('pointerdown', () => selectUpgrade(upgrade));
 
     // Hover effect
     btn.on('pointerover', () => {
-      btn.clear();
-      btn.fillStyle(0x444444, 1);
-      btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
-      btn.lineStyle(3, 0x00ff00, 1);
-      btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
-    });
-
-    btn.on('pointerout', () => {
-      btn.clear();
-      btn.fillStyle(0x333333, 1);
-      btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
-      btn.lineStyle(3, 0x00ff00, 1);
-      btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
+      selectedIndex = i;
+      updateSelection();
     });
   });
+
+  // Initial selection highlight
+  updateSelection();
+
+  // Keyboard controls
+  const leftKey = scene.input.keyboard.addKey('LEFT');
+  const rightKey = scene.input.keyboard.addKey('RIGHT');
+  const enterKey = scene.input.keyboard.addKey('ENTER');
+
+  leftKey.on('down', () => {
+    selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
+    updateSelection();
+    playTone(scene, 800, 0.05);
+  });
+
+  rightKey.on('down', () => {
+    selectedIndex = (selectedIndex + 1) % menuOptions.length;
+    updateSelection();
+    playTone(scene, 800, 0.05);
+  });
+
+  enterKey.on('down', () => {
+    selectUpgrade(menuOptions[selectedIndex].upgrade);
+  });
+
+  menuKeys.push(leftKey, rightKey, enterKey);
 }
 
 function showWeaponSelector(weapons) {
@@ -705,6 +756,46 @@ function showWeaponSelector(weapons) {
     stroke: '#000000',
     strokeThickness: 6
   }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+
+  // Reset menu state
+  selectedIndex = 0;
+  menuOptions = [];
+
+  const selectWeapon = (weapon) => {
+    weapon.unlocked = true;
+    playTone(scene, 1500, 0.2);
+
+    // Initialize weapon
+    if (weapon.id === 'orbitingBall') {
+      initOrbitingBalls();
+    } else if (weapon.id === 'areaDamage') {
+      initAreaDamage();
+    }
+
+    // Clean up menu
+    overlay.destroy();
+    title.destroy();
+    scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
+
+    // Remove keyboard listeners
+    menuKeys.forEach(k => k.removeAllListeners());
+    menuKeys = [];
+
+    // Resume
+    scene.physics.resume();
+    selectingWeapon = false;
+  };
+
+  const updateSelection = () => {
+    menuOptions.forEach((option, i) => {
+      const isSelected = i === selectedIndex;
+      option.btn.clear();
+      option.btn.fillStyle(isSelected ? 0x555555 : 0x333333, 1);
+      option.btn.fillRoundedRect(option.x - 90, option.y - 100, 180, 200, 10);
+      option.btn.lineStyle(3, isSelected ? 0xffff00 : 0xffaa00, 1);
+      option.btn.strokeRoundedRect(option.x - 90, option.y - 100, 180, 200, 10);
+    });
+  };
 
   // Show available weapons
   weapons.forEach((weapon, i) => {
@@ -739,55 +830,56 @@ function showWeaponSelector(weapons) {
       align: 'center'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
 
+    // Store option reference
+    menuOptions.push({ btn, weapon, x, y });
+
     // Click handler
-    btn.on('pointerdown', () => {
-      weapon.unlocked = true;
-      playTone(scene, 1500, 0.2);
-
-      // Initialize weapon
-      if (weapon.id === 'orbitingBall') {
-        initOrbitingBalls();
-      } else if (weapon.id === 'areaDamage') {
-        initAreaDamage();
-      }
-
-      // Clean up menu
-      overlay.destroy();
-      title.destroy();
-      scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
-
-      // Resume
-      scene.physics.resume();
-      selectingWeapon = false;
-    });
+    btn.on('pointerdown', () => selectWeapon(weapon));
 
     // Hover effect
     btn.on('pointerover', () => {
-      btn.clear();
-      btn.fillStyle(0x444444, 1);
-      btn.fillRoundedRect(x - 90, y - 100, 180, 200, 10);
-      btn.lineStyle(3, 0xffaa00, 1);
-      btn.strokeRoundedRect(x - 90, y - 100, 180, 200, 10);
-    });
-
-    btn.on('pointerout', () => {
-      btn.clear();
-      btn.fillStyle(0x333333, 1);
-      btn.fillRoundedRect(x - 90, y - 100, 180, 200, 10);
-      btn.lineStyle(3, 0xffaa00, 1);
-      btn.strokeRoundedRect(x - 90, y - 100, 180, 200, 10);
+      selectedIndex = i;
+      updateSelection();
     });
   });
+
+  // Initial selection highlight
+  updateSelection();
+
+  // Keyboard controls
+  const leftKey = scene.input.keyboard.addKey('LEFT');
+  const rightKey = scene.input.keyboard.addKey('RIGHT');
+  const enterKey = scene.input.keyboard.addKey('ENTER');
+
+  leftKey.on('down', () => {
+    selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
+    updateSelection();
+    playTone(scene, 800, 0.05);
+  });
+
+  rightKey.on('down', () => {
+    selectedIndex = (selectedIndex + 1) % menuOptions.length;
+    updateSelection();
+    playTone(scene, 800, 0.05);
+  });
+
+  enterKey.on('down', () => {
+    selectWeapon(menuOptions[selectedIndex].weapon);
+  });
+
+  menuKeys.push(leftKey, rightKey, enterKey);
 }
 
 function showRareUpgradeMenu() {
   selectingWeapon = true;
   scene.physics.pause();
 
-  // Filter rare upgrades to only unlocked weapons
+  // Filter rare upgrades to only unlocked weapons and not maxed
   const available = rareUpgrades.filter(u => {
     if (!u.weaponId) return true; // Player upgrades
-    return getWeapon(u.weaponId).unlocked;
+    const isUnlocked = getWeapon(u.weaponId).unlocked;
+    const notMaxed = (upgradeLevels[u.id] || 0) < u.maxLevel;
+    return isUnlocked && notMaxed;
   });
 
   // Semi-transparent overlay
@@ -808,6 +900,39 @@ function showRareUpgradeMenu() {
 
   // Shuffle and pick 3 rare upgrades
   const shuffled = [...available].sort(() => Math.random() - 0.5).slice(0, 3);
+
+  // Reset menu state
+  selectedIndex = 0;
+  menuOptions = [];
+
+  const selectUpgrade = (upgrade) => {
+    upgrade.apply();
+    playTone(scene, 1800, 0.1);
+
+    // Clean up menu
+    overlay.destroy();
+    title.destroy();
+    scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
+
+    // Remove keyboard listeners
+    menuKeys.forEach(k => k.removeAllListeners());
+    menuKeys = [];
+
+    // Resume
+    scene.physics.resume();
+    selectingWeapon = false;
+  };
+
+  const updateSelection = () => {
+    menuOptions.forEach((option, i) => {
+      const isSelected = i === selectedIndex;
+      option.btn.clear();
+      option.btn.fillStyle(isSelected ? 0x550055 : 0x330033, 1);
+      option.btn.fillRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
+      option.btn.lineStyle(3, isSelected ? 0xffff00 : 0xff00ff, 1);
+      option.btn.strokeRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
+    });
+  };
 
   shuffled.forEach((upgrade, i) => {
     const x = 150 + i * 250;
@@ -843,38 +968,44 @@ function showRareUpgradeMenu() {
       color: '#ffaaff'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
 
+    // Store option reference
+    menuOptions.push({ btn, upgrade, x, y });
+
     // Click handler
-    btn.on('pointerdown', () => {
-      upgrade.apply();
-      playTone(scene, 1800, 0.1);
-
-      // Clean up menu
-      overlay.destroy();
-      title.destroy();
-      scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
-
-      // Resume
-      scene.physics.resume();
-      selectingWeapon = false;
-    });
+    btn.on('pointerdown', () => selectUpgrade(upgrade));
 
     // Hover effect
     btn.on('pointerover', () => {
-      btn.clear();
-      btn.fillStyle(0x440044, 1);
-      btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
-      btn.lineStyle(3, 0xff00ff, 1);
-      btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
-    });
-
-    btn.on('pointerout', () => {
-      btn.clear();
-      btn.fillStyle(0x330033, 1);
-      btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
-      btn.lineStyle(3, 0xff00ff, 1);
-      btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
+      selectedIndex = i;
+      updateSelection();
     });
   });
+
+  // Initial selection highlight
+  updateSelection();
+
+  // Keyboard controls
+  const leftKey = scene.input.keyboard.addKey('LEFT');
+  const rightKey = scene.input.keyboard.addKey('RIGHT');
+  const enterKey = scene.input.keyboard.addKey('ENTER');
+
+  leftKey.on('down', () => {
+    selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
+    updateSelection();
+    playTone(scene, 800, 0.05);
+  });
+
+  rightKey.on('down', () => {
+    selectedIndex = (selectedIndex + 1) % menuOptions.length;
+    updateSelection();
+    playTone(scene, 800, 0.05);
+  });
+
+  enterKey.on('down', () => {
+    selectUpgrade(menuOptions[selectedIndex].upgrade);
+  });
+
+  menuKeys.push(leftKey, rightKey, enterKey);
 }
 
 function createUI() {
@@ -1089,6 +1220,9 @@ function restartGame() {
   bossTimer = 0;
   warningActive = false;
 
+  // Reset upgrade levels
+  upgradeLevels = {};
+
   // Reset weapons
   weaponTypes.forEach(weapon => {
     if (weapon.id === 'projectile') {
@@ -1099,14 +1233,14 @@ function restartGame() {
       weapon.penetration = 0;
     } else if (weapon.id === 'orbitingBall') {
       weapon.unlocked = false;
-      weapon.count = 1;
+      weapon.count = 2;
       weapon.rotSpeed = 2;
       weapon.radius = 80;
       weapon.damage = 15;
     } else if (weapon.id === 'areaDamage') {
       weapon.unlocked = false;
       weapon.radius = 150;
-      weapon.dps = 5;
+      weapon.dps = 10;
       weapon.tickRate = 500;
       weapon.lastTick = 0;
     } else {
