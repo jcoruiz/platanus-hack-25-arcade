@@ -663,10 +663,14 @@ function hitEnemy(proj, enemy) {
 function hitPlayer(_playerObj, enemy) {
   if (!enemy.active) return;
 
+  // Check cooldown (prevent damage every frame)
+  const lastHit = enemy.getData('lastHitTime') || 0;
+  if (gameTime - lastHit < 500) return; // 500ms cooldown per enemy
+
   const damage = enemy.getData('damage') || difficulty.enemyDamage;
   stats.hp -= damage;
   playTone(scene, 220, 0.15);
-  enemy.destroy();
+  enemy.setData('lastHitTime', gameTime);
 
   if (stats.hp <= 0) {
     endGame();
