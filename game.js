@@ -16,7 +16,7 @@ const config = {
 new Phaser.Game(config);
 
 // Game state
-let player, cursors, enemies, projectiles, xpOrbs, graphics;
+let player, cursors, enemies, projectiles, xpOrbs, obstacles, graphics;
 let gameOver = false, levelingUp = false;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0;
 let waveTimer = 0, bossTimer = 0;
@@ -107,12 +107,23 @@ function preload() {
   g.generateTexture('xp', 10, 10);
   g.clear();
 
+  // Obstacle texture (gray rock)
+  g.fillStyle(0x555555, 1);
+  g.fillCircle(20, 20, 20);
+  g.fillStyle(0x777777, 0.5);
+  g.fillCircle(15, 15, 10);
+  g.generateTexture('obstacle', 40, 40);
+  g.clear();
+
   g.destroy();
 }
 
 function create() {
   scene = this;
   graphics = this.add.graphics();
+
+  // Expand world bounds (3x larger than screen)
+  this.physics.world.setBounds(0, 0, 2400, 1800);
 
   // Initialize unlocked types with first type
   unlockedTypes = [enemyTypes[0]];
@@ -121,11 +132,24 @@ function create() {
   enemies = this.physics.add.group();
   projectiles = this.physics.add.group();
   xpOrbs = this.physics.add.group();
+  obstacles = this.physics.add.staticGroup();
 
-  // Create player
-  player = this.physics.add.image(400, 300, 'player');
+  // Spawn obstacles randomly across map
+  for (let i = 0; i < 80; i++) {
+    const x = 100 + Math.random() * 2200;
+    const y = 100 + Math.random() * 1600;
+    const obs = obstacles.create(x, y, 'obstacle');
+    obs.setCircle(20);
+  }
+
+  // Create player at center of world
+  player = this.physics.add.image(1200, 900, 'player');
   player.setCollideWorldBounds(true);
   player.body.setCircle(12);
+
+  // Camera follows player
+  this.cameras.main.startFollow(player);
+  this.cameras.main.setBounds(0, 0, 2400, 1800);
 
   // Input
   cursors = this.input.keyboard.createCursorKeys();
@@ -137,6 +161,11 @@ function create() {
 
   // Enemy-to-enemy collisions (they push each other)
   this.physics.add.collider(enemies, enemies);
+
+  // Obstacle collisions
+  this.physics.add.collider(player, obstacles);
+  this.physics.add.collider(enemies, obstacles);
+  this.physics.add.collider(projectiles, obstacles);
 
   // Create UI
   createUI(this);
@@ -295,10 +324,18 @@ function spawnEnemy() {
   const side = Math.floor(Math.random() * 4);
   let x, y;
 
-  if (side === 0) { x = Math.random() * 800; y = -20; }
-  else if (side === 1) { x = Math.random() * 800; y = 620; }
-  else if (side === 2) { x = -20; y = Math.random() * 600; }
-  else { x = 820; y = Math.random() * 600; }
+  // Spawn relative to player position, outside camera view
+  const px = player.x;
+  const py = player.y;
+
+  if (side === 0) { x = px + (Math.random() - 0.5) * 800; y = py - 350; }
+  else if (side === 1) { x = px + (Math.random() - 0.5) * 800; y = py + 350; }
+  else if (side === 2) { x = px - 450; y = py + (Math.random() - 0.5) * 600; }
+  else { x = px + 450; y = py + (Math.random() - 0.5) * 600; }
+
+  // Keep within world bounds
+  x = Math.max(20, Math.min(2380, x));
+  y = Math.max(20, Math.min(1780, y));
 
   // Select random enemy type from unlocked types
   const type = unlockedTypes[Math.floor(Math.random() * unlockedTypes.length)];
@@ -384,6 +421,7 @@ function showUpgradeMenu() {
   const overlay = scene.add.graphics();
   overlay.fillStyle(0x000000, 0.85);
   overlay.fillRect(0, 0, 800, 600);
+  overlay.setScrollFactor(0);
   overlay.setDepth(100);
 
   // Title
@@ -393,7 +431,7 @@ function showUpgradeMenu() {
     color: '#ffff00',
     stroke: '#000000',
     strokeThickness: 6
-  }).setOrigin(0.5).setDepth(101);
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
 
   // Shuffle and pick 3 upgrades
   const shuffled = [...upgrades].sort(() => Math.random() - 0.5).slice(0, 3);
@@ -408,27 +446,28 @@ function showUpgradeMenu() {
     btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
     btn.lineStyle(3, 0x00ff00, 1);
     btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
+    btn.setScrollFactor(0);
     btn.setDepth(101);
     btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 80, 180, 160), Phaser.Geom.Rectangle.Contains);
 
     // Icon
     scene.add.text(x, y - 30, upgrade.icon, {
       fontSize: '48px'
-    }).setOrigin(0.5).setDepth(102);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
 
     // Name
     scene.add.text(x, y + 20, upgrade.name, {
       fontSize: '20px',
       fontFamily: 'Arial',
       color: '#ffffff'
-    }).setOrigin(0.5).setDepth(102);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
 
     // Description
     scene.add.text(x, y + 50, upgrade.desc, {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: '#cccccc'
-    }).setOrigin(0.5).setDepth(102);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
 
     // Click handler
     btn.on('pointerdown', () => {
@@ -471,28 +510,28 @@ function createUI() {
     fontSize: '16px',
     fontFamily: 'Arial',
     color: '#ffffff'
-  });
+  }).setScrollFactor(0);
 
   // XP Bar label
   ui.xpText = scene.add.text(300, 10, 'XP:', {
     fontSize: '16px',
     fontFamily: 'Arial',
     color: '#ffffff'
-  });
+  }).setScrollFactor(0);
 
   // Level
   ui.levelText = scene.add.text(550, 10, 'Level: 1', {
     fontSize: '16px',
     fontFamily: 'Arial',
     color: '#ffff00'
-  });
+  }).setScrollFactor(0);
 
   // Timer
   ui.timeText = scene.add.text(700, 10, '0:00', {
     fontSize: '16px',
     fontFamily: 'Arial',
     color: '#00ffff'
-  });
+  }).setScrollFactor(0);
 }
 
 function updateUI() {
@@ -505,6 +544,7 @@ function updateUI() {
 
 function drawUIBars() {
   graphics.clear();
+  graphics.setScrollFactor(0);
 
   // HP Bar background
   graphics.fillStyle(0x440000, 1);
@@ -555,7 +595,7 @@ function drawUIBars() {
       color: '#ff0000',
       stroke: '#000000',
       strokeThickness: 4
-    }).setOrigin(0.5).setDepth(200);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
 
     // Background
     graphics.fillStyle(0x440000, 1);
@@ -577,24 +617,8 @@ function drawUIBars() {
       color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 3
-    }).setOrigin(0.5).setDepth(200);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
   }
-
-  // Draw enemy HP bars (smaller for regular enemies)
-  enemies.children.entries.forEach(enemy => {
-    if (!enemy.active || enemy.getData('isBoss')) return;
-    const hp = enemy.getData('hp');
-    const maxHp = enemy.getData('maxHp');
-    const barWidth = 20;
-    const barHeight = 3;
-    const x = enemy.x - barWidth / 2;
-    const y = enemy.y - 20;
-
-    graphics.fillStyle(0x440000, 1);
-    graphics.fillRect(x, y, barWidth, barHeight);
-    graphics.fillStyle(0xff0000, 1);
-    graphics.fillRect(x, y, barWidth * (hp / maxHp), barHeight);
-  });
 }
 
 function endGame() {
@@ -605,6 +629,7 @@ function endGame() {
   const overlay = scene.add.graphics();
   overlay.fillStyle(0x000000, 0.8);
   overlay.fillRect(0, 0, 800, 600);
+  overlay.setScrollFactor(0);
 
   // Game Over text
   scene.add.text(400, 200, 'GAME OVER', {
@@ -613,7 +638,7 @@ function endGame() {
     color: '#ff0000',
     stroke: '#000000',
     strokeThickness: 8
-  }).setOrigin(0.5);
+  }).setOrigin(0.5).setScrollFactor(0);
 
   // Stats
   const minutes = Math.floor(gameTime / 60000);
@@ -623,26 +648,26 @@ function endGame() {
     fontSize: '28px',
     fontFamily: 'Arial',
     color: '#00ffff'
-  }).setOrigin(0.5);
+  }).setOrigin(0.5).setScrollFactor(0);
 
   scene.add.text(400, 350, `Level Reached: ${stats.level}`, {
     fontSize: '28px',
     fontFamily: 'Arial',
     color: '#ffff00'
-  }).setOrigin(0.5);
+  }).setOrigin(0.5).setScrollFactor(0);
 
   scene.add.text(400, 400, `Enemies Killed: ${stats.enemiesKilled}`, {
     fontSize: '28px',
     fontFamily: 'Arial',
     color: '#00ff00'
-  }).setOrigin(0.5);
+  }).setOrigin(0.5).setScrollFactor(0);
 
   // Restart text
   const restartText = scene.add.text(400, 500, 'Press R to Restart', {
     fontSize: '24px',
     fontFamily: 'Arial',
     color: '#ffffff'
-  }).setOrigin(0.5);
+  }).setOrigin(0.5).setScrollFactor(0);
 
   // Blink animation
   scene.tweens.add({
@@ -700,15 +725,19 @@ function spawnWave() {
   warningActive = false;
   playTone(scene, 800, 0.2);
 
-  // Spawn 15-20 enemies
+  // Spawn 15-20 enemies in a circle around player
   const count = 15 + Math.floor(Math.random() * 6);
   const angleStep = (Math.PI * 2) / count;
 
   for (let i = 0; i < count; i++) {
     const angle = i * angleStep;
     const distance = 400;
-    const x = 400 + Math.cos(angle) * distance;
-    const y = 300 + Math.sin(angle) * distance;
+    let x = player.x + Math.cos(angle) * distance;
+    let y = player.y + Math.sin(angle) * distance;
+
+    // Keep within world bounds
+    x = Math.max(20, Math.min(2380, x));
+    y = Math.max(20, Math.min(1780, y));
 
     // Select random type from unlocked
     const type = unlockedTypes[Math.floor(Math.random() * unlockedTypes.length)];
@@ -731,14 +760,18 @@ function spawnBoss() {
   // Select highest unlocked type for boss
   const type = unlockedTypes[unlockedTypes.length - 1];
 
-  // Spawn boss from random edge
+  // Spawn boss from random direction relative to player
   const side = Math.floor(Math.random() * 4);
   let x, y;
 
-  if (side === 0) { x = 400; y = -50; }
-  else if (side === 1) { x = 400; y = 650; }
-  else if (side === 2) { x = -50; y = 300; }
-  else { x = 850; y = 300; }
+  if (side === 0) { x = player.x; y = player.y - 400; }
+  else if (side === 1) { x = player.x; y = player.y + 400; }
+  else if (side === 2) { x = player.x - 500; y = player.y; }
+  else { x = player.x + 500; y = player.y; }
+
+  // Keep within world bounds
+  x = Math.max(50, Math.min(2350, x));
+  y = Math.max(50, Math.min(1750, y));
 
   const boss = enemies.create(x, y, `boss_${type.name}`);
   boss.body.setCircle(30);
@@ -758,6 +791,7 @@ function showWarning(text, color) {
   const warning = scene.add.graphics();
   warning.fillStyle(color, 0.3);
   warning.fillRect(0, 250, 800, 100);
+  warning.setScrollFactor(0);
   warning.setDepth(50);
 
   // Warning text
@@ -767,7 +801,7 @@ function showWarning(text, color) {
     color: '#ffffff',
     stroke: '#000000',
     strokeThickness: 6
-  }).setOrigin(0.5).setDepth(51);
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(51);
 
   // Flash animation
   scene.tweens.add({
