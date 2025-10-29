@@ -181,16 +181,126 @@ function preload() {
   g.generateTexture('player', 32, 32);
   g.clear();
 
-  // Enemy textures (one for each type)
+  // Enemy textures (one for each type) - different shapes
   enemyTypes.forEach(type => {
+    // Normal enemy
     g.fillStyle(type.color, 1);
-    g.fillCircle(10, 10, 10);
+    if (type.name === 'green') {
+      // Triangle
+      g.fillTriangle(10, 2, 2, 18, 18, 18);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(7, 10, 2);
+      g.fillCircle(13, 10, 2);
+    } else if (type.name === 'blue') {
+      // Diamond
+      g.fillTriangle(10, 2, 2, 10, 10, 18);
+      g.fillTriangle(10, 2, 18, 10, 10, 18);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(8, 8, 2);
+      g.fillCircle(12, 8, 2);
+    } else if (type.name === 'cyan') {
+      // Pentagon-ish
+      g.fillCircle(10, 10, 9);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(7, 9, 2);
+      g.fillCircle(13, 9, 2);
+      g.fillStyle(type.color, 0.7);
+      g.fillCircle(10, 6, 3);
+    } else if (type.name === 'yellow') {
+      // Square
+      g.fillRect(3, 3, 14, 14);
+      g.fillStyle(0x000000, 1);
+      g.fillCircle(7, 8, 2);
+      g.fillCircle(13, 8, 2);
+      g.fillRect(6, 13, 8, 2);
+    } else if (type.name === 'orange') {
+      // Star-like
+      g.fillCircle(10, 10, 9);
+      g.fillTriangle(10, 1, 7, 8, 13, 8);
+      g.fillTriangle(10, 19, 7, 12, 13, 12);
+      g.fillTriangle(1, 10, 8, 7, 8, 13);
+      g.fillTriangle(19, 10, 12, 7, 12, 13);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(7, 8, 2);
+      g.fillCircle(13, 8, 2);
+    } else if (type.name === 'red') {
+      // Hexagon-ish with horns
+      g.fillCircle(10, 10, 9);
+      g.fillTriangle(3, 5, 5, 2, 7, 5);
+      g.fillTriangle(17, 5, 15, 2, 13, 5);
+      g.fillStyle(0xff0000, 1);
+      g.fillCircle(7, 9, 2);
+      g.fillCircle(13, 9, 2);
+      g.fillRect(7, 14, 6, 2);
+    } else if (type.name === 'purple') {
+      // Alien-like
+      g.fillRect(4, 6, 12, 10);
+      g.fillCircle(6, 6, 3);
+      g.fillCircle(14, 6, 3);
+      g.fillStyle(0x00ff00, 1);
+      g.fillCircle(7, 10, 3);
+      g.fillCircle(13, 10, 3);
+      g.fillStyle(0x000000, 1);
+      g.fillCircle(7, 10, 2);
+      g.fillCircle(13, 10, 2);
+    }
     g.generateTexture(`enemy_${type.name}`, 20, 20);
     g.clear();
 
-    // Boss texture (3x size)
+    // Boss texture (3x size) - similar shapes scaled up
     g.fillStyle(type.color, 1);
-    g.fillCircle(30, 30, 30);
+    if (type.name === 'green') {
+      g.fillTriangle(30, 6, 6, 54, 54, 54);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(21, 30, 6);
+      g.fillCircle(39, 30, 6);
+    } else if (type.name === 'blue') {
+      g.fillTriangle(30, 6, 6, 30, 30, 54);
+      g.fillTriangle(30, 6, 54, 30, 30, 54);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(24, 24, 6);
+      g.fillCircle(36, 24, 6);
+    } else if (type.name === 'cyan') {
+      g.fillCircle(30, 30, 27);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(21, 27, 6);
+      g.fillCircle(39, 27, 6);
+      g.fillStyle(type.color, 0.7);
+      g.fillCircle(30, 18, 9);
+    } else if (type.name === 'yellow') {
+      g.fillRect(9, 9, 42, 42);
+      g.fillStyle(0x000000, 1);
+      g.fillCircle(21, 24, 6);
+      g.fillCircle(39, 24, 6);
+      g.fillRect(18, 39, 24, 6);
+    } else if (type.name === 'orange') {
+      g.fillCircle(30, 30, 27);
+      g.fillTriangle(30, 3, 21, 24, 39, 24);
+      g.fillTriangle(30, 57, 21, 36, 39, 36);
+      g.fillTriangle(3, 30, 24, 21, 24, 39);
+      g.fillTriangle(57, 30, 36, 21, 36, 39);
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(21, 24, 6);
+      g.fillCircle(39, 24, 6);
+    } else if (type.name === 'red') {
+      g.fillCircle(30, 30, 27);
+      g.fillTriangle(9, 15, 15, 6, 21, 15);
+      g.fillTriangle(51, 15, 45, 6, 39, 15);
+      g.fillStyle(0xff0000, 1);
+      g.fillCircle(21, 27, 6);
+      g.fillCircle(39, 27, 6);
+      g.fillRect(21, 42, 18, 6);
+    } else if (type.name === 'purple') {
+      g.fillRect(12, 18, 36, 30);
+      g.fillCircle(18, 18, 9);
+      g.fillCircle(42, 18, 9);
+      g.fillStyle(0x00ff00, 1);
+      g.fillCircle(21, 30, 9);
+      g.fillCircle(39, 30, 9);
+      g.fillStyle(0x000000, 1);
+      g.fillCircle(21, 30, 6);
+      g.fillCircle(39, 30, 6);
+    }
     g.generateTexture(`boss_${type.name}`, 60, 60);
     g.clear();
   });
