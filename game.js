@@ -21,7 +21,7 @@ let areaDamageCircle = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
-let nextWaveTime = 60000, nextBossTime = 120000;
+let nextWaveTime = 60000, nextBossTime = 30000;
 let warningActive = false;
 let scene;
 
@@ -78,18 +78,6 @@ const weaponTypes = [
     dps: 10,
     tickRate: 500,
     lastTick: 0
-  },
-  {
-    id: 'placeholder1',
-    name: 'Arma Futura 1',
-    desc: 'Por desbloquear...',
-    unlocked: false
-  },
-  {
-    id: 'placeholder2',
-    name: 'Arma Futura 2',
-    desc: 'Por desbloquear...',
-    unlocked: false
   }
 ];
 
@@ -620,12 +608,10 @@ function spawnEnemy() {
 
   // Apply type multipliers to difficulty base stats
   enemy.setData('hp', difficulty.enemyHp * type.hpMult);
-  enemy.setData('maxHp', difficulty.enemyHp * type.hpMult);
   enemy.setData('speed', difficulty.enemySpeed * type.speedMult);
   enemy.setData('damage', difficulty.enemyDamage * type.damageMult);
   enemy.setData('xpValue', type.xp);
   enemy.setData('dropChance', type.dropChance);
-  enemy.setData('type', type.name);
   enemy.setData('knockbackUntil', 0);
 }
 
@@ -1583,9 +1569,13 @@ function drawUIBars() {
     const x = 100;
     const y = 50;
 
+    // Destroy old boss texts if they exist
+    if (ui.bossLabelText) ui.bossLabelText.destroy();
+    if (ui.bossHpText) ui.bossHpText.destroy();
+
     // Boss label
     graphics.fillStyle(0xffffff, 1);
-    scene.add.text(400, 40, '⚔️ BOSS ⚔️', {
+    ui.bossLabelText = scene.add.text(400, 40, '⚔️ BOSS ⚔️', {
       fontSize: '20px',
       fontFamily: 'Arial',
       color: '#ff0000',
@@ -1607,13 +1597,23 @@ function drawUIBars() {
 
     // HP text
     graphics.fillStyle(0xffffff, 1);
-    scene.add.text(400, 62, `${Math.ceil(hp)} / ${Math.ceil(maxHp)}`, {
+    ui.bossHpText = scene.add.text(400, 62, `${Math.ceil(hp)} / ${Math.ceil(maxHp)}`, {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 3
     }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
+  } else {
+    // Destroy boss texts when no boss
+    if (ui.bossLabelText) {
+      ui.bossLabelText.destroy();
+      ui.bossLabelText = null;
+    }
+    if (ui.bossHpText) {
+      ui.bossHpText.destroy();
+      ui.bossHpText = null;
+    }
   }
 }
 
@@ -1779,11 +1779,9 @@ function spawnWave() {
     const enemy = enemies.create(x, y, `enemy_${type.name}`);
     enemy.body.setCircle(10);
     enemy.setData('hp', difficulty.enemyHp * type.hpMult * 1.5);
-    enemy.setData('maxHp', difficulty.enemyHp * type.hpMult * 1.5);
     enemy.setData('speed', difficulty.enemySpeed * type.speedMult);
     enemy.setData('damage', difficulty.enemyDamage * type.damageMult);
     enemy.setData('xpValue', type.xp);
-    enemy.setData('type', type.name);
     enemy.setData('knockbackUntil', 0);
   }
 }
@@ -1815,7 +1813,6 @@ function spawnBoss() {
   boss.setData('speed', difficulty.enemySpeed * type.speedMult * 0.7);
   boss.setData('damage', difficulty.enemyDamage * type.damageMult * 2);
   boss.setData('xpValue', type.xp * 10);
-  boss.setData('type', type.name);
   boss.setData('isBoss', true);
   boss.setData('knockbackUntil', 0);
 }
@@ -2043,7 +2040,7 @@ function updateAreaDamage(delta) {
   }
 }
 
-function applyVisualFeedback(enemy) {
+function applyDamageFeedback(enemy, sourceX, sourceY) {
   if (!enemy.active) return;
 
   // Apply red tint fill (completely fills sprite with red, more visible)
@@ -2055,13 +2052,6 @@ function applyVisualFeedback(enemy) {
       enemy.clearTint();
     }
   });
-}
-
-function applyDamageFeedback(enemy, sourceX, sourceY) {
-  if (!enemy.active) return;
-
-  // Apply visual feedback
-  applyVisualFeedback(enemy);
 
   // Calculate knockback direction (away from source)
   const angle = Phaser.Math.Angle.Between(sourceX, sourceY, enemy.x, enemy.y);
