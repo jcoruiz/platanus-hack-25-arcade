@@ -16,8 +16,9 @@ const config = {
 new Phaser.Game(config);
 
 // Game state
-let player, cursors, enemies, projectiles, xpOrbs, obstacles, graphics;
-let gameOver = false, levelingUp = false;
+let player, cursors, enemies, projectiles, xpOrbs, obstacles, weaponChests, graphics;
+let areaDamageCircle = null;
+let gameOver = false, levelingUp = false, selectingWeapon = false;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0;
 let waveTimer = 0, bossTimer = 0;
 let nextWaveTime = 60000, nextBossTime = 120000;
@@ -37,14 +38,61 @@ const enemyTypes = [
 
 let unlockedTypes = [];
 
+// Weapon system
+const weaponTypes = [
+  {
+    id: 'projectile',
+    name: 'Proyectiles',
+    desc: 'Dispara automáticamente al enemigo más cercano',
+    unlocked: true,
+    count: 1,
+    fireRate: 500,
+    damage: 10,
+    penetration: 0
+  },
+  {
+    id: 'orbitingBall',
+    name: 'Bola Orbital',
+    desc: 'Bola que gira alrededor del jugador y daña enemigos',
+    unlocked: false,
+    count: 1,
+    rotSpeed: 2,
+    radius: 80,
+    damage: 15
+  },
+  {
+    id: 'areaDamage',
+    name: 'Área de Daño',
+    desc: 'Daña continuamente a enemigos cercanos',
+    unlocked: false,
+    radius: 150,
+    dps: 5,
+    tickRate: 500,
+    lastTick: 0
+  },
+  {
+    id: 'placeholder1',
+    name: 'Arma Futura 1',
+    desc: 'Por desbloquear...',
+    unlocked: false
+  },
+  {
+    id: 'placeholder2',
+    name: 'Arma Futura 2',
+    desc: 'Por desbloquear...',
+    unlocked: false
+  }
+];
+
+let orbitingBalls = [];
+let orbitAngle = 0;
+
 // Player stats
 let stats = {
   hp: 100,
   maxHp: 100,
   speed: 150,
-  damage: 10,
-  fireRate: 500,
-  projectileCount: 1,
+  knockback: 100,
   xp: 0,
   level: 1,
   xpToNext: 10,
@@ -62,13 +110,46 @@ let difficulty = {
 // UI elements
 let ui = {};
 
-// Upgrade options
-const upgrades = [
-  { name: 'Damage', desc: '+20% Damage', icon: '🗡️', apply: () => stats.damage *= 1.2 },
-  { name: 'Fire Rate', desc: '-15% Fire Delay', icon: '⚡', apply: () => stats.fireRate *= 0.85 },
+// Helper to get weapon by id
+function getWeapon(id) {
+  return weaponTypes.find(w => w.id === id);
+}
+
+// Upgrade options (organized by category)
+const playerUpgrades = [
   { name: 'Speed', desc: '+15% Move Speed', icon: '👟', apply: () => stats.speed *= 1.15 },
   { name: 'Max HP', desc: '+20 Max HP', icon: '❤️', apply: () => { stats.maxHp += 20; stats.hp += 20; } },
-  { name: 'Multi Shot', desc: '+1 Projectile', icon: '🔫', apply: () => stats.projectileCount++ }
+  { name: 'Knockback', desc: '+30% Enemy Pushback', icon: '💨', apply: () => stats.knockback *= 1.3 }
+];
+
+const projectileUpgrades = [
+  { name: 'Multi Shot', desc: '+1 Projectile', icon: '🔫', weaponId: 'projectile', apply: () => getWeapon('projectile').count++ },
+  { name: 'Fire Rate', desc: '-100ms Fire Delay', icon: '⚡', weaponId: 'projectile', apply: () => getWeapon('projectile').fireRate = Math.max(200, getWeapon('projectile').fireRate - 100) },
+  { name: 'Projectile Damage', desc: '+5 Damage', icon: '🗡️', weaponId: 'projectile', apply: () => getWeapon('projectile').damage += 5 },
+  { name: 'Penetration', desc: '+1 Enemy Pierced', icon: '⚔️', weaponId: 'projectile', apply: () => getWeapon('projectile').penetration++ }
+];
+
+const orbitingBallUpgrades = [
+  { name: 'More Balls', desc: '+1 Orbiting Ball', icon: '⚪', weaponId: 'orbitingBall', apply: () => getWeapon('orbitingBall').count++ },
+  { name: 'Rotation Speed', desc: '+0.5 Rotation Speed', icon: '🌀', weaponId: 'orbitingBall', apply: () => getWeapon('orbitingBall').rotSpeed += 0.5 },
+  { name: 'Orbit Radius', desc: '+20 Orbit Distance', icon: '🔵', weaponId: 'orbitingBall', apply: () => getWeapon('orbitingBall').radius += 20 },
+  { name: 'Ball Damage', desc: '+8 Ball Damage', icon: '💥', weaponId: 'orbitingBall', apply: () => getWeapon('orbitingBall').damage += 8 }
+];
+
+const areaDamageUpgrades = [
+  { name: 'Area Radius', desc: '+30 Area Range', icon: '🔴', weaponId: 'areaDamage', apply: () => getWeapon('areaDamage').radius += 30 },
+  { name: 'Area DPS', desc: '+3 Damage/Second', icon: '🔥', weaponId: 'areaDamage', apply: () => getWeapon('areaDamage').dps += 3 }
+];
+
+// Rare upgrades (more powerful versions)
+const rareUpgrades = [
+  { name: 'Triple Shot', desc: '+3 Projectiles', icon: '🔫🔫', weaponId: 'projectile', apply: () => getWeapon('projectile').count += 3 },
+  { name: 'Rapid Fire', desc: '-200ms Fire Delay', icon: '⚡⚡', weaponId: 'projectile', apply: () => getWeapon('projectile').fireRate = Math.max(100, getWeapon('projectile').fireRate - 200) },
+  { name: 'Massive Damage', desc: '+30 Projectile Damage', icon: '🗡️🗡️', weaponId: 'projectile', apply: () => getWeapon('projectile').damage += 30 },
+  { name: 'Double Balls', desc: '+2 Orbiting Balls', icon: '⚪⚪', weaponId: 'orbitingBall', apply: () => getWeapon('orbitingBall').count += 2 },
+  { name: 'Mega Ball Damage', desc: '+25 Ball Damage', icon: '💥💥', weaponId: 'orbitingBall', apply: () => getWeapon('orbitingBall').damage += 25 },
+  { name: 'Huge Area', desc: '+100 Area Range', icon: '🔴🔴', weaponId: 'areaDamage', apply: () => getWeapon('areaDamage').radius += 100 },
+  { name: 'Devastating DPS', desc: '+15 Damage/Second', icon: '🔥🔥', weaponId: 'areaDamage', apply: () => getWeapon('areaDamage').dps += 15 }
 ];
 
 function preload() {
@@ -115,6 +196,24 @@ function preload() {
   g.generateTexture('obstacle', 40, 40);
   g.clear();
 
+  // Weapon chest texture (golden chest)
+  g.fillStyle(0xffaa00, 1);
+  g.fillRect(3, 8, 14, 12);
+  g.fillStyle(0xffdd00, 1);
+  g.fillRect(6, 5, 8, 8);
+  g.lineStyle(2, 0xffffff, 1);
+  g.strokeRect(3, 8, 14, 12);
+  g.generateTexture('chest', 20, 20);
+  g.clear();
+
+  // Orbiting ball texture (white ball with glow)
+  g.fillStyle(0xffffff, 1);
+  g.fillCircle(8, 8, 8);
+  g.fillStyle(0xffffaa, 0.5);
+  g.fillCircle(8, 8, 6);
+  g.generateTexture('orbitingBall', 16, 16);
+  g.clear();
+
   g.destroy();
 }
 
@@ -132,6 +231,7 @@ function create() {
   enemies = this.physics.add.group();
   projectiles = this.physics.add.group();
   xpOrbs = this.physics.add.group();
+  weaponChests = this.physics.add.group();
   obstacles = this.physics.add.staticGroup();
 
   // Spawn obstacles randomly across map
@@ -158,6 +258,7 @@ function create() {
   this.physics.add.overlap(projectiles, enemies, hitEnemy, null, this);
   this.physics.add.overlap(player, enemies, hitPlayer, null, this);
   this.physics.add.overlap(player, xpOrbs, collectXP, null, this);
+  this.physics.add.overlap(player, weaponChests, collectChest, null, this);
 
   // Enemy-to-enemy collisions (they push each other)
   this.physics.add.collider(enemies, enemies);
@@ -181,7 +282,7 @@ function create() {
 }
 
 function update(_time, delta) {
-  if (gameOver || levelingUp) return;
+  if (gameOver || levelingUp || selectingWeapon) return;
 
   gameTime += delta;
   shootTimer += delta;
@@ -213,8 +314,9 @@ function update(_time, delta) {
     player.body.velocity.normalize().scale(stats.speed);
   }
 
-  // Auto shoot
-  if (shootTimer >= stats.fireRate) {
+  // Auto shoot (projectile weapon)
+  const projectileWeapon = getWeapon('projectile');
+  if (projectileWeapon.unlocked && shootTimer >= projectileWeapon.fireRate) {
     shootTimer = 0;
     shoot();
   }
@@ -261,6 +363,13 @@ function update(_time, delta) {
   // Move enemies toward player
   enemies.children.entries.forEach(enemy => {
     if (!enemy.active) return;
+
+    // Skip movement update if enemy is in knockback
+    const knockbackUntil = enemy.getData('knockbackUntil') || 0;
+    if (gameTime < knockbackUntil) {
+      return;
+    }
+
     const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
     const speed = enemy.getData('speed');
     enemy.body.setVelocity(
@@ -268,6 +377,12 @@ function update(_time, delta) {
       Math.sin(angle) * speed
     );
   });
+
+  // Update orbiting balls
+  updateOrbitingBalls(delta);
+
+  // Update area damage
+  updateAreaDamage(delta);
 
   // Update UI
   updateUI();
@@ -280,14 +395,15 @@ function shoot() {
   const target = findClosestEnemy();
   if (!target) return;
 
+  const weapon = getWeapon('projectile');
   playTone(scene, 880, 0.05);
 
   // Calculate angles for multiple projectiles
   const baseAngle = Phaser.Math.Angle.Between(player.x, player.y, target.x, target.y);
-  const spread = stats.projectileCount > 1 ? 0.3 : 0;
-  const startOffset = -(stats.projectileCount - 1) * spread / 2;
+  const spread = weapon.count > 1 ? 0.3 : 0;
+  const startOffset = -(weapon.count - 1) * spread / 2;
 
-  for (let i = 0; i < stats.projectileCount; i++) {
+  for (let i = 0; i < weapon.count; i++) {
     const angle = baseAngle + startOffset + i * spread;
     const vx = Math.cos(angle) * 300;
     const vy = Math.sin(angle) * 300;
@@ -296,6 +412,9 @@ function shoot() {
     const proj = projectiles.create(player.x, player.y, 'projectile');
     proj.body.setCircle(4);
     proj.body.setVelocity(vx, vy);
+    proj.setData('damage', weapon.damage);
+    proj.setData('penetration', weapon.penetration);
+    proj.setData('hits', 0);
 
     // Auto-destroy after 2 seconds
     scene.time.delayedCall(2000, () => {
@@ -351,20 +470,42 @@ function spawnEnemy() {
   enemy.setData('damage', difficulty.enemyDamage * type.damageMult);
   enemy.setData('xpValue', type.xp);
   enemy.setData('type', type.name);
+  enemy.setData('knockbackUntil', 0);
 }
 
 function hitEnemy(proj, enemy) {
   if (!enemy.active || !proj.active) return;
 
-  proj.destroy();
+  const projDamage = proj.getData('damage') || 10;
+  const projPenetration = proj.getData('penetration') || 0;
+  const projHits = proj.getData('hits') || 0;
 
-  const hp = enemy.getData('hp') - stats.damage;
+  // Apply damage to enemy
+  const hp = enemy.getData('hp') - projDamage;
   enemy.setData('hp', hp);
+
+  // Apply damage feedback (visual + knockback)
+  applyDamageFeedback(enemy, proj.x, proj.y);
+
+  // Increment projectile hit count
+  proj.setData('hits', projHits + 1);
+
+  // Destroy projectile if it has reached its penetration limit
+  if (projHits >= projPenetration) {
+    proj.destroy();
+  }
 
   if (hp <= 0) {
     playTone(scene, 660, 0.1);
     const xpValue = enemy.getData('xpValue') || 5;
+    const isBoss = enemy.getData('isBoss');
     dropXP(enemy.x, enemy.y, xpValue);
+
+    // Bosses drop weapon chests
+    if (isBoss) {
+      dropChest(enemy.x, enemy.y);
+    }
+
     enemy.destroy();
     stats.enemiesKilled++;
   }
@@ -402,6 +543,31 @@ function collectXP(_playerObj, orb) {
   }
 }
 
+function dropChest(x, y) {
+  const chest = weaponChests.create(x, y, 'chest');
+  chest.body.setCircle(10);
+  // Chest bounces slightly
+  chest.setVelocity((Math.random() - 0.5) * 100, -150);
+  chest.setBounce(0.5);
+  chest.setCollideWorldBounds(true);
+}
+
+function collectChest(_playerObj, chest) {
+  if (!chest.active) return;
+  chest.destroy();
+  playTone(scene, 1500, 0.3);
+
+  // Check if there are weapons to unlock
+  const lockedWeapons = weaponTypes.filter(w => !w.unlocked && !w.id.startsWith('placeholder'));
+
+  if (lockedWeapons.length > 0) {
+    showWeaponSelector(lockedWeapons);
+  } else {
+    // All weapons unlocked, show rare upgrade menu
+    showRareUpgradeMenu();
+  }
+}
+
 function levelUp() {
   levelingUp = true;
   stats.level++;
@@ -417,6 +583,22 @@ function levelUp() {
 }
 
 function showUpgradeMenu() {
+  // Build available upgrades pool
+  let availableUpgrades = [...playerUpgrades];
+
+  // Always include projectile upgrades (always unlocked)
+  availableUpgrades.push(...projectileUpgrades);
+
+  // Add orbiting ball upgrades if unlocked
+  if (getWeapon('orbitingBall').unlocked) {
+    availableUpgrades.push(...orbitingBallUpgrades);
+  }
+
+  // Add area damage upgrades if unlocked
+  if (getWeapon('areaDamage').unlocked) {
+    availableUpgrades.push(...areaDamageUpgrades);
+  }
+
   // Semi-transparent overlay
   const overlay = scene.add.graphics();
   overlay.fillStyle(0x000000, 0.85);
@@ -434,7 +616,7 @@ function showUpgradeMenu() {
   }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
 
   // Shuffle and pick 3 upgrades
-  const shuffled = [...upgrades].sort(() => Math.random() - 0.5).slice(0, 3);
+  const shuffled = [...availableUpgrades].sort(() => Math.random() - 0.5).slice(0, 3);
 
   shuffled.forEach((upgrade, i) => {
     const x = 150 + i * 250;
@@ -504,6 +686,197 @@ function showUpgradeMenu() {
   });
 }
 
+function showWeaponSelector(weapons) {
+  selectingWeapon = true;
+  scene.physics.pause();
+
+  // Semi-transparent overlay
+  const overlay = scene.add.graphics();
+  overlay.fillStyle(0x000000, 0.85);
+  overlay.fillRect(0, 0, 800, 600);
+  overlay.setScrollFactor(0);
+  overlay.setDepth(100);
+
+  // Title
+  const title = scene.add.text(400, 80, '⚔️ CHOOSE A WEAPON ⚔️', {
+    fontSize: '40px',
+    fontFamily: 'Arial',
+    color: '#ffaa00',
+    stroke: '#000000',
+    strokeThickness: 6
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+
+  // Show available weapons
+  weapons.forEach((weapon, i) => {
+    const x = 200 + i * 200;
+    const y = 300;
+
+    // Button background
+    const btn = scene.add.graphics();
+    btn.fillStyle(0x333333, 1);
+    btn.fillRoundedRect(x - 90, y - 100, 180, 200, 10);
+    btn.lineStyle(3, 0xffaa00, 1);
+    btn.strokeRoundedRect(x - 90, y - 100, 180, 200, 10);
+    btn.setScrollFactor(0);
+    btn.setDepth(101);
+    btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 100, 180, 200), Phaser.Geom.Rectangle.Contains);
+
+    // Weapon name
+    scene.add.text(x, y - 40, weapon.name, {
+      fontSize: '20px',
+      fontFamily: 'Arial',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      wordWrap: { width: 160, useAdvancedWrap: true }
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+    // Description
+    scene.add.text(x, y + 20, weapon.desc, {
+      fontSize: '14px',
+      fontFamily: 'Arial',
+      color: '#cccccc',
+      wordWrap: { width: 160, useAdvancedWrap: true },
+      align: 'center'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+    // Click handler
+    btn.on('pointerdown', () => {
+      weapon.unlocked = true;
+      playTone(scene, 1500, 0.2);
+
+      // Initialize weapon
+      if (weapon.id === 'orbitingBall') {
+        initOrbitingBalls();
+      } else if (weapon.id === 'areaDamage') {
+        initAreaDamage();
+      }
+
+      // Clean up menu
+      overlay.destroy();
+      title.destroy();
+      scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
+
+      // Resume
+      scene.physics.resume();
+      selectingWeapon = false;
+    });
+
+    // Hover effect
+    btn.on('pointerover', () => {
+      btn.clear();
+      btn.fillStyle(0x444444, 1);
+      btn.fillRoundedRect(x - 90, y - 100, 180, 200, 10);
+      btn.lineStyle(3, 0xffaa00, 1);
+      btn.strokeRoundedRect(x - 90, y - 100, 180, 200, 10);
+    });
+
+    btn.on('pointerout', () => {
+      btn.clear();
+      btn.fillStyle(0x333333, 1);
+      btn.fillRoundedRect(x - 90, y - 100, 180, 200, 10);
+      btn.lineStyle(3, 0xffaa00, 1);
+      btn.strokeRoundedRect(x - 90, y - 100, 180, 200, 10);
+    });
+  });
+}
+
+function showRareUpgradeMenu() {
+  selectingWeapon = true;
+  scene.physics.pause();
+
+  // Filter rare upgrades to only unlocked weapons
+  const available = rareUpgrades.filter(u => {
+    if (!u.weaponId) return true; // Player upgrades
+    return getWeapon(u.weaponId).unlocked;
+  });
+
+  // Semi-transparent overlay
+  const overlay = scene.add.graphics();
+  overlay.fillStyle(0x000000, 0.85);
+  overlay.fillRect(0, 0, 800, 600);
+  overlay.setScrollFactor(0);
+  overlay.setDepth(100);
+
+  // Title
+  const title = scene.add.text(400, 100, '✨ RARE UPGRADE! ✨', {
+    fontSize: '48px',
+    fontFamily: 'Arial',
+    color: '#ff00ff',
+    stroke: '#000000',
+    strokeThickness: 6
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+
+  // Shuffle and pick 3 rare upgrades
+  const shuffled = [...available].sort(() => Math.random() - 0.5).slice(0, 3);
+
+  shuffled.forEach((upgrade, i) => {
+    const x = 150 + i * 250;
+    const y = 300;
+
+    // Button background (purple tint)
+    const btn = scene.add.graphics();
+    btn.fillStyle(0x330033, 1);
+    btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
+    btn.lineStyle(3, 0xff00ff, 1);
+    btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
+    btn.setScrollFactor(0);
+    btn.setDepth(101);
+    btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 80, 180, 160), Phaser.Geom.Rectangle.Contains);
+
+    // Icon
+    scene.add.text(x, y - 30, upgrade.icon, {
+      fontSize: '48px'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+    // Name
+    scene.add.text(x, y + 20, upgrade.name, {
+      fontSize: '18px',
+      fontFamily: 'Arial',
+      color: '#ff00ff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+    // Description
+    scene.add.text(x, y + 50, upgrade.desc, {
+      fontSize: '14px',
+      fontFamily: 'Arial',
+      color: '#ffaaff'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+    // Click handler
+    btn.on('pointerdown', () => {
+      upgrade.apply();
+      playTone(scene, 1800, 0.1);
+
+      // Clean up menu
+      overlay.destroy();
+      title.destroy();
+      scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
+
+      // Resume
+      scene.physics.resume();
+      selectingWeapon = false;
+    });
+
+    // Hover effect
+    btn.on('pointerover', () => {
+      btn.clear();
+      btn.fillStyle(0x440044, 1);
+      btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
+      btn.lineStyle(3, 0xff00ff, 1);
+      btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
+    });
+
+    btn.on('pointerout', () => {
+      btn.clear();
+      btn.fillStyle(0x330033, 1);
+      btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
+      btn.lineStyle(3, 0xff00ff, 1);
+      btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
+    });
+  });
+}
+
 function createUI() {
   // HP Bar label
   ui.hpText = scene.add.text(10, 10, 'HP:', {
@@ -540,6 +913,31 @@ function updateUI() {
   const minutes = Math.floor(gameTime / 60000);
   const seconds = Math.floor((gameTime % 60000) / 1000);
   ui.timeText.setText(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+
+  // Update weapon indicators
+  let weaponX = 10;
+  let weaponY = 40;
+
+  // Clear old indicators
+  if (ui.weaponIndicators) {
+    ui.weaponIndicators.forEach(ind => ind.destroy());
+  }
+  ui.weaponIndicators = [];
+
+  // Show unlocked weapons
+  weaponTypes.forEach(weapon => {
+    if (weapon.unlocked && !weapon.id.startsWith('placeholder')) {
+      const icon = scene.add.text(weaponX, weaponY, weapon.name.charAt(0), {
+        fontSize: '16px',
+        fontFamily: 'Arial',
+        color: '#ffaa00',
+        backgroundColor: '#333333',
+        padding: { x: 6, y: 4 }
+      }).setScrollFactor(0);
+      ui.weaponIndicators.push(icon);
+      weaponX += 30;
+    }
+  });
 }
 
 function drawUIBars() {
@@ -683,6 +1081,7 @@ function restartGame() {
   // Reset state
   gameOver = false;
   levelingUp = false;
+  selectingWeapon = false;
   gameTime = 0;
   shootTimer = 0;
   spawnTimer = 0;
@@ -690,13 +1089,41 @@ function restartGame() {
   bossTimer = 0;
   warningActive = false;
 
+  // Reset weapons
+  weaponTypes.forEach(weapon => {
+    if (weapon.id === 'projectile') {
+      weapon.unlocked = true;
+      weapon.count = 1;
+      weapon.fireRate = 500;
+      weapon.damage = 10;
+      weapon.penetration = 0;
+    } else if (weapon.id === 'orbitingBall') {
+      weapon.unlocked = false;
+      weapon.count = 1;
+      weapon.rotSpeed = 2;
+      weapon.radius = 80;
+      weapon.damage = 15;
+    } else if (weapon.id === 'areaDamage') {
+      weapon.unlocked = false;
+      weapon.radius = 150;
+      weapon.dps = 5;
+      weapon.tickRate = 500;
+      weapon.lastTick = 0;
+    } else {
+      weapon.unlocked = false;
+    }
+  });
+
+  // Clear orbiting balls
+  orbitingBalls.forEach(ball => ball && ball.destroy());
+  orbitingBalls = [];
+  orbitAngle = 0;
+
   stats = {
     hp: 100,
     maxHp: 100,
     speed: 150,
-    damage: 10,
-    fireRate: 500,
-    projectileCount: 1,
+    knockback: 100,
     xp: 0,
     level: 1,
     xpToNext: 10,
@@ -750,6 +1177,7 @@ function spawnWave() {
     enemy.setData('damage', difficulty.enemyDamage * type.damageMult);
     enemy.setData('xpValue', type.xp);
     enemy.setData('type', type.name);
+    enemy.setData('knockbackUntil', 0);
   }
 }
 
@@ -782,6 +1210,7 @@ function spawnBoss() {
   boss.setData('xpValue', type.xp * 10);
   boss.setData('type', type.name);
   boss.setData('isBoss', true);
+  boss.setData('knockbackUntil', 0);
 }
 
 function showWarning(text, color) {
@@ -822,6 +1251,182 @@ function showWarning(text, color) {
     yoyo: true,
     repeat: 4
   });
+}
+
+function initOrbitingBalls() {
+  // Clear existing balls
+  orbitingBalls.forEach(ball => ball.destroy());
+  orbitingBalls = [];
+  orbitAngle = 0;
+
+  // Create initial balls
+  const weapon = getWeapon('orbitingBall');
+  for (let i = 0; i < weapon.count; i++) {
+    const ball = scene.physics.add.image(player.x, player.y, 'orbitingBall');
+    ball.body.setCircle(8);
+    ball.setData('lastHitTime', {});
+    orbitingBalls.push(ball);
+  }
+
+  // Set up overlap (not collider, so balls don't block)
+  scene.physics.add.overlap(orbitingBalls, enemies, hitEnemyWithBall, null, scene);
+}
+
+function updateOrbitingBalls(delta) {
+  const weapon = getWeapon('orbitingBall');
+  if (!weapon.unlocked) return;
+
+  // Add/remove balls if count changed
+  if (orbitingBalls.length < weapon.count) {
+    for (let i = orbitingBalls.length; i < weapon.count; i++) {
+      const ball = scene.physics.add.image(player.x, player.y, 'orbitingBall');
+      ball.body.setCircle(8);
+      ball.setData('lastHitTime', {});
+      orbitingBalls.push(ball);
+      scene.physics.add.overlap([ball], enemies, hitEnemyWithBall, null, scene);
+    }
+  }
+
+  // Update angle
+  orbitAngle += (weapon.rotSpeed * delta) / 1000;
+
+  // Update ball positions
+  orbitingBalls.forEach((ball, i) => {
+    if (!ball || !ball.active) return;
+    const angleOffset = (Math.PI * 2 / weapon.count) * i;
+    const angle = orbitAngle + angleOffset;
+    ball.x = player.x + Math.cos(angle) * weapon.radius;
+    ball.y = player.y + Math.sin(angle) * weapon.radius;
+  });
+}
+
+function hitEnemyWithBall(ball, enemy) {
+  if (!enemy.active || !ball.active) return;
+
+  const weapon = getWeapon('orbitingBall');
+  const now = Date.now();
+  const lastHitTimes = ball.getData('lastHitTime');
+  const enemyId = enemy.getData('id') || enemy.body.id;
+
+  // Cooldown: 200ms per enemy
+  if (lastHitTimes[enemyId] && now - lastHitTimes[enemyId] < 200) {
+    return;
+  }
+
+  lastHitTimes[enemyId] = now;
+  ball.setData('lastHitTime', lastHitTimes);
+
+  // Apply damage
+  const hp = enemy.getData('hp') - weapon.damage;
+  enemy.setData('hp', hp);
+
+  // Apply damage feedback (visual + knockback)
+  applyDamageFeedback(enemy, ball.x, ball.y);
+
+  playTone(scene, 1100, 0.05);
+
+  if (hp <= 0) {
+    const xpValue = enemy.getData('xpValue') || 5;
+    const isBoss = enemy.getData('isBoss');
+    dropXP(enemy.x, enemy.y, xpValue);
+
+    if (isBoss) {
+      dropChest(enemy.x, enemy.y);
+    }
+
+    enemy.destroy();
+    stats.enemiesKilled++;
+  }
+}
+
+function initAreaDamage() {
+  // Create visual circle
+  if (areaDamageCircle) areaDamageCircle.destroy();
+
+  areaDamageCircle = scene.add.graphics();
+  areaDamageCircle.setDepth(-1);
+}
+
+function updateAreaDamage(delta) {
+  const weapon = getWeapon('areaDamage');
+  if (!weapon.unlocked) return;
+
+  // Update visual circle position
+  if (areaDamageCircle) {
+    areaDamageCircle.clear();
+    areaDamageCircle.lineStyle(2, 0xffaa00, 0.5);
+    areaDamageCircle.fillStyle(0xffaa00, 0.15);
+    areaDamageCircle.fillCircle(player.x, player.y, weapon.radius);
+    areaDamageCircle.strokeCircle(player.x, player.y, weapon.radius);
+  }
+
+  // Damage tick
+  weapon.lastTick += delta;
+  if (weapon.lastTick >= weapon.tickRate) {
+    weapon.lastTick = 0;
+
+    // Find enemies in range
+    enemies.children.entries.forEach(enemy => {
+      if (!enemy.active) return;
+      const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
+      if (dist <= weapon.radius) {
+        // Apply damage
+        const hp = enemy.getData('hp') - weapon.dps;
+        enemy.setData('hp', hp);
+
+        // Apply visual feedback only (no knockback for area damage)
+        applyVisualFeedback(enemy);
+
+        if (hp <= 0) {
+          playTone(scene, 660, 0.1);
+          const xpValue = enemy.getData('xpValue') || 5;
+          const isBoss = enemy.getData('isBoss');
+          dropXP(enemy.x, enemy.y, xpValue);
+
+          if (isBoss) {
+            dropChest(enemy.x, enemy.y);
+          }
+
+          enemy.destroy();
+          stats.enemiesKilled++;
+        }
+      }
+    });
+  }
+}
+
+function applyVisualFeedback(enemy) {
+  if (!enemy.active) return;
+
+  // Apply red tint fill (completely fills sprite with red, more visible)
+  enemy.setTintFill(0xff0000);
+
+  // Restore original appearance after 100ms
+  scene.time.delayedCall(100, () => {
+    if (enemy && enemy.active) {
+      enemy.clearTint();
+    }
+  });
+}
+
+function applyDamageFeedback(enemy, sourceX, sourceY) {
+  if (!enemy.active) return;
+
+  // Apply visual feedback
+  applyVisualFeedback(enemy);
+
+  // Calculate knockback direction (away from source)
+  const angle = Phaser.Math.Angle.Between(sourceX, sourceY, enemy.x, enemy.y);
+  const knockbackForce = stats.knockback;
+
+  // Set knockback state (enemy won't update velocity for 150ms)
+  enemy.setData('knockbackUntil', gameTime + 150);
+
+  // Apply knockback velocity (replace current velocity)
+  enemy.body.setVelocity(
+    Math.cos(angle) * knockbackForce,
+    Math.sin(angle) * knockbackForce
+  );
 }
 
 function playTone(sceneRef, frequency, duration) {
