@@ -16,9 +16,9 @@ const config = {
 new Phaser.Game(config);
 
 // Game state
-let player, cursors, enemies, projectiles, xpOrbs, obstacles, weaponChests, graphics;
+let player, cursors, enemies, projectiles, xpOrbs, obstacles, weaponChests, upgradeChests, graphics;
 let areaDamageCircle = null;
-let gameOver = false, levelingUp = false, selectingWeapon = false;
+let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
 let nextWaveTime = 60000, nextBossTime = 120000;
@@ -35,13 +35,13 @@ let upgradeLevels = {};
 
 // Enemy types configuration
 const enemyTypes = [
-  { name: 'green', color: 0x00ff00, hpMult: 1.0, speedMult: 1.0, damageMult: 1.0, xp: 5, unlockTime: 0 },
-  { name: 'blue', color: 0x0088ff, hpMult: 1.5, speedMult: 0.95, damageMult: 1.2, xp: 8, unlockTime: 20000 },
-  { name: 'cyan', color: 0x00ffff, hpMult: 2.0, speedMult: 1.05, damageMult: 1.4, xp: 10, unlockTime: 40000 },
-  { name: 'yellow', color: 0xffff00, hpMult: 2.5, speedMult: 0.9, damageMult: 1.6, xp: 15, unlockTime: 60000 },
-  { name: 'orange', color: 0xff8800, hpMult: 3.0, speedMult: 1.1, damageMult: 1.8, xp: 20, unlockTime: 90000 },
-  { name: 'red', color: 0xff0000, hpMult: 4.0, speedMult: 0.85, damageMult: 2.0, xp: 25, unlockTime: 120000 },
-  { name: 'purple', color: 0xff00ff, hpMult: 5.0, speedMult: 1.15, damageMult: 2.5, xp: 35, unlockTime: 150000 }
+  { name: 'green', color: 0x00ff00, hpMult: 1.0, speedMult: 1.0, damageMult: 1.0, xp: 5, dropChance: 0.02, unlockTime: 0 },
+  { name: 'blue', color: 0x0088ff, hpMult: 1.5, speedMult: 0.95, damageMult: 1.2, xp: 8, dropChance: 0.03, unlockTime: 20000 },
+  { name: 'cyan', color: 0x00ffff, hpMult: 2.0, speedMult: 1.05, damageMult: 1.4, xp: 10, dropChance: 0.035, unlockTime: 40000 },
+  { name: 'yellow', color: 0xffff00, hpMult: 2.5, speedMult: 0.9, damageMult: 1.6, xp: 15, dropChance: 0.04, unlockTime: 60000 },
+  { name: 'orange', color: 0xff8800, hpMult: 3.0, speedMult: 1.1, damageMult: 1.8, xp: 20, dropChance: 0.045, unlockTime: 90000 },
+  { name: 'red', color: 0xff0000, hpMult: 4.0, speedMult: 0.85, damageMult: 2.0, xp: 25, dropChance: 0.05, unlockTime: 120000 },
+  { name: 'purple', color: 0xff00ff, hpMult: 5.0, speedMult: 1.15, damageMult: 2.5, xp: 35, dropChance: 0.055, unlockTime: 150000 }
 ];
 
 let unlockedTypes = [];
@@ -52,7 +52,7 @@ const weaponTypes = [
     id: 'projectile',
     name: 'Proyectiles',
     desc: 'Dispara automáticamente al enemigo más cercano',
-    unlocked: true,
+    unlocked: false,
     count: 1,
     fireRate: 500,
     damage: 10,
@@ -66,6 +66,7 @@ const weaponTypes = [
     count: 2,
     rotSpeed: 2,
     radius: 80,
+    ballRadius: 8,
     damage: 15
   },
   {
@@ -103,6 +104,7 @@ let stats = {
   knockback: 100,
   hpRegen: 0,
   xpMultiplier: 1.0,
+  lootChance: 1.0,
   xp: 0,
   level: 1,
   xpToNext: 10,
@@ -131,7 +133,8 @@ const playerUpgrades = [
   { id: 'maxhp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: 10, apply: () => { stats.maxHp += 20; stats.hp += 20; upgradeLevels['maxhp'] = (upgradeLevels['maxhp'] || 0) + 1; } },
   { id: 'knockback', name: 'Knockback', desc: '+30% Enemy Pushback', icon: '💨', maxLevel: 6, apply: () => { stats.knockback *= 1.3; upgradeLevels['knockback'] = (upgradeLevels['knockback'] || 0) + 1; } },
   { id: 'hpregen', name: 'HP Regen', desc: '+10 HP/min', icon: '💚', maxLevel: 10, apply: () => { stats.hpRegen += 10; upgradeLevels['hpregen'] = (upgradeLevels['hpregen'] || 0) + 1; } },
-  { id: 'xpboost', name: 'XP Boost', desc: '+50% XP Gain', icon: '⭐', maxLevel: 8, apply: () => { stats.xpMultiplier += 0.5; upgradeLevels['xpboost'] = (upgradeLevels['xpboost'] || 0) + 1; } }
+  { id: 'xpboost', name: 'XP Boost', desc: '+50% XP Gain', icon: '⭐', maxLevel: 8, apply: () => { stats.xpMultiplier += 0.5; upgradeLevels['xpboost'] = (upgradeLevels['xpboost'] || 0) + 1; } },
+  { id: 'loot', name: 'Luck', desc: '+50% Chest Drop Rate', icon: '🍀', maxLevel: 10, apply: () => { stats.lootChance += 0.5; upgradeLevels['loot'] = (upgradeLevels['loot'] || 0) + 1; } }
 ];
 
 const projectileUpgrades = [
@@ -144,7 +147,7 @@ const projectileUpgrades = [
 const orbitingBallUpgrades = [
   { id: 'moreballs', name: 'More Balls', desc: '+1 Orbiting Ball', icon: '⚪', weaponId: 'orbitingBall', maxLevel: 10, apply: () => { getWeapon('orbitingBall').count++; upgradeLevels['moreballs'] = (upgradeLevels['moreballs'] || 0) + 1; } },
   { id: 'rotspeed', name: 'Rotation Speed', desc: '+0.5 Rotation Speed', icon: '🌀', weaponId: 'orbitingBall', maxLevel: 10, apply: () => { getWeapon('orbitingBall').rotSpeed += 0.5; upgradeLevels['rotspeed'] = (upgradeLevels['rotspeed'] || 0) + 1; } },
-  { id: 'orbitradius', name: 'Orbit Radius', desc: '+20 Orbit Distance', icon: '🔵', weaponId: 'orbitingBall', maxLevel: 5, apply: () => { getWeapon('orbitingBall').radius += 20; upgradeLevels['orbitradius'] = (upgradeLevels['orbitradius'] || 0) + 1; } },
+  { id: 'ballsize', name: 'Ball Size', desc: '+2 Ball Radius', icon: '⭕', weaponId: 'orbitingBall', maxLevel: 8, apply: () => { getWeapon('orbitingBall').ballRadius += 2; upgradeLevels['ballsize'] = (upgradeLevels['ballsize'] || 0) + 1; } },
   { id: 'balldamage', name: 'Ball Damage', desc: '+8 Ball Damage', icon: '💥', weaponId: 'orbitingBall', maxLevel: 10, apply: () => { getWeapon('orbitingBall').damage += 8; upgradeLevels['balldamage'] = (upgradeLevels['balldamage'] || 0) + 1; } }
 ];
 
@@ -222,6 +225,16 @@ function preload() {
   g.generateTexture('chest', 20, 20);
   g.clear();
 
+  // Upgrade chest texture (green/emerald chest)
+  g.fillStyle(0x00aa44, 1);
+  g.fillRect(3, 8, 14, 12);
+  g.fillStyle(0x00ff66, 1);
+  g.fillRect(6, 5, 8, 8);
+  g.lineStyle(2, 0xffffff, 1);
+  g.strokeRect(3, 8, 14, 12);
+  g.generateTexture('upgradeChest', 20, 20);
+  g.clear();
+
   // Orbiting ball texture (white ball with glow)
   g.fillStyle(0xffffff, 1);
   g.fillCircle(8, 8, 8);
@@ -248,6 +261,7 @@ function create() {
   projectiles = this.physics.add.group();
   xpOrbs = this.physics.add.group();
   weaponChests = this.physics.add.group();
+  upgradeChests = this.physics.add.group();
   obstacles = this.physics.add.staticGroup();
 
   // Spawn obstacles randomly across map
@@ -275,6 +289,7 @@ function create() {
   this.physics.add.overlap(player, enemies, hitPlayer, null, this);
   this.physics.add.overlap(player, xpOrbs, collectXP, null, this);
   this.physics.add.overlap(player, weaponChests, collectChest, null, this);
+  this.physics.add.overlap(player, upgradeChests, collectUpgradeChest, null, this);
 
   // Enemy-to-enemy collisions (they push each other)
   this.physics.add.collider(enemies, enemies);
@@ -293,12 +308,18 @@ function create() {
     if (gameOver) restartGame();
   });
 
+  // Pause physics until weapon is selected
+  this.physics.pause();
+
+  // Show start screen
+  showStartScreen();
+
   // Start sound
   playTone(this, 440, 0.1);
 }
 
 function update(_time, delta) {
-  if (gameOver || levelingUp || selectingWeapon) return;
+  if (gameOver || levelingUp || selectingWeapon || startScreen) return;
 
   gameTime += delta;
   shootTimer += delta;
@@ -493,6 +514,7 @@ function spawnEnemy() {
   enemy.setData('speed', difficulty.enemySpeed * type.speedMult);
   enemy.setData('damage', difficulty.enemyDamage * type.damageMult);
   enemy.setData('xpValue', type.xp);
+  enemy.setData('dropChance', type.dropChance);
   enemy.setData('type', type.name);
   enemy.setData('knockbackUntil', 0);
 }
@@ -523,11 +545,18 @@ function hitEnemy(proj, enemy) {
     playTone(scene, 660, 0.1);
     const xpValue = enemy.getData('xpValue') || 5;
     const isBoss = enemy.getData('isBoss');
+    const dropChance = enemy.getData('dropChance') || 0;
     dropXP(enemy.x, enemy.y, xpValue);
 
     // Bosses drop weapon chests
     if (isBoss) {
       dropChest(enemy.x, enemy.y);
+    } else {
+      // Normal enemies have a chance to drop upgrade chests
+      const finalDropChance = dropChance * stats.lootChance;
+      if (Math.random() < finalDropChance) {
+        dropUpgradeChest(enemy.x, enemy.y);
+      }
     }
 
     enemy.destroy();
@@ -571,10 +600,9 @@ function collectXP(_playerObj, orb) {
 function dropChest(x, y) {
   const chest = weaponChests.create(x, y, 'chest');
   chest.body.setCircle(10);
-  // Chest bounces slightly
-  chest.setVelocity((Math.random() - 0.5) * 100, -150);
-  chest.setBounce(0.5);
-  chest.setCollideWorldBounds(true);
+  // Chest stays in place (immovable)
+  chest.body.setImmovable(true);
+  chest.body.setAllowGravity(false);
 }
 
 function collectChest(_playerObj, chest) {
@@ -591,6 +619,173 @@ function collectChest(_playerObj, chest) {
     // All weapons unlocked, show rare upgrade menu
     showRareUpgradeMenu();
   }
+}
+
+function dropUpgradeChest(x, y) {
+  const chest = upgradeChests.create(x, y, 'upgradeChest');
+  chest.body.setCircle(10);
+  // Chest stays in place (immovable)
+  chest.body.setImmovable(true);
+  chest.body.setAllowGravity(false);
+}
+
+function collectUpgradeChest(_playerObj, chest) {
+  if (!chest.active) return;
+  chest.destroy();
+  playTone(scene, 1200, 0.2);
+
+  // Build available upgrades pool
+  let availableUpgrades = [...playerUpgrades];
+
+  // Add weapon-specific upgrades if unlocked
+  if (getWeapon('projectile').unlocked) {
+    availableUpgrades.push(...projectileUpgrades);
+  }
+  if (getWeapon('orbitingBall').unlocked) {
+    availableUpgrades.push(...orbitingBallUpgrades);
+  }
+  if (getWeapon('areaDamage').unlocked) {
+    availableUpgrades.push(...areaDamageUpgrades);
+  }
+
+  // Filter out maxed upgrades
+  availableUpgrades = availableUpgrades.filter(u =>
+    (upgradeLevels[u.id] || 0) < u.maxLevel
+  );
+
+  // Show selection menu if upgrades available
+  if (availableUpgrades.length > 0) {
+    showUpgradeChestMenu(availableUpgrades);
+  }
+}
+
+function showUpgradeChestMenu(availableUpgrades) {
+  selectingWeapon = true;
+  scene.physics.pause();
+
+  // Semi-transparent overlay
+  const overlay = scene.add.graphics();
+  overlay.fillStyle(0x000000, 0.85);
+  overlay.fillRect(0, 0, 800, 600);
+  overlay.setScrollFactor(0);
+  overlay.setDepth(100);
+
+  // Title (green/emerald theme to match chest)
+  const title = scene.add.text(400, 100, '💎 UPGRADE CHEST! 💎', {
+    fontSize: '48px',
+    fontFamily: 'Arial',
+    color: '#00ff66',
+    stroke: '#000000',
+    strokeThickness: 6
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+
+  // Shuffle and pick 3 upgrades
+  const shuffled = [...availableUpgrades].sort(() => Math.random() - 0.5).slice(0, 3);
+
+  // Reset menu state
+  selectedIndex = 0;
+  menuOptions = [];
+
+  const selectUpgrade = (upgrade) => {
+    upgrade.apply();
+    playTone(scene, 1400, 0.15);
+
+    // Clean up menu
+    overlay.destroy();
+    title.destroy();
+    scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
+
+    // Remove keyboard listeners
+    menuKeys.forEach(k => k.removeAllListeners());
+    menuKeys = [];
+
+    // Resume physics
+    scene.physics.resume();
+    selectingWeapon = false;
+  };
+
+  const updateSelection = () => {
+    menuOptions.forEach((option, i) => {
+      const isSelected = i === selectedIndex;
+      option.btn.clear();
+      option.btn.fillStyle(isSelected ? 0x005533 : 0x003322, 1);
+      option.btn.fillRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
+      option.btn.lineStyle(3, isSelected ? 0xffff00 : 0x00ff66, 1);
+      option.btn.strokeRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
+    });
+  };
+
+  shuffled.forEach((upgrade, i) => {
+    const x = 150 + i * 250;
+    const y = 300;
+
+    // Button background (green theme)
+    const btn = scene.add.graphics();
+    btn.fillStyle(0x003322, 1);
+    btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
+    btn.lineStyle(3, 0x00ff66, 1);
+    btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
+    btn.setScrollFactor(0);
+    btn.setDepth(101);
+    btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 80, 180, 160), Phaser.Geom.Rectangle.Contains);
+
+    // Icon
+    scene.add.text(x, y - 30, upgrade.icon, {
+      fontSize: '48px'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+    // Name
+    scene.add.text(x, y + 20, upgrade.name, {
+      fontSize: '20px',
+      fontFamily: 'Arial',
+      color: '#00ff66'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+    // Description
+    scene.add.text(x, y + 50, upgrade.desc, {
+      fontSize: '14px',
+      fontFamily: 'Arial',
+      color: '#aaffcc'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+    // Store option reference
+    menuOptions.push({ btn, upgrade, x, y });
+
+    // Click handler
+    btn.on('pointerdown', () => selectUpgrade(upgrade));
+
+    // Hover effect
+    btn.on('pointerover', () => {
+      selectedIndex = i;
+      updateSelection();
+    });
+  });
+
+  // Initial selection highlight
+  updateSelection();
+
+  // Keyboard controls
+  const leftKey = scene.input.keyboard.addKey('LEFT');
+  const rightKey = scene.input.keyboard.addKey('RIGHT');
+  const enterKey = scene.input.keyboard.addKey('ENTER');
+
+  leftKey.on('down', () => {
+    selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
+    updateSelection();
+    playTone(scene, 800, 0.05);
+  });
+
+  rightKey.on('down', () => {
+    selectedIndex = (selectedIndex + 1) % menuOptions.length;
+    updateSelection();
+    playTone(scene, 800, 0.05);
+  });
+
+  enterKey.on('down', () => {
+    selectUpgrade(menuOptions[selectedIndex].upgrade);
+  });
+
+  menuKeys.push(leftKey, rightKey, enterKey);
 }
 
 function levelUp() {
@@ -611,8 +806,10 @@ function showUpgradeMenu() {
   // Build available upgrades pool
   let availableUpgrades = [...playerUpgrades];
 
-  // Always include projectile upgrades (always unlocked)
-  availableUpgrades.push(...projectileUpgrades);
+  // Add projectile upgrades if unlocked
+  if (getWeapon('projectile').unlocked) {
+    availableUpgrades.push(...projectileUpgrades);
+  }
 
   // Add orbiting ball upgrades if unlocked
   if (getWeapon('orbitingBall').unlocked) {
@@ -1025,6 +1222,149 @@ function showRareUpgradeMenu() {
   menuKeys.push(leftKey, rightKey, enterKey);
 }
 
+function showStartScreen() {
+  // Semi-transparent overlay
+  const overlay = scene.add.graphics();
+  overlay.fillStyle(0x000000, 0.9);
+  overlay.fillRect(0, 0, 800, 600);
+  overlay.setScrollFactor(0);
+  overlay.setDepth(100);
+
+  // Title
+  const title = scene.add.text(400, 80, '🍌 BANANA SURVIVORS 🍌', {
+    fontSize: '48px',
+    fontFamily: 'Arial',
+    color: '#ffff00',
+    stroke: '#000000',
+    strokeThickness: 6
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+
+  // Subtitle
+  scene.add.text(400, 140, 'Choose your starting weapon', {
+    fontSize: '24px',
+    fontFamily: 'Arial',
+    color: '#ffffff'
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+
+  // Get the 3 main weapons (not placeholders)
+  const startWeapons = weaponTypes.filter(w => !w.id.startsWith('placeholder'));
+
+  // Reset menu state
+  selectedIndex = 0;
+  menuOptions = [];
+
+  const selectWeapon = (weapon) => {
+    playTone(scene, 1500, 0.2);
+
+    // Unlock selected weapon
+    weapon.unlocked = true;
+
+    // Initialize weapon if needed
+    if (weapon.id === 'orbitingBall') {
+      initOrbitingBalls();
+    } else if (weapon.id === 'areaDamage') {
+      initAreaDamage();
+    }
+
+    // Clean up menu
+    overlay.destroy();
+    title.destroy();
+    scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
+
+    // Remove keyboard listeners
+    menuKeys.forEach(k => k.removeAllListeners());
+    menuKeys = [];
+
+    // Resume physics and start game
+    scene.physics.resume();
+    startScreen = false;
+  };
+
+  const updateSelection = () => {
+    menuOptions.forEach((option, i) => {
+      const isSelected = i === selectedIndex;
+      option.btn.clear();
+      option.btn.fillStyle(isSelected ? 0x555555 : 0x222222, 1);
+      option.btn.fillRoundedRect(option.x - 90, option.y - 100, 180, 200, 10);
+      option.btn.lineStyle(4, isSelected ? 0xffff00 : 0x666666, 1);
+      option.btn.strokeRoundedRect(option.x - 90, option.y - 100, 180, 200, 10);
+    });
+  };
+
+  // Show weapons
+  startWeapons.forEach((weapon, i) => {
+    const x = 150 + i * 250;
+    const y = 350;
+
+    // Button background
+    const btn = scene.add.graphics();
+    btn.fillStyle(0x222222, 1);
+    btn.fillRoundedRect(x - 90, y - 100, 180, 200, 10);
+    btn.lineStyle(4, 0x666666, 1);
+    btn.strokeRoundedRect(x - 90, y - 100, 180, 200, 10);
+    btn.setScrollFactor(0);
+    btn.setDepth(101);
+    btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 100, 180, 200), Phaser.Geom.Rectangle.Contains);
+
+    // Weapon name
+    scene.add.text(x, y - 50, weapon.name, {
+      fontSize: '22px',
+      fontFamily: 'Arial',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      wordWrap: { width: 160, useAdvancedWrap: true },
+      align: 'center'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+    // Description
+    scene.add.text(x, y + 10, weapon.desc, {
+      fontSize: '14px',
+      fontFamily: 'Arial',
+      color: '#cccccc',
+      wordWrap: { width: 160, useAdvancedWrap: true },
+      align: 'center'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+    // Store option reference
+    menuOptions.push({ btn, weapon, x, y });
+
+    // Click handler
+    btn.on('pointerdown', () => selectWeapon(weapon));
+
+    // Hover effect
+    btn.on('pointerover', () => {
+      selectedIndex = i;
+      updateSelection();
+    });
+  });
+
+  // Initial selection highlight
+  updateSelection();
+
+  // Keyboard controls
+  const leftKey = scene.input.keyboard.addKey('LEFT');
+  const rightKey = scene.input.keyboard.addKey('RIGHT');
+  const enterKey = scene.input.keyboard.addKey('ENTER');
+
+  leftKey.on('down', () => {
+    selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
+    updateSelection();
+    playTone(scene, 800, 0.05);
+  });
+
+  rightKey.on('down', () => {
+    selectedIndex = (selectedIndex + 1) % menuOptions.length;
+    updateSelection();
+    playTone(scene, 800, 0.05);
+  });
+
+  enterKey.on('down', () => {
+    selectWeapon(menuOptions[selectedIndex].weapon);
+  });
+
+  menuKeys.push(leftKey, rightKey, enterKey);
+}
+
 function createUI() {
   // HP Bar label
   ui.hpText = scene.add.text(10, 10, 'HP:', {
@@ -1230,6 +1570,7 @@ function restartGame() {
   gameOver = false;
   levelingUp = false;
   selectingWeapon = false;
+  startScreen = true;
   gameTime = 0;
   shootTimer = 0;
   spawnTimer = 0;
@@ -1241,10 +1582,10 @@ function restartGame() {
   // Reset upgrade levels
   upgradeLevels = {};
 
-  // Reset weapons
+  // Reset weapons (all locked, player will choose one)
   weaponTypes.forEach(weapon => {
     if (weapon.id === 'projectile') {
-      weapon.unlocked = true;
+      weapon.unlocked = false;
       weapon.count = 1;
       weapon.fireRate = 500;
       weapon.damage = 10;
@@ -1254,6 +1595,7 @@ function restartGame() {
       weapon.count = 2;
       weapon.rotSpeed = 2;
       weapon.radius = 80;
+      weapon.ballRadius = 8;
       weapon.damage = 15;
     } else if (weapon.id === 'areaDamage') {
       weapon.unlocked = false;
@@ -1278,6 +1620,7 @@ function restartGame() {
     knockback: 100,
     hpRegen: 0,
     xpMultiplier: 1.0,
+    lootChance: 1.0,
     xp: 0,
     level: 1,
     xpToNext: 10,
@@ -1417,7 +1760,12 @@ function initOrbitingBalls() {
   const weapon = getWeapon('orbitingBall');
   for (let i = 0; i < weapon.count; i++) {
     const ball = scene.physics.add.image(player.x, player.y, 'orbitingBall');
-    ball.body.setCircle(8);
+
+    // Update both hitbox and visual size
+    const scale = weapon.ballRadius / 8; // 8 is base radius
+    ball.setScale(scale);
+    ball.body.setCircle(weapon.ballRadius);
+
     ball.setData('lastHitTime', {});
     orbitingBalls.push(ball);
   }
@@ -1434,12 +1782,25 @@ function updateOrbitingBalls(delta) {
   if (orbitingBalls.length < weapon.count) {
     for (let i = orbitingBalls.length; i < weapon.count; i++) {
       const ball = scene.physics.add.image(player.x, player.y, 'orbitingBall');
-      ball.body.setCircle(8);
+
+      // Update both hitbox and visual size
+      const scale = weapon.ballRadius / 8; // 8 is base radius
+      ball.setScale(scale);
+      ball.body.setCircle(weapon.ballRadius);
+
       ball.setData('lastHitTime', {});
       orbitingBalls.push(ball);
       scene.physics.add.overlap([ball], enemies, hitEnemyWithBall, null, scene);
     }
   }
+
+  // Update ball size if changed (both visual and hitbox)
+  const scale = weapon.ballRadius / 8; // 8 is base radius
+  orbitingBalls.forEach((ball) => {
+    if (!ball || !ball.active) return;
+    ball.setScale(scale);
+    ball.body.setCircle(weapon.ballRadius);
+  });
 
   // Update angle
   orbitAngle += (weapon.rotSpeed * delta) / 1000;
@@ -1482,10 +1843,17 @@ function hitEnemyWithBall(ball, enemy) {
   if (hp <= 0) {
     const xpValue = enemy.getData('xpValue') || 5;
     const isBoss = enemy.getData('isBoss');
+    const dropChance = enemy.getData('dropChance') || 0;
     dropXP(enemy.x, enemy.y, xpValue);
 
     if (isBoss) {
       dropChest(enemy.x, enemy.y);
+    } else {
+      // Normal enemies have a chance to drop upgrade chests
+      const finalDropChance = dropChance * stats.lootChance;
+      if (Math.random() < finalDropChance) {
+        dropUpgradeChest(enemy.x, enemy.y);
+      }
     }
 
     enemy.destroy();
@@ -1519,26 +1887,37 @@ function updateAreaDamage(delta) {
   if (weapon.lastTick >= weapon.tickRate) {
     weapon.lastTick = 0;
 
+    let hitAnyEnemy = false;
+
     // Find enemies in range
     enemies.children.entries.forEach(enemy => {
       if (!enemy.active) return;
       const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
       if (dist <= weapon.radius) {
+        hitAnyEnemy = true;
+
         // Apply damage
         const hp = enemy.getData('hp') - weapon.dps;
         enemy.setData('hp', hp);
 
-        // Apply visual feedback only (no knockback for area damage)
-        applyVisualFeedback(enemy);
+        // Apply damage feedback (visual + knockback)
+        applyDamageFeedback(enemy, player.x, player.y);
 
         if (hp <= 0) {
           playTone(scene, 660, 0.1);
           const xpValue = enemy.getData('xpValue') || 5;
           const isBoss = enemy.getData('isBoss');
+          const dropChance = enemy.getData('dropChance') || 0;
           dropXP(enemy.x, enemy.y, xpValue);
 
           if (isBoss) {
             dropChest(enemy.x, enemy.y);
+          } else {
+            // Normal enemies have a chance to drop upgrade chests
+            const finalDropChance = dropChance * stats.lootChance;
+            if (Math.random() < finalDropChance) {
+              dropUpgradeChest(enemy.x, enemy.y);
+            }
           }
 
           enemy.destroy();
@@ -1546,6 +1925,11 @@ function updateAreaDamage(delta) {
         }
       }
     });
+
+    // Play damage sound once per tick if any enemy was hit
+    if (hitAnyEnemy) {
+      playTone(scene, 900, 0.08);
+    }
   }
 }
 
