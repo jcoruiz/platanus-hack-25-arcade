@@ -412,10 +412,8 @@ function preload() {
 
   // Coin texture (golden circle)
   g.fillStyle(0xFFD700, 1);
-  g.fillCircle(6, 6, 6);
-  g.lineStyle(2, 0xFFA500, 1);
-  g.strokeCircle(6, 6, 6);
-  g.generateTexture('coin', 12, 12);
+  g.fillCircle(5, 5, 5);
+  g.generateTexture('coin', 10, 10);
   g.clear();
 
   // Health drop texture (red medical cross)
