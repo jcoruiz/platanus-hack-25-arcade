@@ -122,12 +122,14 @@ const inS = { // initial stats
 
 let stats = JSON.parse(JSON.stringify(inS));
 
-let difficulty = {
+let inD = { // initial difficulty
   spawnRate: 2000,
   enemyHp: 20,
   enemyDamage: 10,
   enemySpeed: 80
 };
+
+let difficulty = { ...inD };
 
 let ui = {};
 let statsPanel = null;
@@ -2006,14 +2008,8 @@ function restartGame() {
   orbitingBalls = [];
   orbitAngle = 0;
 
-  stats = JSON.parse(JSON.stringify(inS));;
-
-  difficulty = {
-    spawnRate: 2000,
-    enemyHp: 20,
-    enemyDamage: 10,
-    enemySpeed: 80
-  };
+  stats = JSON.parse(JSON.stringify(inS));
+  difficulty = { ...inD };
 
   scene.scene.restart();
 }
