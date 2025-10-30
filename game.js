@@ -42,8 +42,8 @@ const enemyTypes = [
 
 let unlockedTypes = [];
 
-// Weapon types: i=id, n=name, d=desc, u=unlocked
-const weaponTypes = [
+const iwt = [ // initial weapon types
+  // Weapon types: i=id, n=name, d=desc, u=unlocked
   // Projectile: c=count, f=fireRate, m=damage, e=penetration
   { i: 'p', n: 'Projectiles', d: 'Shoots nearest', u: false, c: 1, f: 500, m: 10, e: 0 },
   // Orbit Ball: c=count, r=rotSpeed, a=radius, b=ballRadius, m=damage
@@ -54,14 +54,16 @@ const weaponTypes = [
   { i: 'b', n: 'Boomerang', d: 'Returns', u: false, c: 2, m: 12, s: 350, w: 250, x: 300, z: 1 }
 ];
 
+let weaponTypes = JSON.parse(JSON.stringify(iwt));
+
 const characters = [
   {
     name: 'Bananza',
     desc: 'Bananas',
     weapon: 'b',
     texture: 'p_b',
-    passiveType: 'damage',
-    passiveValue: 1.05,
+    pt: 1, // passiveType: damage
+    pv: 1.05, // passiveValue
     passiveDesc: '+5% Daño/niv'
   },
   {
@@ -69,8 +71,8 @@ const characters = [
     desc: 'Area Damage',
     weapon: 'a',
     texture: 'p_j',
-    passiveType: 'regen',
-    passiveValue: 5,
+    pt: 2, // passiveType: regen
+    pv: 5, // passiveValue
     passiveDesc: '+5 HP/niv'
   },
   {
@@ -78,8 +80,8 @@ const characters = [
     desc: 'Orbs',
     weapon: 'o',
     texture: 'p_o',
-    passiveType: 'crit',
-    passiveValue: 0.02,
+    pt: 3, // passiveType: crit
+    pv: 0.02, // passiveValue
     passiveDesc: '+2% Crit/niv'
   },
   {
@@ -87,8 +89,8 @@ const characters = [
     desc: 'Fast shoots',
     weapon: 'p',
     texture: 'p_t',
-    passiveType: 'speed',
-    passiveValue: 1.03,
+    pt: 4, // passiveType: speed
+    pv: 1.03, // passiveValue
     passiveDesc: '+3% Vel/niv'
   }
 ];
@@ -102,7 +104,7 @@ let boomerangs = [];
 let availableBoomerangs = 0;
 let boomerangShootTimer = 0;
 
-let stats = {
+const inS = { // initial stats
   hp: 100,
   maxHp: 100,
   speed: 150,
@@ -117,6 +119,8 @@ let stats = {
   xpToNext: 10,
   enKilled: 0
 };
+
+let stats = JSON.parse(JSON.stringify(inS));
 
 let difficulty = {
   spawnRate: 2000,
@@ -1135,20 +1139,20 @@ function levelUp() {
 
   // Apply character passive ability
   if (selectedCharacter) {
-    const passive = selectedCharacter.passiveType;
-    const value = selectedCharacter.passiveValue;
+    const passive = selectedCharacter.pt;
+    const value = selectedCharacter.pv;
 
-    if (passive === 'damage') {
+    if (passive === 1) {// damage
       // Banana: +5% weapon damage
       const weapon = getWeapon(selectedCharacter.weapon);
       if (weapon) weapon.m = Math.floor(weapon.m * value);
-    } else if (passive === 'regen') {
+    } else if (passive === 2) { // regen
       // Medusa: +5 HP regen
       stats.hpRegen += value;
-    } else if (passive === 'crit') {
+    } else if (passive === 3) { // crit
       // Orbe: +2% crit chance
       stats.critChance = Math.min(1, stats.critChance + value);
-    } else if (passive === 'speed') {
+    } else if (passive === 4) { // speed
       // Tren Bala: +3% speed
       stats.speed = Math.floor(stats.speed * value);
     }
@@ -1993,50 +1997,16 @@ function restartGame() {
   // Reset upgrade levels
   ul = {};
 
-  // Reset weapons (all locked, p will choose one)
-  weaponTypes.forEach(w => {
-    if (w.i === 'p') {
-      w.u = false;
-      w.c = 1;
-      w.f = 500;
-      w.m = 10;
-      w.e = 0;
-    } else if (w.i === 'o') {
-      w.u = false;
-      w.c = 2;
-      w.r = 2;
-      w.a = 80;
-      w.b = 8;
-      w.m = 15;
-    } else if (w.i === 'a') {
-      w.u = false;
-      w.a = 150;
-      w.p = 10;
-      w.t = 500;
-      w.l = 0;
-    } else {
-      w.u = false;
-    }
-  });
+  // Reset weapons (all locked)
+  weaponTypes = JSON.parse(JSON.stringify(iwt));
+
 
   // Clear orbiting balls
   orbitingBalls.forEach(ball => ball && ball.destroy());
   orbitingBalls = [];
   orbitAngle = 0;
 
-  stats = {
-    hp: 100,
-    maxHp: 100,
-    speed: 150,
-    knockback: 100,
-    hpRegen: 0,
-    xpMultiplier: 1.0,
-    lootChance: 1.0,
-    xp: 0,
-    level: 1,
-    xpToNext: 10,
-    enKilled: 0
-  };
+  stats = JSON.parse(JSON.stringify(inS));;
 
   difficulty = {
     spawnRate: 2000,
