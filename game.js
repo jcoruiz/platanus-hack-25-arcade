@@ -26,8 +26,8 @@ let scene;
 let selectedIndex = 0;
 let menuOptions = [];
 let menuKeys = [];
-
-let upgradeLevels = {};
+// ul=upgradedLevels
+let ul = {};
 
 // Enemy types: n=name, c=color, h=hpMult, s=speedMult, d=damageMult, x=xp, r=dropRate, u=unlockTime
 const enemyTypes = [
@@ -134,51 +134,51 @@ function getWeapon(id) {
 }
 
 const pUpgrades = [
-  { id: 's', name: 'Speed', desc: '+15% Move Speed', icon: '👟', maxLevel: 8, apply: () => { stats.speed *= 1.15; upgradeLevels['s'] = (upgradeLevels['s'] || 0) + 1; } },
-  { id: 'hp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: 10, apply: () => { stats.maxHp += 20; stats.hp += 20; upgradeLevels['hp'] = (upgradeLevels['hp'] || 0) + 1; } },
-  { id: 'kb', name: 'Knockback', desc: '+30% Enemy Pushback', icon: '💨', maxLevel: 6, apply: () => { stats.knockback *= 1.3; upgradeLevels['kb'] = (upgradeLevels['kb'] || 0) + 1; } },
-  { id: 'hr', name: 'HP Regen', desc: '+10 HP/min', icon: '💚', maxLevel: 10, apply: () => { stats.hpRegen += 10; upgradeLevels['hr'] = (upgradeLevels['hr'] || 0) + 1; } },
-  { id: 'xp', name: 'XP Boost', desc: '+50% XP Gain', icon: '⭐', maxLevel: 8, apply: () => { stats.xpMultiplier += 0.5; upgradeLevels['xp'] = (upgradeLevels['xp'] || 0) + 1; } },
-  { id: 'l', name: 'Luck', desc: '+50% Chest Drop Rate', icon: '🍀', maxLevel: 10, apply: () => { stats.lootChance += 0.5; upgradeLevels['l'] = (upgradeLevels['l'] || 0) + 1; } },
-  { id: 'cc', name: 'Crit Chance', desc: '+5% Crit Probability', icon: '🎯', maxLevel: 10, apply: () => { stats.critChance += 0.05; upgradeLevels['cc'] = (upgradeLevels['cc'] || 0) + 1; } },
-  { id: 'cd', name: 'Crit Damage', desc: '+25% Crit Multiplier', icon: '💢', maxLevel: 10, apply: () => { stats.critDamage += 0.25; upgradeLevels['cd'] = (upgradeLevels['cd'] || 0) + 1; } }
+  { id: 's', name: 'Speed', desc: '+15% Move Speed', icon: '👟', maxLevel: 8, apply: () => { stats.speed *= 1.15; ul['s'] = (ul['s'] || 0) + 1; } },
+  { id: 'hp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: 10, apply: () => { stats.maxHp += 20; stats.hp += 20; ul['hp'] = (ul['hp'] || 0) + 1; } },
+  { id: 'kb', name: 'Knockback', desc: '+30% Enemy Pushback', icon: '💨', maxLevel: 6, apply: () => { stats.knockback *= 1.3; ul['kb'] = (ul['kb'] || 0) + 1; } },
+  { id: 'hr', name: 'HP Regen', desc: '+10 HP/min', icon: '💚', maxLevel: 10, apply: () => { stats.hpRegen += 10; ul['hr'] = (ul['hr'] || 0) + 1; } },
+  { id: 'xp', name: 'XP Boost', desc: '+50% XP Gain', icon: '⭐', maxLevel: 8, apply: () => { stats.xpMultiplier += 0.5; ul['xp'] = (ul['xp'] || 0) + 1; } },
+  { id: 'l', name: 'Luck', desc: '+50% Chest Drop Rate', icon: '🍀', maxLevel: 10, apply: () => { stats.lootChance += 0.5; ul['l'] = (ul['l'] || 0) + 1; } },
+  { id: 'cc', name: 'Crit Chance', desc: '+5% Crit Probability', icon: '🎯', maxLevel: 10, apply: () => { stats.critChance += 0.05; ul['cc'] = (ul['cc'] || 0) + 1; } },
+  { id: 'cd', name: 'Crit Damage', desc: '+25% Crit Multiplier', icon: '💢', maxLevel: 10, apply: () => { stats.critDamage += 0.25; ul['cd'] = (ul['cd'] || 0) + 1; } }
 ];
 
 const projectileUpgrades = [
-  { id: 'ms', name: 'Multi Shot', desc: '+1 Projectile', icon: '🔫', weaponId: 'p', maxLevel: 10, apply: () => { getWeapon('p').c++; upgradeLevels['ms'] = (upgradeLevels['ms'] || 0) + 1; } },
-  { id: 'fr', name: 'Fire Rate', desc: '-15% Fire Delay', icon: '⚡', weaponId: 'p', maxLevel: 8, apply: () => { getWeapon('p').f = Math.max(150, getWeapon('p').f * 0.85); upgradeLevels['fr'] = (upgradeLevels['fr'] || 0) + 1; } },
-  { id: 'pd', name: 'Projectile Damage', desc: '+5 Damage', icon: '🗡️', weaponId: 'p', maxLevel: 10, apply: () => { getWeapon('p').m += 5; upgradeLevels['pd'] = (upgradeLevels['pd'] || 0) + 1; } },
-  { id: 'pn', name: 'Penetration', desc: '+1 Enemy Pierced', icon: '⚔️', weaponId: 'p', maxLevel: 5, apply: () => { getWeapon('p').e++; upgradeLevels['pn'] = (upgradeLevels['pn'] || 0) + 1; } }
+  { id: 'ms', name: 'Multi Shot', desc: '+1 Projectile', icon: '🔫', weaponId: 'p', maxLevel: 10, apply: () => { getWeapon('p').c++; ul['ms'] = (ul['ms'] || 0) + 1; } },
+  { id: 'fr', name: 'Fire Rate', desc: '-15% Fire Delay', icon: '⚡', weaponId: 'p', maxLevel: 8, apply: () => { getWeapon('p').f = Math.max(150, getWeapon('p').f * 0.85); ul['fr'] = (ul['fr'] || 0) + 1; } },
+  { id: 'pd', name: 'Projectile Damage', desc: '+5 Damage', icon: '🗡️', weaponId: 'p', maxLevel: 10, apply: () => { getWeapon('p').m += 5; ul['pd'] = (ul['pd'] || 0) + 1; } },
+  { id: 'pn', name: 'Penetration', desc: '+1 Enemy Pierced', icon: '⚔️', weaponId: 'p', maxLevel: 5, apply: () => { getWeapon('p').e++; ul['pn'] = (ul['pn'] || 0) + 1; } }
 ];
 
 const orbitingBallUpgrades = [
-  { id: 'mb', name: 'More Balls', desc: '+1 Orbiting Ball', icon: '⚪', weaponId: 'o', maxLevel: 10, apply: () => { getWeapon('o').c++; upgradeLevels['mb'] = (upgradeLevels['mb'] || 0) + 1; } },
-  { id: 'rs', name: 'Rotation Speed', desc: '+0.5 Rotation Speed', icon: '🌀', weaponId: 'o', maxLevel: 10, apply: () => { getWeapon('o').r += 0.5; upgradeLevels['rs'] = (upgradeLevels['rs'] || 0) + 1; } },
-  { id: 'bs', name: 'Ball Size', desc: '+2 Ball Radius', icon: '⭕', weaponId: 'o', maxLevel: 8, apply: () => { getWeapon('o').b += 2; upgradeLevels['bs'] = (upgradeLevels['bs'] || 0) + 1; } },
-  { id: 'bd', name: 'Ball Damage', desc: '+8 Ball Damage', icon: '💥', weaponId: 'o', maxLevel: 10, apply: () => { getWeapon('o').m += 8; upgradeLevels['bd'] = (upgradeLevels['bd'] || 0) + 1; } }
+  { id: 'mb', name: 'More Balls', desc: '+1 Orbiting Ball', icon: '⚪', weaponId: 'o', maxLevel: 10, apply: () => { getWeapon('o').c++; ul['mb'] = (ul['mb'] || 0) + 1; } },
+  { id: 'rs', name: 'Rotation Speed', desc: '+0.5 Rotation Speed', icon: '🌀', weaponId: 'o', maxLevel: 10, apply: () => { getWeapon('o').r += 0.5; ul['rs'] = (ul['rs'] || 0) + 1; } },
+  { id: 'bs', name: 'Ball Size', desc: '+2 Ball Radius', icon: '⭕', weaponId: 'o', maxLevel: 8, apply: () => { getWeapon('o').b += 2; ul['bs'] = (ul['bs'] || 0) + 1; } },
+  { id: 'bd', name: 'Ball Damage', desc: '+8 Ball Damage', icon: '💥', weaponId: 'o', maxLevel: 10, apply: () => { getWeapon('o').m += 8; ul['bd'] = (ul['bd'] || 0) + 1; } }
 ];
 
 const areaDamageUpgrades = [
-  { id: 'ar', name: 'Area Radius', desc: '+30 Area Range', icon: '🔴', weaponId: 'a', maxLevel: 5, apply: () => { getWeapon('a').a += 30; upgradeLevels['ar'] = (upgradeLevels['ar'] || 0) + 1; } },
-  { id: 'ad', name: 'Area DPS', desc: '+3 Damage/Second', icon: '🔥', weaponId: 'a', maxLevel: 10, apply: () => { getWeapon('a').p += 3; upgradeLevels['ad'] = (upgradeLevels['ad'] || 0) + 1; } },
-  { id: 'at', name: 'Tick Speed', desc: '-15% Pulse Delay', icon: '⚡', weaponId: 'a', maxLevel: 8, apply: () => { getWeapon('a').t = Math.max(150, getWeapon('a').t * 0.85); upgradeLevels['at'] = (upgradeLevels['at'] || 0) + 1; } }
+  { id: 'ar', name: 'Area Radius', desc: '+30 Area Range', icon: '🔴', weaponId: 'a', maxLevel: 5, apply: () => { getWeapon('a').a += 30; ul['ar'] = (ul['ar'] || 0) + 1; } },
+  { id: 'ad', name: 'Area DPS', desc: '+3 Damage/Second', icon: '🔥', weaponId: 'a', maxLevel: 10, apply: () => { getWeapon('a').p += 3; ul['ad'] = (ul['ad'] || 0) + 1; } },
+  { id: 'at', name: 'Tick Speed', desc: '-15% Pulse Delay', icon: '⚡', weaponId: 'a', maxLevel: 8, apply: () => { getWeapon('a').t = Math.max(150, getWeapon('a').t * 0.85); ul['at'] = (ul['at'] || 0) + 1; } }
 ];
 
 const boomerangUpgrades = [
-  { id: 'bg', name: 'Boomerang Damage', desc: '+8 Damage', icon: '💥', weaponId: 'b', maxLevel: 10, apply: () => { getWeapon('b').m += 8; upgradeLevels['bg'] = (upgradeLevels['bg'] || 0) + 1; } },
-  { id: 'bz', name: 'Boomerang Size', desc: '+30% Size', icon: '📏', weaponId: 'b', maxLevel: 8, apply: () => { getWeapon('b').z += 0.3; upgradeLevels['bz'] = (upgradeLevels['bz'] || 0) + 1; } },
-  { id: 'bv', name: 'Boomerang Speed', desc: '+15% Speed', icon: '💨', weaponId: 'b', maxLevel: 8, apply: () => { getWeapon('b').s *= 1.15; getWeapon('b').w *= 1.15; upgradeLevels['bv'] = (upgradeLevels['bv'] || 0) + 1; } },
-  { id: 'bc', name: 'More Boomerangs', desc: '+1 Boomerang', icon: '🪃', weaponId: 'b', maxLevel: 5, apply: () => { getWeapon('b').c++; availableBoomerangs++; upgradeLevels['bc'] = (upgradeLevels['bc'] || 0) + 1; } }
+  { id: 'bg', name: 'Boomerang Damage', desc: '+8 Damage', icon: '💥', weaponId: 'b', maxLevel: 10, apply: () => { getWeapon('b').m += 8; ul['bg'] = (ul['bg'] || 0) + 1; } },
+  { id: 'bz', name: 'Boomerang Size', desc: '+30% Size', icon: '📏', weaponId: 'b', maxLevel: 8, apply: () => { getWeapon('b').z += 0.3; ul['bz'] = (ul['bz'] || 0) + 1; } },
+  { id: 'bv', name: 'Boomerang Speed', desc: '+15% Speed', icon: '💨', weaponId: 'b', maxLevel: 8, apply: () => { getWeapon('b').s *= 1.15; getWeapon('b').w *= 1.15; ul['bv'] = (ul['bv'] || 0) + 1; } },
+  { id: 'bc', name: 'More Boomerangs', desc: '+1 Boomerang', icon: '🪃', weaponId: 'b', maxLevel: 5, apply: () => { getWeapon('b').c++; availableBoomerangs++; ul['bc'] = (ul['bc'] || 0) + 1; } }
 ];
 
 const rareUpgrades = [
-  { id: 'r1', name: 'Triple Shot', desc: '+3 Projectiles', icon: '🔫', weaponId: 'p', maxLevel: 2, apply: () => { getWeapon('p').c += 3; upgradeLevels['r1'] = (upgradeLevels['r1'] || 0) + 1; } },
-  { id: 'r2', name: 'Rapid Fire', desc: '-40% Fire Delay', icon: '⚡', weaponId: 'p', maxLevel: 3, apply: () => { getWeapon('p').f = Math.max(100, getWeapon('p').f * 0.6); upgradeLevels['r2'] = (upgradeLevels['r2'] || 0) + 1; } },
-  { id: 'r3', name: 'Massive Damage', desc: '+30 Projectile Damage', icon: '🗡️', weaponId: 'p', maxLevel: 3, apply: () => { getWeapon('p').m += 30; upgradeLevels['r3'] = (upgradeLevels['r3'] || 0) + 1; } },
-  { id: 'r4', name: 'Double Balls', desc: '+2 Orbiting Balls', icon: '⚪', weaponId: 'o', maxLevel: 2, apply: () => { getWeapon('o').c += 2; upgradeLevels['r4'] = (upgradeLevels['r4'] || 0) + 1; } },
-  { id: 'r5', name: 'Mega Ball Damage', desc: '+25 Ball Damage', icon: '💥', weaponId: 'o', maxLevel: 3, apply: () => { getWeapon('o').m += 25; upgradeLevels['r5'] = (upgradeLevels['r5'] || 0) + 1; } },
-  { id: 'r6', name: 'Huge Area', desc: '+100 Area Range', icon: '🔴', weaponId: 'a', maxLevel: 2, apply: () => { getWeapon('a').a += 100; upgradeLevels['r6'] = (upgradeLevels['r6'] || 0) + 1; } },
-  { id: 'r7', name: 'Devastating DPS', desc: '+15 Damage/Second', icon: '🔥', weaponId: 'a', maxLevel: 3, apply: () => { getWeapon('a').p += 15; upgradeLevels['r7'] = (upgradeLevels['r7'] || 0) + 1; } }
+  { id: 'r1', name: 'Triple Shot', desc: '+3 Projectiles', icon: '🔫', weaponId: 'p', maxLevel: 2, apply: () => { getWeapon('p').c += 3; ul['r1'] = (ul['r1'] || 0) + 1; } },
+  { id: 'r2', name: 'Rapid Fire', desc: '-40% Fire Delay', icon: '⚡', weaponId: 'p', maxLevel: 3, apply: () => { getWeapon('p').f = Math.max(100, getWeapon('p').f * 0.6); ul['r2'] = (ul['r2'] || 0) + 1; } },
+  { id: 'r3', name: 'Massive Damage', desc: '+30 Projectile Damage', icon: '🗡️', weaponId: 'p', maxLevel: 3, apply: () => { getWeapon('p').m += 30; ul['r3'] = (ul['r3'] || 0) + 1; } },
+  { id: 'r4', name: 'Double Balls', desc: '+2 Orbiting Balls', icon: '⚪', weaponId: 'o', maxLevel: 2, apply: () => { getWeapon('o').c += 2; ul['r4'] = (ul['r4'] || 0) + 1; } },
+  { id: 'r5', name: 'Mega Ball Damage', desc: '+25 Ball Damage', icon: '💥', weaponId: 'o', maxLevel: 3, apply: () => { getWeapon('o').m += 25; ul['r5'] = (ul['r5'] || 0) + 1; } },
+  { id: 'r6', name: 'Huge Area', desc: '+100 Area Range', icon: '🔴', weaponId: 'a', maxLevel: 2, apply: () => { getWeapon('a').a += 100; ul['r6'] = (ul['r6'] || 0) + 1; } },
+  { id: 'r7', name: 'Devastating DPS', desc: '+15 Damage/Second', icon: '🔥', weaponId: 'a', maxLevel: 3, apply: () => { getWeapon('a').p += 15; ul['r7'] = (ul['r7'] || 0) + 1; } }
 ];
 
 function preload() {
@@ -968,7 +968,7 @@ function collectUpgradeChest(_pObj, chest) {
 
   // Filter out maxed upgrades
   availableUpgrades = availableUpgrades.filter(u =>
-    (upgradeLevels[u.id] || 0) < u.maxLevel
+    (ul[u.id] || 0) < u.maxLevel
   );
 
   // Show selection menu if upgrades available
@@ -1188,7 +1188,7 @@ function showUpgradeMenu() {
 
   // Filter out upgrades that have reached max level
   availableUpgrades = availableUpgrades.filter(u =>
-    (upgradeLevels[u.id] || 0) < u.maxLevel
+    (ul[u.id] || 0) < u.maxLevel
   );
 
   // Semi-transparent overlay
@@ -1459,7 +1459,7 @@ function showRareUpgradeMenu() {
   const available = rareUpgrades.filter(u => {
     if (!u.weaponId) return true; // Player upgrades
     const isUnlocked = getWeapon(u.weaponId).u;
-    const notMaxed = (upgradeLevels[u.id] || 0) < u.maxLevel;
+    const notMaxed = (ul[u.id] || 0) < u.maxLevel;
     return isUnlocked && notMaxed;
   });
 
@@ -1991,7 +1991,7 @@ function restartGame() {
   warningActive = false;
 
   // Reset upgrade levels
-  upgradeLevels = {};
+  ul = {};
 
   // Reset weapons (all locked, p will choose one)
   weaponTypes.forEach(w => {
