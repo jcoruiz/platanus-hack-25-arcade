@@ -12,8 +12,8 @@ const config = {
 
 new Phaser.Game(config);
 
-// Global vars: p=player, cr=cursors, en=enemies, pr=projectiles, xo=xpOrbs, co=coins, ob=obstacles, wc=weaponChests, uc=upgradeChests, mg=magnets, gr=graphics
-let p, cr, en, pr, xo, co, ob, wc, uc, mg, gr;
+// Global vars: p=player, cr=cursors, en=enemies, pr=projectiles, xo=xpOrbs, co=coins, ob=obstacles, wc=weaponChests, uc=upgradeChests, mg=magnets, hd=healthDrops, gr=graphics
+let p, cr, en, pr, xo, co, ob, wc, uc, mg, hd, gr;
 // adc=areaDamageCircle
 let adc = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, showStats = false, paused = false;
@@ -418,6 +418,18 @@ function preload() {
   g.generateTexture('coin', 12, 12);
   g.clear();
 
+  // Health drop texture (red medical cross)
+  g.fillStyle(0xffffff, 1);
+  g.fillCircle(10, 10, 10);
+  g.fillStyle(0xff0000, 1);
+  g.fillRect(8, 4, 4, 12);
+  g.fillRect(4, 8, 12, 4);
+  g.lineStyle(2, 0xffffff, 1);
+  g.strokeRect(8, 4, 4, 12);
+  g.strokeRect(4, 8, 12, 4);
+  g.generateTexture('healthDrop', 20, 20);
+  g.clear();
+
   // Obstacle texture (gray rock)
   g.fillStyle(0x555555, 1);
   g.fillCircle(20, 20, 20);
@@ -506,6 +518,7 @@ function create() {
   wc = this.physics.add.group();
   uc = this.physics.add.group();
   mg = this.physics.add.group();
+  hd = this.physics.add.group();
   ob = this.physics.add.staticGroup();
 
   // Spawn ob randomly across map
@@ -536,6 +549,7 @@ function create() {
   this.physics.add.overlap(p, wc, collectChest, null, this);
   this.physics.add.overlap(p, uc, collectUpgradeChest, null, this);
   this.physics.add.overlap(p, mg, collectMagnet, null, this);
+  this.physics.add.overlap(p, hd, collectHealthHeal, null, this);
 
   // Enemy-to-enemy collisions (they push each other)
   this.physics.add.collider(en, en);
@@ -904,6 +918,12 @@ function hitEnemy(proj, enemy) {
       if (Math.random() < magnetDropChance * stats.lootChance) {
         dropMagnet(enemy.x, enemy.y);
       }
+
+      // Small chance to drop health heal
+      const healthDropChance = 0.015; // 1.5% chance
+      if (Math.random() < healthDropChance * stats.lootChance) {
+        dropHealthHeal(enemy.x, enemy.y);
+      }
     }
 
     enemy.destroy();
@@ -952,6 +972,13 @@ function dropCoin(x, y, coinValue) {
   const coin = co.create(x, y, 'coin');
   coin.body.setCircle(6);
   coin.setData('coinValue', coinValue);
+}
+
+function dropHealthHeal(x, y) {
+  const heal = hd.create(x, y, 'healthDrop');
+  heal.body.setCircle(10);
+  heal.body.setImmovable(true);
+  heal.body.setAllowGravity(false);
 }
 
 function collectCoin(_pObj, coin) {
@@ -1053,6 +1080,13 @@ function collectMagnet(_pObj, magnet) {
       coin.setData('magnetized', true);
     }
   });
+}
+
+function collectHealthHeal(_pObj, healDrop) {
+  if (!healDrop.active) return;
+  healDrop.destroy();
+  stats.hp = Math.min(stats.maxHp, stats.hp + 30);
+  playTone(scene, 900, 0.2);
 }
 
 function showUpgradeChestMenu(availableUpgrades) {
@@ -2514,6 +2548,12 @@ function updateAreaDamage(delta) {
             if (Math.random() < finalDropChance) {
               dropUpgradeChest(enemy.x, enemy.y);
             }
+
+            // Small chance to drop health heal
+            const healthDropChance = 0.015; // 1.5% chance
+            if (Math.random() < healthDropChance * stats.lootChance) {
+              dropHealthHeal(enemy.x, enemy.y);
+            }
           }
 
           enemy.destroy();
@@ -2688,6 +2728,12 @@ function hitEnemyWithBoomerang(boom, enemy) {
       const magnetDropChance = 0.015;
       if (Math.random() < magnetDropChance * stats.lootChance) {
         dropMagnet(enemy.x, enemy.y);
+      }
+
+      // Small chance to drop health heal
+      const healthDropChance = 0.015; // 1.5% chance
+      if (Math.random() < healthDropChance * stats.lootChance) {
+        dropHealthHeal(enemy.x, enemy.y);
       }
     }
 
