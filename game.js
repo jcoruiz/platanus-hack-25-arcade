@@ -18,7 +18,7 @@ new Phaser.Game(config);
 // Game state
 let player, cursors, enemies, projectiles, xpOrbs, obstacles, weaponChests, upgradeChests, magnets, graphics;
 let areaDamageCircle = null;
-let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, showStats = false;
+let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, showStats = false, paused = false;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
 let nextWaveTime = 60000, nextBossTime = 120000;
@@ -575,7 +575,47 @@ function create() {
   // Keyboard for restart
   const rKey = this.input.keyboard.addKey('R');
   rKey.on('down', () => {
-    if (gameOver) restartGame();
+    if (!startScreen) restartGame();
+  });
+
+  // Keyboard for pause
+  const pKey = this.input.keyboard.addKey('P');
+  let pauseOverlay = null;
+  let pauseText = null;
+  let pauseHint = null;
+  pKey.on('down', () => {
+    if (!gameOver && !startScreen && !levelingUp && !selectingWeapon && !showStats) {
+      paused = !paused;
+      if (paused) {
+        scene.physics.pause();
+        playTone(scene, 600, 0.1);
+        // Show pause overlay
+        pauseOverlay = scene.add.graphics();
+        pauseOverlay.fillStyle(0x000000, 0.7);
+        pauseOverlay.fillRect(0, 0, 800, 600);
+        pauseOverlay.setScrollFactor(0);
+        pauseOverlay.setDepth(200);
+        pauseText = scene.add.text(400, 300, 'PAUSED', {
+          fontSize: '64px',
+          fontFamily: 'Arial',
+          color: '#ffff00',
+          stroke: '#000000',
+          strokeThickness: 8
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+        pauseHint = scene.add.text(400, 370, 'Press [P] to resume', {
+          fontSize: '24px',
+          fontFamily: 'Arial',
+          color: '#ffffff'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+      } else {
+        scene.physics.resume();
+        playTone(scene, 800, 0.1);
+        // Remove pause overlay
+        if (pauseOverlay) pauseOverlay.destroy();
+        if (pauseText) pauseText.destroy();
+        if (pauseHint) pauseHint.destroy();
+      }
+    }
   });
 
   // Keyboard for stats panel
@@ -595,7 +635,7 @@ function create() {
 }
 
 function update(_time, delta) {
-  if (gameOver || levelingUp || selectingWeapon || startScreen || showStats) return;
+  if (gameOver || levelingUp || selectingWeapon || startScreen || showStats || paused) return;
 
   gameTime += delta;
   shootTimer += delta;
@@ -1755,7 +1795,7 @@ function createUI() {
   }).setScrollFactor(0);
 
   // Stats indicator
-  ui.statsHint = scene.add.text(700, 580, '[S] Stats', {
+  ui.statsHint = scene.add.text(580, 580, '[S] Stats  [P] Pause  [R] Restart', {
     fontSize: '14px',
     fontFamily: 'Arial',
     color: '#888888'
@@ -1952,6 +1992,7 @@ function restartGame() {
   levelingUp = false;
   selectingWeapon = false;
   startScreen = true;
+  paused = false;
   gameTime = 0;
   shootTimer = 0;
   spawnTimer = 0;
