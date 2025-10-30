@@ -305,145 +305,71 @@ function preload() {
   g.clear();
 
   // Enemy textures (one for each type) - different shapes
+  // Helpers for common drawing operations
+  const e=(x1,y1,x2,y2)=>{g.fillStyle(C.W,1);g.fillCircle(x1,y1,2);g.fillCircle(x2,y2,2);}; // e=eyes (white circles)
+  const t=(...args)=>g.fillTriangle(...args); // t=triangle
+  const c=(x,y,r)=>g.fillCircle(x,y,r); // c=circle
+  const r=(x,y,w,h)=>g.fillRect(x,y,w,h); // r=rect
+
   enemyTypes.forEach(type => {
     // Normal enemy
     g.fillStyle(type.c, 1);
     if (type.n === 'g') {
       // Triangle
-      g.fillTriangle(10, 2, 2, 18, 18, 18);
-      g.fillStyle(C.W, 1);
-      g.fillCircle(7, 10, 2);
-      g.fillCircle(13, 10, 2);
+      t(10,2,2,18,18,18);
+      e(7,10,13,10);
     } else if (type.n === 'b') {
       // Diamond
-      g.fillTriangle(10, 2, 2, 10, 10, 18);
-      g.fillTriangle(10, 2, 18, 10, 10, 18);
-      g.fillStyle(C.W, 1);
-      g.fillCircle(8, 8, 2);
-      g.fillCircle(12, 8, 2);
+      t(10,2,2,10,10,18);
+      t(10,2,18,10,10,18);
+      e(8,8,12,8);
     } else if (type.n === 'c') {
       // Pentagon-ish
-      g.fillCircle(10, 10, 9);
-      g.fillStyle(C.W, 1);
-      g.fillCircle(7, 9, 2);
-      g.fillCircle(13, 9, 2);
+      c(10,10,9);
+      e(7,9,13,9);
       g.fillStyle(type.c, 0.7);
-      g.fillCircle(10, 6, 3);
+      c(10,6,3);
     } else if (type.n === 'y') {
       // Square
-      g.fillRect(3, 3, 14, 14);
+      r(3,3,14,14);
       g.fillStyle(C.B, 1);
-      g.fillCircle(7, 8, 2);
-      g.fillCircle(13, 8, 2);
-      g.fillRect(6, 13, 8, 2);
+      e(7,8,13,8);
+      r(6,13,8,2);
     } else if (type.n === 'o') {
       // Star-like
-      g.fillCircle(10, 10, 9);
-      g.fillTriangle(10, 1, 7, 8, 13, 8);
-      g.fillTriangle(10, 19, 7, 12, 13, 12);
-      g.fillTriangle(1, 10, 8, 7, 8, 13);
-      g.fillTriangle(19, 10, 12, 7, 12, 13);
-      g.fillStyle(C.W, 1);
-      g.fillCircle(7, 8, 2);
-      g.fillCircle(13, 8, 2);
+      c(10,10,9);
+      t(10,1,7,8,13,8);
+      t(10,19,7,12,13,12);
+      t(1,10,8,7,8,13);
+      t(19,10,12,7,12,13);
+      e(7,8,13,8);
     } else if (type.n === 'r') {
       // Hexagon-ish with horns
-      g.fillCircle(10, 10, 9);
-      g.fillTriangle(3, 5, 5, 2, 7, 5);
-      g.fillTriangle(17, 5, 15, 2, 13, 5);
+      c(10,10,9);
+      t(3,5,5,2,7,5);
+      t(17,5,15,2,13,5);
       g.fillStyle(C.R, 1);
-      g.fillCircle(7, 9, 2);
-      g.fillCircle(13, 9, 2);
-      g.fillRect(7, 14, 6, 2);
+      e(7,9,13,9);
+      r(7,14,6,2);
     } else if (type.n === 'p') {
       // Alien-like
-      g.fillRect(4, 6, 12, 10);
-      g.fillCircle(6, 6, 3);
-      g.fillCircle(14, 6, 3);
+      r(4,6,12,10);
+      c(6,6,3);
+      c(14,6,3);
       g.fillStyle(C.G, 1);
-      g.fillCircle(7, 10, 3);
-      g.fillCircle(13, 10, 3);
+      c(7,10,3);
+      c(13,10,3);
       g.fillStyle(C.B, 1);
-      g.fillCircle(7, 10, 2);
-      g.fillCircle(13, 10, 2);
+      e(7,10,13,10);
     }
     g.generateTexture(`enemy_${type.n}`, 20, 20);
     g.clear();
-
-    // Boss texture (3x size) - similar shapes scaled up
-    g.fillStyle(type.c, 1);
-    if (type.n === 'g') {
-      g.fillTriangle(30, 6, 6, 54, 54, 54);
-      g.fillStyle(C.W, 1);
-      g.fillCircle(21, 30, 6);
-      g.fillCircle(39, 30, 6);
-    } else if (type.n === 'b') {
-      g.fillTriangle(30, 6, 6, 30, 30, 54);
-      g.fillTriangle(30, 6, 54, 30, 30, 54);
-      g.fillStyle(C.W, 1);
-      g.fillCircle(24, 24, 6);
-      g.fillCircle(36, 24, 6);
-    } else if (type.n === 'c') {
-      g.fillCircle(30, 30, 27);
-      g.fillStyle(C.W, 1);
-      g.fillCircle(21, 27, 6);
-      g.fillCircle(39, 27, 6);
-      g.fillStyle(type.c, 0.7);
-      g.fillCircle(30, 18, 9);
-    } else if (type.n === 'y') {
-      g.fillRect(9, 9, 42, 42);
-      g.fillStyle(C.B, 1);
-      g.fillCircle(21, 24, 6);
-      g.fillCircle(39, 24, 6);
-      g.fillRect(18, 39, 24, 6);
-    } else if (type.n === 'o') {
-      g.fillCircle(30, 30, 27);
-      g.fillTriangle(30, 3, 21, 24, 39, 24);
-      g.fillTriangle(30, 57, 21, 36, 39, 36);
-      g.fillTriangle(3, 30, 24, 21, 24, 39);
-      g.fillTriangle(57, 30, 36, 21, 36, 39);
-      g.fillStyle(C.W, 1);
-      g.fillCircle(21, 24, 6);
-      g.fillCircle(39, 24, 6);
-    } else if (type.n === 'r') {
-      g.fillCircle(30, 30, 27);
-      g.fillTriangle(9, 15, 15, 6, 21, 15);
-      g.fillTriangle(51, 15, 45, 6, 39, 15);
-      g.fillStyle(C.R, 1);
-      g.fillCircle(21, 27, 6);
-      g.fillCircle(39, 27, 6);
-      g.fillRect(21, 42, 18, 6);
-    } else if (type.n === 'p') {
-      g.fillRect(12, 18, 36, 30);
-      g.fillCircle(18, 18, 9);
-      g.fillCircle(42, 18, 9);
-      g.fillStyle(C.G, 1);
-      g.fillCircle(21, 30, 9);
-      g.fillCircle(39, 30, 9);
-      g.fillStyle(C.B, 1);
-      g.fillCircle(21, 30, 6);
-      g.fillCircle(39, 30, 6);
-    }
-    g.generateTexture(`boss_${type.n}`, 60, 60);
-    g.clear();
   });
 
-  // Projectile texture (orange circle)
-  g.fillStyle(C.O, 1);
-  g.fillCircle(4, 4, 4);
-  g.generateTexture('p', 8, 8);
-  g.clear();
-
-  // XP orb texture (cyan circle)
-  g.fillStyle(C.Cy, 1);
+  // Generic orb texture (white for tinting)
+  g.fillStyle(C.W, 1);
   g.fillCircle(5, 5, 5);
-  g.generateTexture('xp', 10, 10);
-  g.clear();
-
-  // Coin texture (golden circle)
-  g.fillStyle(0xFFD700, 1);
-  g.fillCircle(5, 5, 5);
-  g.generateTexture('coin', 10, 10);
+  g.generateTexture('orb', 10, 10);
   g.clear();
 
   // Health drop texture (red medical cross)
@@ -466,24 +392,14 @@ function preload() {
   g.generateTexture('obstacle', 40, 40);
   g.clear();
 
-  // Weapon chest texture (golden chest)
-  g.fillStyle(0xffaa00, 1);
+  // Generic chest texture (white for tinting)
+  g.fillStyle(0xcccccc, 1);
   g.fillRect(3, 8, 14, 12);
-  g.fillStyle(0xffdd00, 1);
+  g.fillStyle(C.W, 1);
   g.fillRect(6, 5, 8, 8);
   g.lineStyle(2, C.W, 1);
   g.strokeRect(3, 8, 14, 12);
   g.generateTexture('chest', 20, 20);
-  g.clear();
-
-  // Upgrade chest texture (green/emerald chest)
-  g.fillStyle(0x00aa44, 1);
-  g.fillRect(3, 8, 14, 12);
-  g.fillStyle(0x00ff66, 1);
-  g.fillRect(6, 5, 8, 8);
-  g.lineStyle(2, C.W, 1);
-  g.strokeRect(3, 8, 14, 12);
-  g.generateTexture('upgradeChest', 20, 20);
   g.clear();
 
   // Magnet texture (horseshoe magnet)
@@ -815,7 +731,9 @@ function shoot() {
     const vy = Math.sin(angle) * 300;
 
     // Create using the group (important!)
-    const proj = pr.create(p.x, p.y, 'p');
+    const proj = pr.create(p.x, p.y, 'orb');
+    proj.setTint(C.O);
+    proj.setScale(0.8);
     proj.body.setCircle(4);
     proj.body.setVelocity(vx, vy);
     proj.setData('damage', weapon.m);
@@ -932,7 +850,8 @@ function hitPlayer(_pObj, enemy) {
 
 function dropXP(x, y, xpValue) {
   // Create using the group
-  const orb = xo.create(x, y, 'xp');
+  const orb = xo.create(x, y, 'orb');
+  orb.setTint(C.Cy);
   orb.body.setCircle(5);
   orb.setData('xpValue', xpValue);
   // XP orbs stay forever until collected
@@ -951,7 +870,8 @@ function collectXP(_pObj, orb) {
 }
 
 function dropCoin(x, y, coinValue) {
-  const coin = co.create(x, y, 'coin');
+  const coin = co.create(x, y, 'orb');
+  coin.setTint(0xFFD700);
   coin.body.setCircle(6);
   coin.setData('coinValue', coinValue);
 }
@@ -973,6 +893,7 @@ function collectCoin(_pObj, coin) {
 
 function dropChest(x, y) {
   const chest = wc.create(x, y, 'chest');
+  chest.setTint(0xffdd00);
   chest.body.setCircle(10);
   // Chest stays in place (immovable)
   chest.body.setImmovable(true);
@@ -996,7 +917,8 @@ function collectChest(_pObj, chest) {
 }
 
 function dropUpgCh(x, y) {
-  const chest = uc.create(x, y, 'upgradeChest');
+  const chest = uc.create(x, y, 'chest');
+  chest.setTint(0x00ff66);
   chest.body.setCircle(10);
   // Chest stays in place (immovable)
   chest.body.setImmovable(true);
@@ -2272,7 +2194,8 @@ function spawnBoss() {
   x = Math.max(50, Math.min(2350, x));
   y = Math.max(50, Math.min(1750, y));
 
-  const boss = en.create(x, y, `boss_${type.n}`);
+  const boss = en.create(x, y, `enemy_${type.n}`);
+  boss.setScale(3);
   boss.body.setCircle(30);
   boss.setData('hp', difficulty.enemyHp * type.h * 10);
   boss.setData('maxHp', difficulty.enemyHp * type.h * 10);
