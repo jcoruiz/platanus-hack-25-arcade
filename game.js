@@ -97,35 +97,47 @@ const weaponTypes = [
 const characters = [
   {
     id: 'banana',
-    name: 'Banana',
-    desc: 'Disparos rápidos',
-    weapon: 'projectile',
+    name: 'Bananza',
+    desc: 'Boomerangs retornantes',
+    weapon: 'boomerang',
     texture: 'player',
-    emoji: '🍌'
+    emoji: '🍌',
+    passiveType: 'damage',
+    passiveValue: 1.05,
+    passiveDesc: '+5% Weapon Damage/nivel'
   },
   {
     id: 'jellyfish',
-    name: 'Medusa',
-    desc: 'Bolas orbitales',
-    weapon: 'orbitingBall',
+    name: 'Medusin',
+    desc: 'Daño por área',
+    weapon: 'areaDamage',
     texture: 'player_jellyfish',
-    emoji: '🎐'
+    emoji: '🎐',
+    passiveType: 'regen',
+    passiveValue: 5,
+    passiveDesc: '+5 HP Regen/nivel'
   },
   {
     id: 'orb',
-    name: 'Orbe',
-    desc: 'Daño por área',
-    weapon: 'areaDamage',
+    name: 'Lab Studio',
+    desc: 'Bolas orbitales',
+    weapon: 'orbitingBall',
     texture: 'player_orb',
-    emoji: '🔮'
+    emoji: '🔮',
+    passiveType: 'crit',
+    passiveValue: 0.02,
+    passiveDesc: '+2% Crit Chance/nivel'
   },
   {
     id: 'bullettrain',
     name: 'Tren Bala',
-    desc: 'Boomerangs retornantes',
-    weapon: 'boomerang',
+    desc: 'Disparos rápidos',
+    weapon: 'projectile',
     texture: 'player_bullettrain',
-    emoji: '🚄'
+    emoji: '🚄',
+    passiveType: 'speed',
+    passiveValue: 1.03,
+    passiveDesc: '+3% Velocidad/nivel'
   }
 ];
 
@@ -1174,6 +1186,27 @@ function levelUp() {
   stats.xp -= stats.xpToNext;
   stats.xpToNext = Math.floor(stats.xpToNext * 1.2);
 
+  // Apply character passive ability
+  if (selectedCharacter) {
+    const passive = selectedCharacter.passiveType;
+    const value = selectedCharacter.passiveValue;
+
+    if (passive === 'damage') {
+      // Banana: +5% weapon damage
+      const weapon = getWeapon(selectedCharacter.weapon);
+      if (weapon) weapon.damage = Math.floor(weapon.damage * value);
+    } else if (passive === 'regen') {
+      // Medusa: +5 HP regen
+      stats.hpRegen += value;
+    } else if (passive === 'crit') {
+      // Orbe: +2% crit chance
+      stats.critChance = Math.min(1, stats.critChance + value);
+    } else if (passive === 'speed') {
+      // Tren Bala: +3% speed
+      stats.speed = Math.floor(stats.speed * value);
+    }
+  }
+
   // Pause physics
   scene.physics.pause();
 
@@ -1721,6 +1754,15 @@ function showStartScreen() {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: '#cccccc',
+      wordWrap: { width: 160, useAdvancedWrap: true },
+      align: 'center'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+    // Passive ability
+    scene.add.text(x, y + 75, character.passiveDesc, {
+      fontSize: '12px',
+      fontFamily: 'Arial',
+      color: '#00ff88',
       wordWrap: { width: 160, useAdvancedWrap: true },
       align: 'center'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
