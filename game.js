@@ -12,8 +12,8 @@ const config = {
 
 new Phaser.Game(config);
 
-// Global vars: p=player, cr=cursors, en=enemies, pr=projectiles, xo=xpOrbs, ob=obstacles, wc=weaponChests, uc=upgradeChests, mg=magnets, gr=graphics
-let p, cr, en, pr, xo, ob, wc, uc, mg, gr;
+// Global vars: p=player, cr=cursors, en=enemies, pr=projectiles, xo=xpOrbs, co=coins, ob=obstacles, wc=weaponChests, uc=upgradeChests, mg=magnets, gr=graphics
+let p, cr, en, pr, xo, co, ob, wc, uc, mg, gr;
 // adc=areaDamageCircle
 let adc = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, showStats = false, paused = false;
@@ -29,15 +29,15 @@ let menuKeys = [];
 // ul=upgradedLevels
 let ul = {};
 
-// Enemy types: n=name, c=color, h=hpMult, s=speedMult, d=damageMult, x=xp, r=dropRate, u=unlockTime
+// Enemy types: n=name, c=color, h=hpMult, s=speedMult, d=damageMult, x=xp, cn=coins, r=dropRate, u=unlockTime
 const enemyTypes = [
-  { n: 'g', c: 0x00ff00, h: 1.0, s: 1.0, d: 1.0, x: 5, r: 0.02, u: 0 },
-  { n: 'b', c: 0x0088ff, h: 1.5, s: 0.95, d: 1.2, x: 8, r: 0.03, u: 20000 },
-  { n: 'c', c: 0x00ffff, h: 2.0, s: 1.05, d: 1.4, x: 10, r: 0.035, u: 40000 },
-  { n: 'y', c: 0xffff00, h: 2.5, s: 0.9, d: 1.6, x: 15, r: 0.04, u: 60000 },
-  { n: 'o', c: 0xff8800, h: 3.0, s: 1.1, d: 1.8, x: 20, r: 0.045, u: 90000 },
-  { n: 'r', c: 0xff0000, h: 4.0, s: 0.85, d: 2.0, x: 25, r: 0.05, u: 120000 },
-  { n: 'p', c: 0xff00ff, h: 5.0, s: 1.15, d: 2.5, x: 35, r: 0.055, u: 150000 }
+  { n: 'g', c: 0x00ff00, h: 1.0, s: 1.0, d: 1.0, x: 5, cn: 1, r: 0.02, u: 0 },
+  { n: 'b', c: 0x0088ff, h: 1.5, s: 0.95, d: 1.2, x: 8, cn: 2, r: 0.03, u: 20000 },
+  { n: 'c', c: 0x00ffff, h: 2.0, s: 1.05, d: 1.4, x: 10, cn: 2, r: 0.035, u: 40000 },
+  { n: 'y', c: 0xffff00, h: 2.5, s: 0.9, d: 1.6, x: 15, cn: 3, r: 0.04, u: 60000 },
+  { n: 'o', c: 0xff8800, h: 3.0, s: 1.1, d: 1.8, x: 20, cn: 3, r: 0.045, u: 90000 },
+  { n: 'r', c: 0xff0000, h: 4.0, s: 0.85, d: 2.0, x: 25, cn: 4, r: 0.05, u: 120000 },
+  { n: 'p', c: 0xff00ff, h: 5.0, s: 1.15, d: 2.5, x: 35, cn: 5, r: 0.055, u: 150000 }
 ];
 
 let unlockedTypes = [];
@@ -115,6 +115,7 @@ const inS = { // initial stats
   critChance: 0.05,
   critDamage: 1.5,
   xp: 0,
+  coins: 0,
   level: 1,
   xpToNext: 10,
   enKilled: 0
@@ -409,6 +410,14 @@ function preload() {
   g.generateTexture('xp', 10, 10);
   g.clear();
 
+  // Coin texture (golden circle)
+  g.fillStyle(0xFFD700, 1);
+  g.fillCircle(6, 6, 6);
+  g.lineStyle(2, 0xFFA500, 1);
+  g.strokeCircle(6, 6, 6);
+  g.generateTexture('coin', 12, 12);
+  g.clear();
+
   // Obstacle texture (gray rock)
   g.fillStyle(0x555555, 1);
   g.fillCircle(20, 20, 20);
@@ -493,6 +502,7 @@ function create() {
   en = this.physics.add.group();
   pr = this.physics.add.group();
   xo = this.physics.add.group();
+  co = this.physics.add.group();
   wc = this.physics.add.group();
   uc = this.physics.add.group();
   mg = this.physics.add.group();
@@ -522,6 +532,7 @@ function create() {
   this.physics.add.overlap(pr, en, hitEnemy, null, this);
   this.physics.add.overlap(p, en, hitPlayer, null, this);
   this.physics.add.overlap(p, xo, collectXP, null, this);
+  this.physics.add.overlap(p, co, collectCoin, null, this);
   this.physics.add.overlap(p, wc, collectChest, null, this);
   this.physics.add.overlap(p, uc, collectUpgradeChest, null, this);
   this.physics.add.overlap(p, mg, collectMagnet, null, this);
@@ -726,6 +737,18 @@ function update(_time, delta) {
     }
   });
 
+  // Move magnetized coins toward p
+  co.children.entries.forEach(coin => {
+    if (coin.active && coin.getData('magnetized')) {
+      const angle = Phaser.Math.Angle.Between(coin.x, coin.y, p.x, p.y);
+      const speed = 300; // Attraction speed
+      coin.body.setVelocity(
+        Math.cos(angle) * speed,
+        Math.sin(angle) * speed
+      );
+    }
+  });
+
   // Update orbiting balls
   updateOrbitingBalls(delta);
 
@@ -819,6 +842,7 @@ function spawnEnemy() {
   enemy.setData('speed', difficulty.enemySpeed * type.s);
   enemy.setData('damage', difficulty.enemyDamage * type.d);
   enemy.setData('xpValue', type.x);
+  enemy.setData('coinValue', type.cn);
   enemy.setData('dropChance', type.r);
   enemy.setData('knockbackUntil', 0);
 }
@@ -854,9 +878,15 @@ function hitEnemy(proj, enemy) {
   if (hp <= 0) {
     playTone(scene, 660, 0.1);
     const xpValue = enemy.getData('xpValue') || 5;
+    const coinValue = enemy.getData('coinValue') || 1;
     const isBoss = enemy.getData('isBoss');
     const dropChance = enemy.getData('dropChance') || 0;
     dropXP(enemy.x, enemy.y, xpValue);
+
+    // 25% chance to drop coins
+    if (Math.random() < 0.25) {
+      dropCoin(enemy.x, enemy.y, coinValue);
+    }
 
     // Bosses drop weapon chests and mg
     if (isBoss) {
@@ -916,6 +946,20 @@ function collectXP(_pObj, orb) {
   if (stats.xp >= stats.xpToNext) {
     levelUp();
   }
+}
+
+function dropCoin(x, y, coinValue) {
+  const coin = co.create(x, y, 'coin');
+  coin.body.setCircle(6);
+  coin.setData('coinValue', coinValue);
+}
+
+function collectCoin(_pObj, coin) {
+  if (!coin.active) return;
+  const coinValue = coin.getData('coinValue') || 1;
+  coin.destroy();
+  stats.coins += coinValue;
+  playTone(scene, 1800, 0.15);
 }
 
 function dropChest(x, y) {
@@ -1000,6 +1044,13 @@ function collectMagnet(_pObj, magnet) {
   xo.children.entries.forEach(orb => {
     if (orb.active) {
       orb.setData('magnetized', true);
+    }
+  });
+
+  // Magnetize all existing coins
+  co.children.entries.forEach(coin => {
+    if (coin.active) {
+      coin.setData('magnetized', true);
     }
   });
 }
@@ -1220,6 +1271,106 @@ function showUpgradeMenu() {
   selectedIndex = 0;
   menuOptions = [];
 
+  // Reroll button variables (declare early so they're available in updateSelection)
+  const rerollX = 400;
+  const rerollY = 490;
+  const rerollCost = 10;
+  const canReroll = stats.coins >= rerollCost;
+
+  const rerollBtn = scene.add.graphics();
+  rerollBtn.fillStyle(canReroll ? 0x554400 : 0x333333, 1);
+  rerollBtn.fillRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
+  rerollBtn.lineStyle(3, canReroll ? 0xFFD700 : 0x555555, 1);
+  rerollBtn.strokeRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
+  rerollBtn.setScrollFactor(0);
+  rerollBtn.setDepth(101);
+
+  if (canReroll) {
+    rerollBtn.setInteractive(new Phaser.Geom.Rectangle(rerollX - 150, rerollY - 40, 300, 80), Phaser.Geom.Rectangle.Contains);
+  }
+
+  const rerollText = scene.add.text(rerollX, rerollY - 10, `🔄 REROLL (${rerollCost}🪙)`, {
+    fontSize: '24px',
+    fontFamily: 'Arial',
+    color: canReroll ? '#FFD700' : '#666666'
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+  const coinsInfo = scene.add.text(rerollX, rerollY + 15, `Tienes: ${stats.coins} monedas`, {
+    fontSize: '14px',
+    fontFamily: 'Arial',
+    color: '#cccccc'
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+  // Reroll button click handler
+  if (canReroll) {
+    rerollBtn.on('pointerdown', () => {
+      stats.coins -= rerollCost;
+      playTone(scene, 1400, 0.1);
+
+      // Clear old options
+      menuOptions.forEach(opt => opt.btn.destroy());
+      scene.children.list.filter(c => c.depth === 102 && c !== title && c !== rerollBtn && c !== rerollText && c !== coinsInfo).forEach(c => c.destroy());
+
+      // Regenerate options
+      const newShuffled = [...availableUpgrades].sort(() => Math.random() - 0.5).slice(0, 3);
+      menuOptions = [];
+      selectedIndex = 0;
+
+      newShuffled.forEach((upgrade, i) => {
+        const x = 150 + i * 250;
+        const y = 300;
+
+        const btn = scene.add.graphics();
+        btn.fillStyle(0x333333, 1);
+        btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
+        btn.lineStyle(3, 0x00ff00, 1);
+        btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
+        btn.setScrollFactor(0);
+        btn.setDepth(101);
+        btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 80, 180, 160), Phaser.Geom.Rectangle.Contains);
+
+        scene.add.text(x, y - 30, upgrade.icon, {
+          fontSize: '48px'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+        scene.add.text(x, y + 20, upgrade.name, {
+          fontSize: '20px',
+          fontFamily: 'Arial',
+          color: '#ffffff'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+        scene.add.text(x, y + 50, upgrade.desc, {
+          fontSize: '14px',
+          fontFamily: 'Arial',
+          color: '#cccccc'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+
+        menuOptions.push({ btn, upgrade, x, y });
+        btn.on('pointerdown', () => selectUpgrade(upgrade));
+        btn.on('pointerover', () => {
+          selectedIndex = i;
+          updateSelection();
+        });
+      });
+
+      updateSelection();
+
+      // Update reroll button state
+      const newCanReroll = stats.coins >= rerollCost;
+      rerollBtn.clear();
+      rerollBtn.fillStyle(newCanReroll ? 0x554400 : 0x333333, 1);
+      rerollBtn.fillRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
+      rerollBtn.lineStyle(3, newCanReroll ? 0xFFD700 : 0x555555, 1);
+      rerollBtn.strokeRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
+      rerollBtn.removeInteractive();
+      if (newCanReroll) {
+        rerollBtn.setInteractive(new Phaser.Geom.Rectangle(rerollX - 150, rerollY - 40, 300, 80), Phaser.Geom.Rectangle.Contains);
+      }
+      rerollText.setColor(newCanReroll ? '#FFD700' : '#666666');
+      coinsInfo.setText(`Tienes: ${stats.coins} monedas`);
+    });
+  }
+
   const selectUpgrade = (upgrade) => {
     upgrade.apply();
     playTone(scene, 1000, 0.1);
@@ -1247,6 +1398,15 @@ function showUpgradeMenu() {
       option.btn.lineStyle(3, isSelected ? 0xffff00 : 0x00ff00, 1);
       option.btn.strokeRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
     });
+
+    // Update reroll button highlight (recalculate canReroll dynamically)
+    const currentCanReroll = stats.coins >= rerollCost;
+    const rerollSelected = selectedIndex === 3;
+    rerollBtn.clear();
+    rerollBtn.fillStyle(rerollSelected ? (currentCanReroll ? 0x776600 : 0x444444) : (currentCanReroll ? 0x554400 : 0x333333), 1);
+    rerollBtn.fillRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
+    rerollBtn.lineStyle(3, rerollSelected ? 0xffff00 : (currentCanReroll ? 0xFFD700 : 0x555555), 1);
+    rerollBtn.strokeRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
   };
 
   shuffled.forEach((upgrade, i) => {
@@ -1301,25 +1461,51 @@ function showUpgradeMenu() {
   // Keyboard controls
   const leftKey = scene.input.keyboard.addKey('LEFT');
   const rightKey = scene.input.keyboard.addKey('RIGHT');
+  const upKey = scene.input.keyboard.addKey('UP');
+  const downKey = scene.input.keyboard.addKey('DOWN');
   const enterKey = scene.input.keyboard.addKey('ENTER');
 
   leftKey.on('down', () => {
-    selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
-    updateSelection();
-    playTone(scene, 800, 0.05);
+    if (selectedIndex < 3) {
+      selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
+      updateSelection();
+      playTone(scene, 800, 0.05);
+    }
   });
 
   rightKey.on('down', () => {
-    selectedIndex = (selectedIndex + 1) % menuOptions.length;
-    updateSelection();
-    playTone(scene, 800, 0.05);
+    if (selectedIndex < 3) {
+      selectedIndex = (selectedIndex + 1) % menuOptions.length;
+      updateSelection();
+      playTone(scene, 800, 0.05);
+    }
+  });
+
+  upKey.on('down', () => {
+    if (selectedIndex === 3) {
+      selectedIndex = menuOptions.length - 1;
+      updateSelection();
+      playTone(scene, 800, 0.05);
+    }
+  });
+
+  downKey.on('down', () => {
+    if (selectedIndex < 3) {
+      selectedIndex = 3;
+      updateSelection();
+      playTone(scene, 800, 0.05);
+    }
   });
 
   enterKey.on('down', () => {
-    selectUpgrade(menuOptions[selectedIndex].upgrade);
+    if (selectedIndex === 3 && stats.coins >= rerollCost) {
+      rerollBtn.emit('pointerdown');
+    } else if (selectedIndex < 3) {
+      selectUpgrade(menuOptions[selectedIndex].upgrade);
+    }
   });
 
-  menuKeys.push(leftKey, rightKey, enterKey);
+  menuKeys.push(leftKey, rightKey, upKey, downKey, enterKey);
 }
 
 function showWeaponSelector(weapons) {
@@ -1782,8 +1968,15 @@ function createUI() {
     color: '#ffff00'
   }).setScrollFactor(0);
 
+  // Coins
+  ui.coinsText = scene.add.text(650, 10, '🪙 0', {
+    fontSize: '16px',
+    fontFamily: 'Arial',
+    color: '#FFD700'
+  }).setScrollFactor(0);
+
   // Timer
-  ui.timeText = scene.add.text(700, 10, '0:00', {
+  ui.timeText = scene.add.text(740, 10, '0:00', {
     fontSize: '16px',
     fontFamily: 'Arial',
     color: '#00ffff'
@@ -1799,6 +1992,7 @@ function createUI() {
 
 function updateUI() {
   ui.levelText.setText(`Level: ${stats.level}`);
+  ui.coinsText.setText(`🪙 ${stats.coins}`);
 
   const minutes = Math.floor(gameTime / 60000);
   const seconds = Math.floor((gameTime % 60000) / 1000);
@@ -2049,6 +2243,7 @@ function spawnWave() {
     enemy.setData('speed', difficulty.enemySpeed * type.s);
     enemy.setData('damage', difficulty.enemyDamage * type.d);
     enemy.setData('xpValue', type.x);
+    enemy.setData('coinValue', type.cn);
     enemy.setData('knockbackUntil', 0);
   }
 }
@@ -2080,6 +2275,7 @@ function spawnBoss() {
   boss.setData('speed', difficulty.enemySpeed * type.s * 0.7);
   boss.setData('damage', difficulty.enemyDamage * type.d * 2);
   boss.setData('xpValue', type.x * 10);
+  boss.setData('coinValue', type.cn * 10);
   boss.setData('isBoss', true);
   boss.setData('knockbackUntil', 0);
 }
@@ -2223,9 +2419,15 @@ function hitEnemyWithBall(ball, enemy) {
 
   if (hp <= 0) {
     const xpValue = enemy.getData('xpValue') || 5;
+    const coinValue = enemy.getData('coinValue') || 1;
     const isBoss = enemy.getData('isBoss');
     const dropChance = enemy.getData('dropChance') || 0;
     dropXP(enemy.x, enemy.y, xpValue);
+
+    // 25% chance to drop coins
+    if (Math.random() < 0.25) {
+      dropCoin(enemy.x, enemy.y, coinValue);
+    }
 
     if (isBoss) {
       dropChest(enemy.x, enemy.y);
@@ -2294,9 +2496,15 @@ function updateAreaDamage(delta) {
         if (hp <= 0) {
           playTone(scene, 660, 0.1);
           const xpValue = enemy.getData('xpValue') || 5;
+          const coinValue = enemy.getData('coinValue') || 1;
           const isBoss = enemy.getData('isBoss');
           const dropChance = enemy.getData('dropChance') || 0;
           dropXP(enemy.x, enemy.y, xpValue);
+
+          // 25% chance to drop coins
+          if (Math.random() < 0.25) {
+            dropCoin(enemy.x, enemy.y, coinValue);
+          }
 
           if (isBoss) {
             dropChest(enemy.x, enemy.y);
@@ -2458,9 +2666,15 @@ function hitEnemyWithBoomerang(boom, enemy) {
 
   if (hp <= 0) {
     const xpValue = enemy.getData('xpValue') || 5;
+    const coinValue = enemy.getData('coinValue') || 1;
     const isBoss = enemy.getData('isBoss');
     const dropChance = enemy.getData('dropChance') || 0;
     dropXP(enemy.x, enemy.y, xpValue);
+
+    // 25% chance to drop coins
+    if (Math.random() < 0.25) {
+      dropCoin(enemy.x, enemy.y, coinValue);
+    }
 
     if (isBoss) {
       dropChest(enemy.x, enemy.y);
