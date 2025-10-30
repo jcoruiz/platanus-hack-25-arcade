@@ -1321,7 +1321,7 @@ function showUpgradeMenu() {
     rerollBtn.setInteractive(new Phaser.Geom.Rectangle(rerollX - 150, rerollY - 40, 300, 80), Phaser.Geom.Rectangle.Contains);
   }
 
-  const rerollText = scene.add.text(rerollX, rerollY - 10, `🔄 REROLL (${rerollCost}🪙)`, {
+  const rerollText = scene.add.text(rerollX, rerollY - 10, `REROLL (${rerollCost} Coins)`, {
     fontSize: '24px',
     fontFamily: 'Arial',
     color: canReroll ? '#FFD700' : '#666666'
@@ -2001,7 +2001,7 @@ function createUI() {
   }).setScrollFactor(0);
 
   // Coins
-  ui.coinsText = scene.add.text(650, 10, '🪙 0', {
+  ui.coinsText = scene.add.text(650, 10, 'Coins: 0', {
     fontSize: '16px',
     fontFamily: 'Arial',
     color: '#FFD700'
@@ -2024,7 +2024,7 @@ function createUI() {
 
 function updateUI() {
   ui.levelText.setText(`Level: ${stats.level}`);
-  ui.coinsText.setText(`🪙 ${stats.coins}`);
+  ui.coinsText.setText(`Coins: ${stats.coins}`);
 
   const minutes = Math.floor(gameTime / 60000);
   const seconds = Math.floor((gameTime % 60000) / 1000);
