@@ -1024,32 +1024,9 @@ function collectUpgradeChest(_pObj, chest) {
   chest.destroy();
   playTone(scene, 1200, 0.2);
 
-  // Build available upgrades pool
-  let availableUpgrades = [...pUpgrades];
-
-  // Add weapon-specific upgrades if unlocked
-  if (getWeapon('p').u) {
-    availableUpgrades.push(...projectileUpgrades);
-  }
-  if (getWeapon('o').u) {
-    availableUpgrades.push(...orbitingBallUpgrades);
-  }
-  if (getWeapon('a').u) {
-    availableUpgrades.push(...areaDamageUpgrades);
-  }
-  if (getWeapon('b').u) {
-    availableUpgrades.push(...boomerangUpgrades);
-  }
-
-  // Filter out maxed upgrades
-  availableUpgrades = availableUpgrades.filter(u =>
-    (ul[u.id] || 0) < u.maxLevel
-  );
-
-  // Show selection menu if upgrades available
-  if (availableUpgrades.length > 0) {
-    showUpgradeChestMenu(availableUpgrades);
-  }
+  selectingWeapon = true;
+  scene.physics.pause();
+  showUpgradeMenu('selectingWeapon');
 }
 
 function dropMagnet(x, y) {
@@ -1087,135 +1064,6 @@ function collectHealthHeal(_pObj, healDrop) {
   playTone(scene, 900, 0.2);
 }
 
-function showUpgradeChestMenu(availableUpgrades) {
-  selectingWeapon = true;
-  scene.physics.pause();
-
-  // Semi-transparent overlay
-  const overlay = scene.add.graphics();
-  overlay.fillStyle(0x000000, 0.85);
-  overlay.fillRect(0, 0, 800, 600);
-  overlay.setScrollFactor(0);
-  overlay.setDepth(100);
-
-  // Title (green/emerald theme to match chest)
-  const title = scene.add.text(400, 100, '💎 UPGRADE CHEST! 💎', {
-    fontSize: '48px',
-    fontFamily: 'Arial',
-    color: '#00ff66',
-    stroke: '#000000',
-    strokeThickness: 6
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
-
-  // Shuffle and pick 3 upgrades
-  const shuffled = [...availableUpgrades].sort(() => Math.random() - 0.5).slice(0, 3);
-
-  // Reset menu state
-  selectedIndex = 0;
-  menuOptions = [];
-
-  const selectUpgrade = (upgrade) => {
-    upgrade.apply();
-    playTone(scene, 1400, 0.15);
-
-    // Clean up menu
-    overlay.destroy();
-    title.destroy();
-    scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
-
-    // Remove keyboard listeners
-    menuKeys.forEach(k => k.removeAllListeners());
-    menuKeys = [];
-
-    // Resume physics
-    scene.physics.resume();
-    selectingWeapon = false;
-  };
-
-  const updateSelection = () => {
-    menuOptions.forEach((option, i) => {
-      const isSelected = i === selectedIndex;
-      option.btn.clear();
-      option.btn.fillStyle(isSelected ? 0x005533 : 0x003322, 1);
-      option.btn.fillRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
-      option.btn.lineStyle(3, isSelected ? 0xffff00 : 0x00ff66, 1);
-      option.btn.strokeRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
-    });
-  };
-
-  shuffled.forEach((upgrade, i) => {
-    const x = 150 + i * 250;
-    const y = 300;
-
-    // Button background (green theme)
-    const btn = scene.add.graphics();
-    btn.fillStyle(0x003322, 1);
-    btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
-    btn.lineStyle(3, 0x00ff66, 1);
-    btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
-    btn.setScrollFactor(0);
-    btn.setDepth(101);
-    btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 80, 180, 160), Phaser.Geom.Rectangle.Contains);
-
-    // Icon
-    scene.add.text(x, y - 30, upgrade.icon, {
-      fontSize: '48px'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
-
-    // Name
-    scene.add.text(x, y + 20, upgrade.name, {
-      fontSize: '20px',
-      fontFamily: 'Arial',
-      color: '#00ff66'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
-
-    // Description
-    scene.add.text(x, y + 50, upgrade.desc, {
-      fontSize: '14px',
-      fontFamily: 'Arial',
-      color: '#aaffcc'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
-
-    // Store option reference
-    menuOptions.push({ btn, upgrade, x, y });
-
-    // Click handler
-    btn.on('pointerdown', () => selectUpgrade(upgrade));
-
-    // Hover effect
-    btn.on('pointerover', () => {
-      selectedIndex = i;
-      updateSelection();
-    });
-  });
-
-  // Initial selection highlight
-  updateSelection();
-
-  // Keyboard controls
-  const leftKey = scene.input.keyboard.addKey('LEFT');
-  const rightKey = scene.input.keyboard.addKey('RIGHT');
-  const enterKey = scene.input.keyboard.addKey('ENTER');
-
-  leftKey.on('down', () => {
-    selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
-    updateSelection();
-    playTone(scene, 800, 0.05);
-  });
-
-  rightKey.on('down', () => {
-    selectedIndex = (selectedIndex + 1) % menuOptions.length;
-    updateSelection();
-    playTone(scene, 800, 0.05);
-  });
-
-  enterKey.on('down', () => {
-    selectUpgrade(menuOptions[selectedIndex].upgrade);
-  });
-
-  menuKeys.push(leftKey, rightKey, enterKey);
-}
-
 function levelUp() {
   levelingUp = true;
   stats.level++;
@@ -1248,10 +1096,10 @@ function levelUp() {
 
   playTone(scene, 1200, 0.2);
 
-  showUpgradeMenu();
+  showUpgradeMenu('levelingUp');
 }
 
-function showUpgradeMenu() {
+function showUpgradeMenu(stateVar = 'levelingUp') {
   // Build available upgrades pool
   let availableUpgrades = [...pUpgrades];
 
@@ -1288,7 +1136,7 @@ function showUpgradeMenu() {
   overlay.setDepth(100);
 
   // Title
-  const title = scene.add.text(400, 100, 'LEVEL UP!', {
+  const title = scene.add.text(400, 100, 'UPGRADE MENU', {
     fontSize: '48px',
     fontFamily: 'Arial',
     color: '#ffff00',
@@ -1418,7 +1266,11 @@ function showUpgradeMenu() {
 
     // Resume physics
     scene.physics.resume();
-    levelingUp = false;
+    if (stateVar === 'levelingUp') {
+      levelingUp = false;
+    } else if (stateVar === 'selectingWeapon') {
+      selectingWeapon = false;
+    }
   };
 
   const updateSelection = () => {
