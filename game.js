@@ -12,7 +12,7 @@ const config = {
 
 new Phaser.Game(config);
 
-let player, cursors, enemies, projectiles, xpOrbs, obstacles, weaponChests, upgradeChests, magnets, graphics;
+let p, cr, en, pr, xo, ob, wc, uc, mg, graphics;
 let areaDamageCircle = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, showStats = false, paused = false;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
@@ -110,7 +110,7 @@ let stats = {
   xp: 0,
   level: 1,
   xpToNext: 10,
-  enemiesKilled: 0
+  enKilled: 0
 };
 
 let difficulty = {
@@ -128,7 +128,7 @@ function getWeapon(id) {
   return weaponTypes.find(w => w.i === id);
 }
 
-const playerUpgrades = [
+const pUpgrades = [
   { id: 'speed', name: 'Speed', desc: '+15% Move Speed', icon: '👟', maxLevel: 8, apply: () => { stats.speed *= 1.15; upgradeLevels['speed'] = (upgradeLevels['speed'] || 0) + 1; } },
   { id: 'maxhp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: 10, apply: () => { stats.maxHp += 20; stats.hp += 20; upgradeLevels['maxhp'] = (upgradeLevels['maxhp'] || 0) + 1; } },
   { id: 'knockback', name: 'Knockback', desc: '+30% Enemy Pushback', icon: '💨', maxLevel: 6, apply: () => { stats.knockback *= 1.3; upgradeLevels['knockback'] = (upgradeLevels['knockback'] || 0) + 1; } },
@@ -479,49 +479,49 @@ function create() {
   unlockedTypes = [enemyTypes[0]];
 
   // Create physics groups
-  enemies = this.physics.add.group();
-  projectiles = this.physics.add.group();
-  xpOrbs = this.physics.add.group();
-  weaponChests = this.physics.add.group();
-  upgradeChests = this.physics.add.group();
-  magnets = this.physics.add.group();
-  obstacles = this.physics.add.staticGroup();
+  en = this.physics.add.group();
+  pr = this.physics.add.group();
+  xo = this.physics.add.group();
+  wc = this.physics.add.group();
+  uc = this.physics.add.group();
+  mg = this.physics.add.group();
+  ob = this.physics.add.staticGroup();
 
-  // Spawn obstacles randomly across map
+  // Spawn ob randomly across map
   for (let i = 0; i < 80; i++) {
     const x = 100 + Math.random() * 2200;
     const y = 100 + Math.random() * 1600;
-    const obs = obstacles.create(x, y, 'obstacle');
+    const obs = ob.create(x, y, 'obstacle');
     obs.setCircle(20);
   }
 
-  // Create player at center of world
-  player = this.physics.add.image(1200, 900, 'player');
-  player.setCollideWorldBounds(true);
-  player.body.setCircle(16);
+  // Create p at center of world
+  p = this.physics.add.image(1200, 900, 'p');
+  p.setCollideWorldBounds(true);
+  p.body.setCircle(16);
 
-  // Camera follows player
-  this.cameras.main.startFollow(player);
+  // Camera follows p
+  this.cameras.main.startFollow(p);
   this.cameras.main.setBounds(0, 0, 2400, 1800);
 
   // Input
-  cursors = this.input.keyboard.createCursorKeys();
+  cr = this.input.keyboard.createCursorKeys();
 
   // Collisions
-  this.physics.add.overlap(projectiles, enemies, hitEnemy, null, this);
-  this.physics.add.overlap(player, enemies, hitPlayer, null, this);
-  this.physics.add.overlap(player, xpOrbs, collectXP, null, this);
-  this.physics.add.overlap(player, weaponChests, collectChest, null, this);
-  this.physics.add.overlap(player, upgradeChests, collectUpgradeChest, null, this);
-  this.physics.add.overlap(player, magnets, collectMagnet, null, this);
+  this.physics.add.overlap(pr, en, hitEnemy, null, this);
+  this.physics.add.overlap(p, en, hitPlayer, null, this);
+  this.physics.add.overlap(p, xo, collectXP, null, this);
+  this.physics.add.overlap(p, wc, collectChest, null, this);
+  this.physics.add.overlap(p, uc, collectUpgradeChest, null, this);
+  this.physics.add.overlap(p, mg, collectMagnet, null, this);
 
   // Enemy-to-enemy collisions (they push each other)
-  this.physics.add.collider(enemies, enemies);
+  this.physics.add.collider(en, en);
 
   // Obstacle collisions
-  this.physics.add.collider(player, obstacles);
-  this.physics.add.collider(enemies, obstacles);
-  this.physics.add.collider(projectiles, obstacles);
+  this.physics.add.collider(p, ob);
+  this.physics.add.collider(en, ob);
+  this.physics.add.collider(pr, ob);
 
   // Create UI
   createUI(this);
@@ -604,29 +604,29 @@ function update(_time, delta) {
   }
 
   // Player movement
-  player.body.setVelocity(0, 0);
+  p.body.setVelocity(0, 0);
   let moving = false;
 
-  if (cursors.left.isDown) {
-    player.body.setVelocityX(-stats.speed);
+  if (cr.left.isDown) {
+    p.body.setVelocityX(-stats.speed);
     moving = true;
   }
-  if (cursors.right.isDown) {
-    player.body.setVelocityX(stats.speed);
+  if (cr.right.isDown) {
+    p.body.setVelocityX(stats.speed);
     moving = true;
   }
-  if (cursors.up.isDown) {
-    player.body.setVelocityY(-stats.speed);
+  if (cr.up.isDown) {
+    p.body.setVelocityY(-stats.speed);
     moving = true;
   }
-  if (cursors.down.isDown) {
-    player.body.setVelocityY(stats.speed);
+  if (cr.down.isDown) {
+    p.body.setVelocityY(stats.speed);
     moving = true;
   }
 
   // Normalize diagonal movement
-  if (moving && player.body.velocity.x !== 0 && player.body.velocity.y !== 0) {
-    player.body.velocity.normalize().scale(stats.speed);
+  if (moving && p.body.velocity.x !== 0 && p.body.velocity.y !== 0) {
+    p.body.velocity.normalize().scale(stats.speed);
   }
 
   // Auto shoot (projectile weapon)
@@ -646,7 +646,7 @@ function update(_time, delta) {
     }
   }
 
-  // Spawn enemies
+  // Spawn en
   if (spawnTimer >= difficulty.spawnRate) {
     spawnTimer = 0;
     spawnEnemy();
@@ -685,8 +685,8 @@ function update(_time, delta) {
     spawnBoss();
   }
 
-  // Move enemies toward player
-  enemies.children.entries.forEach(enemy => {
+  // Move en toward p
+  en.children.entries.forEach(enemy => {
     if (!enemy.active) return;
 
     // Skip movement update if enemy is in knockback
@@ -695,7 +695,7 @@ function update(_time, delta) {
       return;
     }
 
-    const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+    const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, p.x, p.y);
     const speed = enemy.getData('speed');
     enemy.body.setVelocity(
       Math.cos(angle) * speed,
@@ -703,10 +703,10 @@ function update(_time, delta) {
     );
   });
 
-  // Move magnetized XP orbs toward player
-  xpOrbs.children.entries.forEach(orb => {
+  // Move magnetized XP orbs toward p
+  xo.children.entries.forEach(orb => {
     if (orb.active && orb.getData('magnetized')) {
-      const angle = Phaser.Math.Angle.Between(orb.x, orb.y, player.x, player.y);
+      const angle = Phaser.Math.Angle.Between(orb.x, orb.y, p.x, p.y);
       const speed = 300; // Attraction speed
       orb.body.setVelocity(
         Math.cos(angle) * speed,
@@ -738,8 +738,8 @@ function shoot() {
   const weapon = getWeapon('p');
   playTone(scene, 880, 0.05);
 
-  // Calculate angles for multiple projectiles
-  const baseAngle = Phaser.Math.Angle.Between(player.x, player.y, target.x, target.y);
+  // Calculate angles for multiple pr
+  const baseAngle = Phaser.Math.Angle.Between(p.x, p.y, target.x, target.y);
   const spread = weapon.c > 1 ? 0.3 : 0;
   const startOffset = -(weapon.c - 1) * spread / 2;
 
@@ -749,7 +749,7 @@ function shoot() {
     const vy = Math.sin(angle) * 300;
 
     // Create using the group (important!)
-    const proj = projectiles.create(player.x, player.y, 'p');
+    const proj = pr.create(p.x, p.y, 'p');
     proj.body.setCircle(4);
     proj.body.setVelocity(vx, vy);
     proj.setData('damage', weapon.m);
@@ -767,9 +767,9 @@ function findClosestEnemy() {
   let closest = null;
   let minDist = Infinity;
 
-  enemies.children.entries.forEach(enemy => {
+  en.children.entries.forEach(enemy => {
     if (!enemy.active) return;
-    const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
+    const dist = Phaser.Math.Distance.Between(p.x, p.y, enemy.x, enemy.y);
     if (dist < minDist) {
       minDist = dist;
       closest = enemy;
@@ -783,9 +783,9 @@ function spawnEnemy() {
   const side = Math.floor(Math.random() * 4);
   let x, y;
 
-  // Spawn relative to player position, outside camera view
-  const px = player.x;
-  const py = player.y;
+  // Spawn relative to p position, outside camera view
+  const px = p.x;
+  const py = p.y;
 
   if (side === 0) { x = px + (Math.random() - 0.5) * 800; y = py - 350; }
   else if (side === 1) { x = px + (Math.random() - 0.5) * 800; y = py + 350; }
@@ -800,7 +800,7 @@ function spawnEnemy() {
   const type = unlockedTypes[Math.floor(Math.random() * unlockedTypes.length)];
 
   // Create using the group with appropriate texture
-  const enemy = enemies.create(x, y, `enemy_${type.n}`);
+  const enemy = en.create(x, y, `enemy_${type.n}`);
   enemy.body.setCircle(10);
 
   // Apply type multipliers to difficulty base stats
@@ -847,12 +847,12 @@ function hitEnemy(proj, enemy) {
     const dropChance = enemy.getData('dropChance') || 0;
     dropXP(enemy.x, enemy.y, xpValue);
 
-    // Bosses drop weapon chests and magnets
+    // Bosses drop weapon chests and mg
     if (isBoss) {
       dropChest(enemy.x, enemy.y);
       dropMagnet(enemy.x + 40, enemy.y); // Offset slightly so they don't overlap
     } else {
-      // Normal enemies have a chance to drop upgrade chests
+      // Normal en have a chance to drop upgrade chests
       const finalDropChance = dropChance * stats.lootChance;
       if (Math.random() < finalDropChance) {
         dropUpgradeChest(enemy.x, enemy.y);
@@ -866,11 +866,11 @@ function hitEnemy(proj, enemy) {
     }
 
     enemy.destroy();
-    stats.enemiesKilled++;
+    stats.enKilled++;
   }
 }
 
-function hitPlayer(_playerObj, enemy) {
+function hitPlayer(_pObj, enemy) {
   if (!enemy.active) return;
 
   // Check cooldown (prevent damage every frame)
@@ -889,13 +889,13 @@ function hitPlayer(_playerObj, enemy) {
 
 function dropXP(x, y, xpValue) {
   // Create using the group
-  const orb = xpOrbs.create(x, y, 'xp');
+  const orb = xo.create(x, y, 'xp');
   orb.body.setCircle(5);
   orb.setData('xpValue', xpValue);
   // XP orbs stay forever until collected
 }
 
-function collectXP(_playerObj, orb) {
+function collectXP(_pObj, orb) {
   if (!orb.active) return;
   const baseXpValue = orb.getData('xpValue') || 5;
   orb.destroy();
@@ -908,14 +908,14 @@ function collectXP(_playerObj, orb) {
 }
 
 function dropChest(x, y) {
-  const chest = weaponChests.create(x, y, 'chest');
+  const chest = wc.create(x, y, 'chest');
   chest.body.setCircle(10);
   // Chest stays in place (immovable)
   chest.body.setImmovable(true);
   chest.body.setAllowGravity(false);
 }
 
-function collectChest(_playerObj, chest) {
+function collectChest(_pObj, chest) {
   if (!chest.active) return;
   chest.destroy();
   playTone(scene, 1500, 0.3);
@@ -932,20 +932,20 @@ function collectChest(_playerObj, chest) {
 }
 
 function dropUpgradeChest(x, y) {
-  const chest = upgradeChests.create(x, y, 'upgradeChest');
+  const chest = uc.create(x, y, 'upgradeChest');
   chest.body.setCircle(10);
   // Chest stays in place (immovable)
   chest.body.setImmovable(true);
   chest.body.setAllowGravity(false);
 }
 
-function collectUpgradeChest(_playerObj, chest) {
+function collectUpgradeChest(_pObj, chest) {
   if (!chest.active) return;
   chest.destroy();
   playTone(scene, 1200, 0.2);
 
   // Build available upgrades pool
-  let availableUpgrades = [...playerUpgrades];
+  let availableUpgrades = [...pUpgrades];
 
   // Add weapon-specific upgrades if unlocked
   if (getWeapon('p').u) {
@@ -973,20 +973,20 @@ function collectUpgradeChest(_playerObj, chest) {
 }
 
 function dropMagnet(x, y) {
-  const magnet = magnets.create(x, y, 'magnet');
+  const magnet = mg.create(x, y, 'magnet');
   magnet.body.setCircle(10);
   // Magnet stays in place (immovable)
   magnet.body.setImmovable(true);
   magnet.body.setAllowGravity(false);
 }
 
-function collectMagnet(_playerObj, magnet) {
+function collectMagnet(_pObj, magnet) {
   if (!magnet.active) return;
   magnet.destroy();
   playTone(scene, 1500, 0.3);
 
   // Magnetize all existing XP orbs
-  xpOrbs.children.entries.forEach(orb => {
+  xo.children.entries.forEach(orb => {
     if (orb.active) {
       orb.setData('magnetized', true);
     }
@@ -1159,7 +1159,7 @@ function levelUp() {
 
 function showUpgradeMenu() {
   // Build available upgrades pool
-  let availableUpgrades = [...playerUpgrades];
+  let availableUpgrades = [...pUpgrades];
 
   // Add projectile upgrades if unlocked
   if (getWeapon('p').u) {
@@ -1618,8 +1618,8 @@ function showStartScreen() {
     // Set selected character
     selectedCharacter = character;
 
-    // Change player texture
-    player.setTexture(character.texture);
+    // Change p texture
+    p.setTexture(character.texture);
 
     // Get and unlock character's weapon
     const weapon = weaponTypes.find(w => w.i === character.weapon);
@@ -1849,7 +1849,7 @@ function drawUIBars() {
 
   // Find active boss
   let boss = null;
-  enemies.children.entries.forEach(enemy => {
+  en.children.entries.forEach(enemy => {
     if (enemy.active && enemy.getData('isBoss')) {
       boss = enemy;
     }
@@ -1947,7 +1947,7 @@ function endGame() {
     color: '#ffff00'
   }).setOrigin(0.5).setScrollFactor(0);
 
-  scene.add.text(400, 400, `Enemies Killed: ${stats.enemiesKilled}`, {
+  scene.add.text(400, 400, `Enemies Killed: ${stats.enKilled}`, {
     fontSize: '28px',
     fontFamily: 'Arial',
     color: '#00ff00'
@@ -1988,7 +1988,7 @@ function restartGame() {
   // Reset upgrade levels
   upgradeLevels = {};
 
-  // Reset weapons (all locked, player will choose one)
+  // Reset weapons (all locked, p will choose one)
   weaponTypes.forEach(w => {
     if (weapon.i === 'p') {
       weapon.u = false;
@@ -2030,7 +2030,7 @@ function restartGame() {
     xp: 0,
     level: 1,
     xpToNext: 10,
-    enemiesKilled: 0
+    enKilled: 0
   };
 
   difficulty = {
@@ -2055,15 +2055,15 @@ function spawnWave() {
   warningActive = false;
   playTone(scene, 800, 0.2);
 
-  // Spawn 15-20 enemies in a circle around player
+  // Spawn 15-20 en in a circle around p
   const count = 15 + Math.floor(Math.random() * 6);
   const angleStep = (Math.PI * 2) / count;
 
   for (let i = 0; i < count; i++) {
     const angle = i * angleStep;
     const distance = 400;
-    let x = player.x + Math.cos(angle) * distance;
-    let y = player.y + Math.sin(angle) * distance;
+    let x = p.x + Math.cos(angle) * distance;
+    let y = p.y + Math.sin(angle) * distance;
 
     // Keep within world bounds
     x = Math.max(20, Math.min(2380, x));
@@ -2072,7 +2072,7 @@ function spawnWave() {
     // Select random type from unlocked
     const type = unlockedTypes[Math.floor(Math.random() * unlockedTypes.length)];
 
-    const enemy = enemies.create(x, y, `enemy_${type.n}`);
+    const enemy = en.create(x, y, `enemy_${type.n}`);
     enemy.body.setCircle(10);
     enemy.setData('hp', difficulty.enemyHp * type.h * 1.5);
     enemy.setData('speed', difficulty.enemySpeed * type.s);
@@ -2089,20 +2089,20 @@ function spawnBoss() {
   // Select highest unlocked type for boss
   const type = unlockedTypes[unlockedTypes.length - 1];
 
-  // Spawn boss from random direction relative to player
+  // Spawn boss from random direction relative to p
   const side = Math.floor(Math.random() * 4);
   let x, y;
 
-  if (side === 0) { x = player.x; y = player.y - 400; }
-  else if (side === 1) { x = player.x; y = player.y + 400; }
-  else if (side === 2) { x = player.x - 500; y = player.y; }
-  else { x = player.x + 500; y = player.y; }
+  if (side === 0) { x = p.x; y = p.y - 400; }
+  else if (side === 1) { x = p.x; y = p.y + 400; }
+  else if (side === 2) { x = p.x - 500; y = p.y; }
+  else { x = p.x + 500; y = p.y; }
 
   // Keep within world bounds
   x = Math.max(50, Math.min(2350, x));
   y = Math.max(50, Math.min(1750, y));
 
-  const boss = enemies.create(x, y, `boss_${type.n}`);
+  const boss = en.create(x, y, `boss_${type.n}`);
   boss.body.setCircle(30);
   boss.setData('hp', difficulty.enemyHp * type.h * 10);
   boss.setData('maxHp', difficulty.enemyHp * type.h * 10);
@@ -2162,7 +2162,7 @@ function initOrbitingBalls() {
   // Create initial balls
   const weapon = getWeapon('o');
   for (let i = 0; i < weapon.c; i++) {
-    const ball = scene.physics.add.image(player.x, player.y, 'o');
+    const ball = scene.physics.add.image(p.x, p.y, 'o');
 
     // Update both hitbox and visual size
     const scale = weapon.b / 8; // 8 is base radius
@@ -2174,7 +2174,7 @@ function initOrbitingBalls() {
   }
 
   // Set up overlap (not collider, so balls don't block)
-  scene.physics.add.overlap(orbitingBalls, enemies, hitEnemyWithBall, null, scene);
+  scene.physics.add.overlap(orbitingBalls, en, hitEnemyWithBall, null, scene);
 }
 
 function updateOrbitingBalls(delta) {
@@ -2184,7 +2184,7 @@ function updateOrbitingBalls(delta) {
   // Add/remove balls if count changed
   if (orbitingBalls.length < weapon.c) {
     for (let i = orbitingBalls.length; i < weapon.c; i++) {
-      const ball = scene.physics.add.image(player.x, player.y, 'o');
+      const ball = scene.physics.add.image(p.x, p.y, 'o');
 
       // Update both hitbox and visual size
       const scale = weapon.b / 8; // 8 is base radius
@@ -2193,7 +2193,7 @@ function updateOrbitingBalls(delta) {
 
       ball.setData('lastHitTime', {});
       orbitingBalls.push(ball);
-      scene.physics.add.overlap([ball], enemies, hitEnemyWithBall, null, scene);
+      scene.physics.add.overlap([ball], en, hitEnemyWithBall, null, scene);
     }
   }
 
@@ -2213,8 +2213,8 @@ function updateOrbitingBalls(delta) {
     if (!ball || !ball.active) return;
     const angleOffset = (Math.PI * 2 / weapon.c) * i;
     const angle = orbitAngle + angleOffset;
-    ball.x = player.x + Math.cos(angle) * weapon.a;
-    ball.y = player.y + Math.sin(angle) * weapon.a;
+    ball.x = p.x + Math.cos(angle) * weapon.a;
+    ball.y = p.y + Math.sin(angle) * weapon.a;
   });
 }
 
@@ -2259,7 +2259,7 @@ function hitEnemyWithBall(ball, enemy) {
     if (isBoss) {
       dropChest(enemy.x, enemy.y);
     } else {
-      // Normal enemies have a chance to drop upgrade chests
+      // Normal en have a chance to drop upgrade chests
       const finalDropChance = dropChance * stats.lootChance;
       if (Math.random() < finalDropChance) {
         dropUpgradeChest(enemy.x, enemy.y);
@@ -2267,7 +2267,7 @@ function hitEnemyWithBall(ball, enemy) {
     }
 
     enemy.destroy();
-    stats.enemiesKilled++;
+    stats.enKilled++;
   }
 }
 
@@ -2288,8 +2288,8 @@ function updateAreaDamage(delta) {
     areaDamageCircle.clear();
     areaDamageCircle.lineStyle(2, 0xffaa00, 0.5);
     areaDamageCircle.fillStyle(0xffaa00, 0.15);
-    areaDamageCircle.fillCircle(player.x, player.y, weapon.a);
-    areaDamageCircle.strokeCircle(player.x, player.y, weapon.a);
+    areaDamageCircle.fillCircle(p.x, p.y, weapon.a);
+    areaDamageCircle.strokeCircle(p.x, p.y, weapon.a);
   }
 
   // Damage tick
@@ -2299,10 +2299,10 @@ function updateAreaDamage(delta) {
 
     let hitAnyEnemy = false;
 
-    // Find enemies in range
-    enemies.children.entries.forEach(enemy => {
+    // Find en in range
+    en.children.entries.forEach(enemy => {
       if (!enemy.active) return;
-      const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
+      const dist = Phaser.Math.Distance.Between(p.x, p.y, enemy.x, enemy.y);
       if (dist <= weapon.a) {
         hitAnyEnemy = true;
 
@@ -2318,7 +2318,7 @@ function updateAreaDamage(delta) {
         enemy.setData('hp', hp);
 
         // Apply damage feedback (visual + knockback)
-        applyDamageFeedback(enemy, player.x, player.y, isCrit);
+        applyDamageFeedback(enemy, p.x, p.y, isCrit);
 
         if (hp <= 0) {
           playTone(scene, 660, 0.1);
@@ -2330,7 +2330,7 @@ function updateAreaDamage(delta) {
           if (isBoss) {
             dropChest(enemy.x, enemy.y);
           } else {
-            // Normal enemies have a chance to drop upgrade chests
+            // Normal en have a chance to drop upgrade chests
             const finalDropChance = dropChance * stats.lootChance;
             if (Math.random() < finalDropChance) {
               dropUpgradeChest(enemy.x, enemy.y);
@@ -2338,7 +2338,7 @@ function updateAreaDamage(delta) {
           }
 
           enemy.destroy();
-          stats.enemiesKilled++;
+          stats.enKilled++;
         }
       }
     });
@@ -2364,20 +2364,20 @@ function shootBoomerang() {
   if (!target) return;
 
   // Calculate angle toward target
-  const angle = Phaser.Math.Angle.Between(player.x, player.y, target.x, target.y);
+  const angle = Phaser.Math.Angle.Between(p.x, p.y, target.x, target.y);
   const vx = Math.cos(angle) * weapon.s;
   const vy = Math.sin(angle) * weapon.s;
 
   // Create boomerang sprite
-  const boom = scene.physics.add.sprite(player.x, player.y, 'b');
+  const boom = scene.physics.add.sprite(p.x, p.y, 'b');
   boom.setScale(weapon.z);
   boom.body.setCircle(8 * weapon.z);
   boom.body.setVelocity(vx, vy);
 
   // Set data
   boom.setData('state', 'outbound');
-  boom.setData('startX', player.x);
-  boom.setData('startY', player.y);
+  boom.setData('startX', p.x);
+  boom.setData('startY', p.y);
   boom.setData('distanceTraveled', 0);
   boom.setData('lastHitTimes', {});
   boom.setData('rotation', 0);
@@ -2386,8 +2386,8 @@ function shootBoomerang() {
   availableBoomerangs--;
 
   // Setup collision
-  scene.physics.add.overlap(boom, enemies, hitEnemyWithBoomerang, null, scene);
-  scene.physics.add.overlap(boom, player, collectBoomerang, null, scene);
+  scene.physics.add.overlap(boom, en, hitEnemyWithBoomerang, null, scene);
+  scene.physics.add.overlap(boom, p, collectBoomerang, null, scene);
 
   playTone(scene, 1200, 0.1);
 }
@@ -2420,16 +2420,16 @@ function updateBoomerangs(delta) {
       if (dist >= weapon.x) {
         boom.setData('state', 'returning');
 
-        // Start returning to player
-        const angleToPlayer = Phaser.Math.Angle.Between(boom.x, boom.y, player.x, player.y);
+        // Start returning to p
+        const angleToPlayer = Phaser.Math.Angle.Between(boom.x, boom.y, p.x, p.y);
         boom.body.setVelocity(
           Math.cos(angleToPlayer) * weapon.w,
           Math.sin(angleToPlayer) * weapon.w
         );
       }
     } else if (state === 'returning') {
-      // Check distance to player
-      const distToPlayer = Phaser.Math.Distance.Between(boom.x, boom.y, player.x, player.y);
+      // Check distance to p
+      const distToPlayer = Phaser.Math.Distance.Between(boom.x, boom.y, p.x, p.y);
 
       // Collect if close enough (within 30 pixels)
       if (distToPlayer < 30) {
@@ -2443,8 +2443,8 @@ function updateBoomerangs(delta) {
         return;
       }
 
-      // Update direction to player (homing)
-      const angleToPlayer = Phaser.Math.Angle.Between(boom.x, boom.y, player.x, player.y);
+      // Update direction to p (homing)
+      const angleToPlayer = Phaser.Math.Angle.Between(boom.x, boom.y, p.x, p.y);
       boom.body.setVelocity(
         Math.cos(angleToPlayer) * weapon.w,
         Math.sin(angleToPlayer) * weapon.w
@@ -2507,11 +2507,11 @@ function hitEnemyWithBoomerang(boom, enemy) {
     }
 
     enemy.destroy();
-    stats.enemiesKilled++;
+    stats.enKilled++;
   }
 }
 
-function collectBoomerang(_playerObj, boom) {
+function collectBoomerang(_pObj, boom) {
   if (!boom.active) return;
   if (boom.getData('state') !== 'returning') return;
 
