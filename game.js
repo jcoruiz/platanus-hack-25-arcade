@@ -16,12 +16,12 @@ const config = {
 new Phaser.Game(config);
 
 // Game state
-let player, cursors, enemies, projectiles, xpOrbs, obstacles, weaponChests, upgradeChests, graphics;
+let player, cursors, enemies, projectiles, xpOrbs, obstacles, weaponChests, upgradeChests, magnets, graphics;
 let areaDamageCircle = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
-let nextWaveTime = 60000, nextBossTime = 30000;
+let nextWaveTime = 60000, nextBossTime = 120000;
 let warningActive = false;
 let scene;
 
@@ -141,7 +141,8 @@ const orbitingBallUpgrades = [
 
 const areaDamageUpgrades = [
   { id: 'arearadius', name: 'Area Radius', desc: '+30 Area Range', icon: '🔴', weaponId: 'areaDamage', maxLevel: 5, apply: () => { getWeapon('areaDamage').radius += 30; upgradeLevels['arearadius'] = (upgradeLevels['arearadius'] || 0) + 1; } },
-  { id: 'areadps', name: 'Area DPS', desc: '+3 Damage/Second', icon: '🔥', weaponId: 'areaDamage', maxLevel: 10, apply: () => { getWeapon('areaDamage').dps += 3; upgradeLevels['areadps'] = (upgradeLevels['areadps'] || 0) + 1; } }
+  { id: 'areadps', name: 'Area DPS', desc: '+3 Damage/Second', icon: '🔥', weaponId: 'areaDamage', maxLevel: 10, apply: () => { getWeapon('areaDamage').dps += 3; upgradeLevels['areadps'] = (upgradeLevels['areadps'] || 0) + 1; } },
+  { id: 'areatickrate', name: 'Tick Speed', desc: '-15% Pulse Delay', icon: '⚡', weaponId: 'areaDamage', maxLevel: 8, apply: () => { getWeapon('areaDamage').tickRate = Math.max(150, getWeapon('areaDamage').tickRate * 0.85); upgradeLevels['areatickrate'] = (upgradeLevels['areatickrate'] || 0) + 1; } }
 ];
 
 // Rare upgrades (more powerful versions)
@@ -333,6 +334,17 @@ function preload() {
   g.generateTexture('upgradeChest', 20, 20);
   g.clear();
 
+  // Magnet texture (horseshoe magnet)
+  g.fillStyle(0xff0000, 1);
+  g.fillRect(2, 2, 5, 16);
+  g.fillRect(2, 14, 16, 4);
+  g.fillStyle(0x0088ff, 1);
+  g.fillRect(13, 2, 5, 16);
+  g.fillStyle(0xffffff, 1);
+  g.fillCircle(10, 10, 3);
+  g.generateTexture('magnet', 20, 20);
+  g.clear();
+
   // Orbiting ball texture (white ball with glow)
   g.fillStyle(0xffffff, 1);
   g.fillCircle(8, 8, 8);
@@ -360,6 +372,7 @@ function create() {
   xpOrbs = this.physics.add.group();
   weaponChests = this.physics.add.group();
   upgradeChests = this.physics.add.group();
+  magnets = this.physics.add.group();
   obstacles = this.physics.add.staticGroup();
 
   // Spawn obstacles randomly across map
@@ -388,6 +401,7 @@ function create() {
   this.physics.add.overlap(player, xpOrbs, collectXP, null, this);
   this.physics.add.overlap(player, weaponChests, collectChest, null, this);
   this.physics.add.overlap(player, upgradeChests, collectUpgradeChest, null, this);
+  this.physics.add.overlap(player, magnets, collectMagnet, null, this);
 
   // Enemy-to-enemy collisions (they push each other)
   this.physics.add.collider(enemies, enemies);
@@ -521,6 +535,18 @@ function update(_time, delta) {
     );
   });
 
+  // Move magnetized XP orbs toward player
+  xpOrbs.children.entries.forEach(orb => {
+    if (orb.active && orb.getData('magnetized')) {
+      const angle = Phaser.Math.Angle.Between(orb.x, orb.y, player.x, player.y);
+      const speed = 300; // Attraction speed
+      orb.body.setVelocity(
+        Math.cos(angle) * speed,
+        Math.sin(angle) * speed
+      );
+    }
+  });
+
   // Update orbiting balls
   updateOrbitingBalls(delta);
 
@@ -644,14 +670,21 @@ function hitEnemy(proj, enemy) {
     const dropChance = enemy.getData('dropChance') || 0;
     dropXP(enemy.x, enemy.y, xpValue);
 
-    // Bosses drop weapon chests
+    // Bosses drop weapon chests and magnets
     if (isBoss) {
       dropChest(enemy.x, enemy.y);
+      dropMagnet(enemy.x + 40, enemy.y); // Offset slightly so they don't overlap
     } else {
       // Normal enemies have a chance to drop upgrade chests
       const finalDropChance = dropChance * stats.lootChance;
       if (Math.random() < finalDropChance) {
         dropUpgradeChest(enemy.x, enemy.y);
+      }
+
+      // Small chance to drop magnet
+      const magnetDropChance = 0.015; // 1.5% chance
+      if (Math.random() < magnetDropChance * stats.lootChance) {
+        dropMagnet(enemy.x, enemy.y);
       }
     }
 
@@ -757,6 +790,27 @@ function collectUpgradeChest(_playerObj, chest) {
   if (availableUpgrades.length > 0) {
     showUpgradeChestMenu(availableUpgrades);
   }
+}
+
+function dropMagnet(x, y) {
+  const magnet = magnets.create(x, y, 'magnet');
+  magnet.body.setCircle(10);
+  // Magnet stays in place (immovable)
+  magnet.body.setImmovable(true);
+  magnet.body.setAllowGravity(false);
+}
+
+function collectMagnet(_playerObj, magnet) {
+  if (!magnet.active) return;
+  magnet.destroy();
+  playTone(scene, 1500, 0.3);
+
+  // Magnetize all existing XP orbs
+  xpOrbs.children.entries.forEach(orb => {
+    if (orb.active) {
+      orb.setData('magnetized', true);
+    }
+  });
 }
 
 function showUpgradeChestMenu(availableUpgrades) {
