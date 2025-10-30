@@ -20,7 +20,7 @@ let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen =
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
 let nextWaveTime = 60000, nextBossTime = 120000;
-let warningActive = false;
+let warnAct = false;
 let scene;
 
 let selectedIndex = 0;
@@ -29,15 +29,24 @@ let menuKeys = [];
 // ul=upgradedLevels
 let ul = {};
 
+// Color constants (numeric for Phaser Graphics)
+const C={W:0xffffff,B:0x000000,Y:0xffff00,R:0xff0000,G:0x00ff00,Cy:0x00ffff,O:0xff8800,P:0xff00ff,Gr:0xaaaaaa,Gy:0x888888,DG:0x666666,VG:0x333333,DD:0x222222,DB:0x555555,DR:0x440000};
+// Color constants (string for text)
+const CS={W:'#ffffff',B:'#000000',Y:'#ffff00',R:'#ff0000',G:'#00ff00',Cy:'#00ffff',Gy:'#888888',LG:'#cccccc',Go:'#FFD700',Si:'#C0C0C0',Br:'#CD7F32'};
+// Style property shortcuts
+const F='fontSize',FF='fontFamily',A='Arial',CO='color',STR='stroke',STT='strokeThickness',FST='fontStyle';
+// Text style constants
+const ST={t:{[F]:'48px',[FF]:A,[CO]:CS.Y,[STR]:CS.B,[STT]:6},h:{[F]:'24px',[FF]:A,[CO]:CS.W},d:{[F]:'14px',[FF]:A,[CO]:CS.LG},sm:{[F]:'12px',[FF]:A,[CO]:'#00ff88'},i:{[F]:'16px',[FF]:A,[CO]:CS.W,[FST]:'bold'},lg:{[F]:'28px',[FF]:A}};
+
 // Enemy types: n=name, c=color, h=hpMult, s=speedMult, d=damageMult, x=xp, cn=coins, r=dropRate, u=unlockTime
 const enemyTypes = [
-  { n: 'g', c: 0x00ff00, h: 1.0, s: 0.5, d: 1.0, x: 5, cn: 1, r: 0.02, u: 0 },
+  { n: 'g', c: C.G, h: 1.0, s: 0.5, d: 1.0, x: 5, cn: 1, r: 0.02, u: 0 },
   { n: 'b', c: 0x0088ff, h: 1.5, s: 0.55, d: 1.2, x: 8, cn: 2, r: 0.03, u: 20000 },
-  { n: 'c', c: 0x00ffff, h: 2.0, s: 1.6, d: 1.4, x: 10, cn: 2, r: 0.035, u: 40000 },
-  { n: 'y', c: 0xffff00, h: 2.5, s: 0.65, d: 1.6, x: 15, cn: 3, r: 0.04, u: 60000 },
-  { n: 'o', c: 0xff8800, h: 3.0, s: 0.7, d: 1.8, x: 20, cn: 3, r: 0.045, u: 90000 },
-  { n: 'r', c: 0xff0000, h: 4.0, s: 0.8, d: 2.0, x: 25, cn: 4, r: 0.05, u: 120000 },
-  { n: 'p', c: 0xff00ff, h: 5.0, s: 0.9, d: 2.5, x: 35, cn: 5, r: 0.055, u: 150000 }
+  { n: 'c', c: C.Cy, h: 2.0, s: 1.6, d: 1.4, x: 10, cn: 2, r: 0.035, u: 40000 },
+  { n: 'y', c: C.Y, h: 2.5, s: 0.65, d: 1.6, x: 15, cn: 3, r: 0.04, u: 60000 },
+  { n: 'o', c: C.O, h: 3.0, s: 0.7, d: 1.8, x: 20, cn: 3, r: 0.045, u: 90000 },
+  { n: 'r', c: C.R, h: 4.0, s: 0.8, d: 2.0, x: 25, cn: 4, r: 0.05, u: 120000 },
+  { n: 'p', c: C.P, h: 5.0, s: 0.9, d: 2.5, x: 35, cn: 5, r: 0.055, u: 150000 }
 ];
 
 let unlockedTypes = [];
@@ -95,14 +104,14 @@ const characters = [
   }
 ];
 
-let selectedCharacter = null;
+let selCh = null;
 
 let orbitingBalls = [];
 let orbitAngle = 0;
 
 let boomerangs = [];
-let availableBoomerangs = 0;
-let boomerangShootTimer = 0;
+let avB = 0;
+let bTmr = 0;
 
 const inS = { // initial stats
   hp: 100,
@@ -134,7 +143,7 @@ let difficulty = { ...inD };
 
 let ui = {};
 let statsPanel = null;
-let wasPausedBeforeStats = false;
+let wasPaused = false;
 
 function getWeapon(id) {
   return weaponTypes.find(w => w.i === id);
@@ -175,7 +184,7 @@ const boomerangUpgrades = [
   { id: 'bg', name: 'Boomerang Damage', desc: '+8 Damage', icon: '💥', weaponId: 'b', maxLevel: 10, apply: () => { getWeapon('b').m += 8; ul['bg'] = (ul['bg'] || 0) + 1; } },
   { id: 'bz', name: 'Boomerang Size', desc: '+30% Size', icon: '📏', weaponId: 'b', maxLevel: 8, apply: () => { getWeapon('b').z += 0.3; ul['bz'] = (ul['bz'] || 0) + 1; } },
   { id: 'bv', name: 'Boomerang Speed', desc: '+15% Speed', icon: '💨', weaponId: 'b', maxLevel: 8, apply: () => { getWeapon('b').s *= 1.15; getWeapon('b').w *= 1.15; ul['bv'] = (ul['bv'] || 0) + 1; } },
-  { id: 'bc', name: 'More Boomerangs', desc: '+1 Boomerang', icon: '🪃', weaponId: 'b', maxLevel: 5, apply: () => { getWeapon('b').c++; availableBoomerangs++; ul['bc'] = (ul['bc'] || 0) + 1; } }
+  { id: 'bc', name: 'More Boomerangs', desc: '+1 Boomerang', icon: '🪃', weaponId: 'b', maxLevel: 5, apply: () => { getWeapon('b').c++; avB++; ul['bc'] = (ul['bc'] || 0) + 1; } }
 ];
 
 const rareUpgrades = [
@@ -188,12 +197,33 @@ const rareUpgrades = [
   { id: 'r7', name: 'Devastating DPS', desc: '+15 Damage/Second', icon: '🔥', weaponId: 'a', maxLevel: 3, apply: () => { getWeapon('a').p += 15; ul['r7'] = (ul['r7'] || 0) + 1; } }
 ];
 
+// Helper: create text with common properties
+function mkTxt(x,y,t,s,d=101){return scene.add.text(x,y,t,s).setOrigin(0.5).setScrollFactor(0).setDepth(d);}
+
+// Helper: handle enemy death and drops
+function handleEnemyDeath(e){
+  const xp=e.getData('xpValue')||5;
+  const cn=e.getData('coinValue')||1;
+  const iB=e.getData('isBoss');
+  const dc=e.getData('dropChance')||0;
+  dropXP(e.x,e.y,xp);
+  if(Math.random()<0.25)dropCoin(e.x,e.y,cn);
+  if(iB){dropChest(e.x,e.y);dropMagnet(e.x+40,e.y);}
+  else{
+    if(Math.random()<dc*stats.lootChance)dropUpgCh(e.x,e.y);
+    if(Math.random()<0.015*stats.lootChance)dropMagnet(e.x,e.y);
+    if(Math.random()<0.015*stats.lootChance)dropHealthHeal(e.x,e.y);
+  }
+  e.destroy();
+  stats.enKilled++;
+}
+
 function preload() {
   // Create simple textures programmatically
   const g = this.add.graphics();
 
   // Player texture (banana shape)
-  g.fillStyle(0xffff00, 1);
+  g.fillStyle(C.Y, 1);
   g.fillEllipse(16, 16, 10, 24);
   g.fillStyle(0xffdd00, 1);
   g.fillEllipse(18, 16, 6, 20);
@@ -211,7 +241,7 @@ function preload() {
   g.fillRect(13, 20, 3, 10);
   g.fillRect(18, 19, 3, 11);
   // Eyes
-  g.fillStyle(0x000000, 1);
+  g.fillStyle(C.B, 1);
   g.fillCircle(12, 11, 2);
   g.fillCircle(20, 11, 2);
   g.generateTexture('p_j', 32, 32);
@@ -225,10 +255,10 @@ function preload() {
   g.slice(16, 16, 12, Phaser.Math.DegToRad(270), Phaser.Math.DegToRad(90), false);
   g.fillPath();
   // Dividing line
-  g.lineStyle(2, 0xffffff, 1);
+  g.lineStyle(2, C.W, 1);
   g.lineBetween(16, 4, 16, 28);
   // Center glow
-  g.fillStyle(0xffffff, 0.8);
+  g.fillStyle(C.W, 0.8);
   g.fillCircle(16, 16, 4);
   g.generateTexture('p_o', 32, 32);
   g.clear();
@@ -236,11 +266,11 @@ function preload() {
   // Bullet Train texture
   g.fillStyle(0xe0e0e0, 1); // Silver body
   g.fillRoundedRect(6, 10, 20, 12, 3);
-  g.fillStyle(0xffffff, 1); // White front
+  g.fillStyle(C.W, 1); // White front
   g.fillTriangle(4, 16, 10, 12, 10, 20);
   g.fillStyle(0x0088ff, 1); // Blue stripe
   g.fillRect(8, 15, 18, 2);
-  g.fillStyle(0xff0000, 1); // Red stripe
+  g.fillStyle(C.R, 1); // Red stripe
   g.fillRect(8, 18, 18, 2);
   // Windows
   g.fillStyle(0x4444ff, 0.7);
@@ -281,20 +311,20 @@ function preload() {
     if (type.n === 'g') {
       // Triangle
       g.fillTriangle(10, 2, 2, 18, 18, 18);
-      g.fillStyle(0xffffff, 1);
+      g.fillStyle(C.W, 1);
       g.fillCircle(7, 10, 2);
       g.fillCircle(13, 10, 2);
     } else if (type.n === 'b') {
       // Diamond
       g.fillTriangle(10, 2, 2, 10, 10, 18);
       g.fillTriangle(10, 2, 18, 10, 10, 18);
-      g.fillStyle(0xffffff, 1);
+      g.fillStyle(C.W, 1);
       g.fillCircle(8, 8, 2);
       g.fillCircle(12, 8, 2);
     } else if (type.n === 'c') {
       // Pentagon-ish
       g.fillCircle(10, 10, 9);
-      g.fillStyle(0xffffff, 1);
+      g.fillStyle(C.W, 1);
       g.fillCircle(7, 9, 2);
       g.fillCircle(13, 9, 2);
       g.fillStyle(type.c, 0.7);
@@ -302,7 +332,7 @@ function preload() {
     } else if (type.n === 'y') {
       // Square
       g.fillRect(3, 3, 14, 14);
-      g.fillStyle(0x000000, 1);
+      g.fillStyle(C.B, 1);
       g.fillCircle(7, 8, 2);
       g.fillCircle(13, 8, 2);
       g.fillRect(6, 13, 8, 2);
@@ -313,7 +343,7 @@ function preload() {
       g.fillTriangle(10, 19, 7, 12, 13, 12);
       g.fillTriangle(1, 10, 8, 7, 8, 13);
       g.fillTriangle(19, 10, 12, 7, 12, 13);
-      g.fillStyle(0xffffff, 1);
+      g.fillStyle(C.W, 1);
       g.fillCircle(7, 8, 2);
       g.fillCircle(13, 8, 2);
     } else if (type.n === 'r') {
@@ -321,7 +351,7 @@ function preload() {
       g.fillCircle(10, 10, 9);
       g.fillTriangle(3, 5, 5, 2, 7, 5);
       g.fillTriangle(17, 5, 15, 2, 13, 5);
-      g.fillStyle(0xff0000, 1);
+      g.fillStyle(C.R, 1);
       g.fillCircle(7, 9, 2);
       g.fillCircle(13, 9, 2);
       g.fillRect(7, 14, 6, 2);
@@ -330,10 +360,10 @@ function preload() {
       g.fillRect(4, 6, 12, 10);
       g.fillCircle(6, 6, 3);
       g.fillCircle(14, 6, 3);
-      g.fillStyle(0x00ff00, 1);
+      g.fillStyle(C.G, 1);
       g.fillCircle(7, 10, 3);
       g.fillCircle(13, 10, 3);
-      g.fillStyle(0x000000, 1);
+      g.fillStyle(C.B, 1);
       g.fillCircle(7, 10, 2);
       g.fillCircle(13, 10, 2);
     }
@@ -344,25 +374,25 @@ function preload() {
     g.fillStyle(type.c, 1);
     if (type.n === 'g') {
       g.fillTriangle(30, 6, 6, 54, 54, 54);
-      g.fillStyle(0xffffff, 1);
+      g.fillStyle(C.W, 1);
       g.fillCircle(21, 30, 6);
       g.fillCircle(39, 30, 6);
     } else if (type.n === 'b') {
       g.fillTriangle(30, 6, 6, 30, 30, 54);
       g.fillTriangle(30, 6, 54, 30, 30, 54);
-      g.fillStyle(0xffffff, 1);
+      g.fillStyle(C.W, 1);
       g.fillCircle(24, 24, 6);
       g.fillCircle(36, 24, 6);
     } else if (type.n === 'c') {
       g.fillCircle(30, 30, 27);
-      g.fillStyle(0xffffff, 1);
+      g.fillStyle(C.W, 1);
       g.fillCircle(21, 27, 6);
       g.fillCircle(39, 27, 6);
       g.fillStyle(type.c, 0.7);
       g.fillCircle(30, 18, 9);
     } else if (type.n === 'y') {
       g.fillRect(9, 9, 42, 42);
-      g.fillStyle(0x000000, 1);
+      g.fillStyle(C.B, 1);
       g.fillCircle(21, 24, 6);
       g.fillCircle(39, 24, 6);
       g.fillRect(18, 39, 24, 6);
@@ -372,14 +402,14 @@ function preload() {
       g.fillTriangle(30, 57, 21, 36, 39, 36);
       g.fillTriangle(3, 30, 24, 21, 24, 39);
       g.fillTriangle(57, 30, 36, 21, 36, 39);
-      g.fillStyle(0xffffff, 1);
+      g.fillStyle(C.W, 1);
       g.fillCircle(21, 24, 6);
       g.fillCircle(39, 24, 6);
     } else if (type.n === 'r') {
       g.fillCircle(30, 30, 27);
       g.fillTriangle(9, 15, 15, 6, 21, 15);
       g.fillTriangle(51, 15, 45, 6, 39, 15);
-      g.fillStyle(0xff0000, 1);
+      g.fillStyle(C.R, 1);
       g.fillCircle(21, 27, 6);
       g.fillCircle(39, 27, 6);
       g.fillRect(21, 42, 18, 6);
@@ -387,10 +417,10 @@ function preload() {
       g.fillRect(12, 18, 36, 30);
       g.fillCircle(18, 18, 9);
       g.fillCircle(42, 18, 9);
-      g.fillStyle(0x00ff00, 1);
+      g.fillStyle(C.G, 1);
       g.fillCircle(21, 30, 9);
       g.fillCircle(39, 30, 9);
-      g.fillStyle(0x000000, 1);
+      g.fillStyle(C.B, 1);
       g.fillCircle(21, 30, 6);
       g.fillCircle(39, 30, 6);
     }
@@ -399,13 +429,13 @@ function preload() {
   });
 
   // Projectile texture (orange circle)
-  g.fillStyle(0xff8800, 1);
+  g.fillStyle(C.O, 1);
   g.fillCircle(4, 4, 4);
   g.generateTexture('p', 8, 8);
   g.clear();
 
   // XP orb texture (cyan circle)
-  g.fillStyle(0x00ffff, 1);
+  g.fillStyle(C.Cy, 1);
   g.fillCircle(5, 5, 5);
   g.generateTexture('xp', 10, 10);
   g.clear();
@@ -417,19 +447,19 @@ function preload() {
   g.clear();
 
   // Health drop texture (red medical cross)
-  g.fillStyle(0xffffff, 1);
+  g.fillStyle(C.W, 1);
   g.fillCircle(10, 10, 10);
-  g.fillStyle(0xff0000, 1);
+  g.fillStyle(C.R, 1);
   g.fillRect(8, 4, 4, 12);
   g.fillRect(4, 8, 12, 4);
-  g.lineStyle(2, 0xffffff, 1);
+  g.lineStyle(2, C.W, 1);
   g.strokeRect(8, 4, 4, 12);
   g.strokeRect(4, 8, 12, 4);
   g.generateTexture('healthDrop', 20, 20);
   g.clear();
 
   // Obstacle texture (gray rock)
-  g.fillStyle(0x555555, 1);
+  g.fillStyle(C.DB, 1);
   g.fillCircle(20, 20, 20);
   g.fillStyle(0x777777, 0.5);
   g.fillCircle(15, 15, 10);
@@ -441,7 +471,7 @@ function preload() {
   g.fillRect(3, 8, 14, 12);
   g.fillStyle(0xffdd00, 1);
   g.fillRect(6, 5, 8, 8);
-  g.lineStyle(2, 0xffffff, 1);
+  g.lineStyle(2, C.W, 1);
   g.strokeRect(3, 8, 14, 12);
   g.generateTexture('chest', 20, 20);
   g.clear();
@@ -451,24 +481,24 @@ function preload() {
   g.fillRect(3, 8, 14, 12);
   g.fillStyle(0x00ff66, 1);
   g.fillRect(6, 5, 8, 8);
-  g.lineStyle(2, 0xffffff, 1);
+  g.lineStyle(2, C.W, 1);
   g.strokeRect(3, 8, 14, 12);
   g.generateTexture('upgradeChest', 20, 20);
   g.clear();
 
   // Magnet texture (horseshoe magnet)
-  g.fillStyle(0xff0000, 1);
+  g.fillStyle(C.R, 1);
   g.fillRect(2, 2, 5, 16);
   g.fillRect(2, 14, 16, 4);
   g.fillStyle(0x0088ff, 1);
   g.fillRect(13, 2, 5, 16);
-  g.fillStyle(0xffffff, 1);
+  g.fillStyle(C.W, 1);
   g.fillCircle(10, 10, 3);
   g.generateTexture('magnet', 20, 20);
   g.clear();
 
   // Orbiting ball texture (white ball with glow)
-  g.fillStyle(0xffffff, 1);
+  g.fillStyle(C.W, 1);
   g.fillCircle(8, 8, 8);
   g.fillStyle(0xffffaa, 0.5);
   g.fillCircle(8, 8, 6);
@@ -492,7 +522,7 @@ function create() {
 
   starLayers.forEach((layer, i) => {
     const stars = this.add.graphics();
-    stars.fillStyle(0xffffff, layer.a);
+    stars.fillStyle(C.W, layer.a);
     for (let j = 0; j < layer.c; j++) {
       const x = Math.random() * 2400;
       const y = Math.random() * 1800;
@@ -545,9 +575,9 @@ function create() {
   this.physics.add.overlap(p, xo, collectXP, null, this);
   this.physics.add.overlap(p, co, collectCoin, null, this);
   this.physics.add.overlap(p, wc, collectChest, null, this);
-  this.physics.add.overlap(p, uc, collectUpgradeChest, null, this);
+  this.physics.add.overlap(p, uc, colUpgCh, null, this);
   this.physics.add.overlap(p, mg, collectMagnet, null, this);
-  this.physics.add.overlap(p, hd, collectHealthHeal, null, this);
+  this.physics.add.overlap(p, hd, colHeal, null, this);
 
   // Enemy-to-enemy collisions (they push each other)
   this.physics.add.collider(en, en);
@@ -579,22 +609,12 @@ function create() {
         playTone(scene, 600, 0.1);
         // Show pause overlay
         pauseOverlay = scene.add.graphics();
-        pauseOverlay.fillStyle(0x000000, 0.7);
+        pauseOverlay.fillStyle(C.B, 0.7);
         pauseOverlay.fillRect(0, 0, 800, 600);
         pauseOverlay.setScrollFactor(0);
         pauseOverlay.setDepth(200);
-        pauseText = scene.add.text(400, 300, 'PAUSED', {
-          fontSize: '64px',
-          fontFamily: 'Arial',
-          color: '#ffff00',
-          stroke: '#000000',
-          strokeThickness: 8
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
-        pauseHint = scene.add.text(400, 370, 'Press [P] to resume', {
-          fontSize: '24px',
-          fontFamily: 'Arial',
-          color: '#ffffff'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+        pauseText = mkTxt(400, 300, 'PAUSED', {[F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8}, 201);
+        pauseHint = mkTxt(400, 370, 'Press [P] to resume', {[F]: '24px', [FF]: A, [CO]: CS.W}, 201);
       } else {
         scene.physics.resume();
         playTone(scene, 800, 0.1);
@@ -673,9 +693,9 @@ function update(_time, delta) {
   // Auto shoot (boomerang weapon)
   const boomerangWeapon = getWeapon('b');
   if (boomerangWeapon.u) {
-    boomerangShootTimer += delta;
-    if (boomerangShootTimer >= 200 && availableBoomerangs > 0) {
-      boomerangShootTimer = 0;
+    bTmr += delta;
+    if (bTmr >= 200 && avB > 0) {
+      bTmr = 0;
       shootBoomerang();
     }
   }
@@ -687,7 +707,7 @@ function update(_time, delta) {
   }
 
   // Unlock new enemy types based on time
-  updateUnlockedTypes();
+  updUnlockTypes();
 
   // Scale difficulty every 30 seconds
   if (Math.floor(gameTime / 30000) > Math.floor((gameTime - delta) / 30000)) {
@@ -699,8 +719,8 @@ function update(_time, delta) {
 
   // Wave system (every 60 seconds)
   waveTimer += delta;
-  if (waveTimer >= nextWaveTime - 3000 && waveTimer < nextWaveTime && !warningActive) {
-    showWarning('⚠️ WAVE INCOMING!', 0xffff00);
+  if (waveTimer >= nextWaveTime - 3000 && waveTimer < nextWaveTime && !warnAct) {
+    showWarning('⚠️ WAVE INCOMING!', C.Y);
     playTone(scene, 600, 0.3);
   }
   if (waveTimer >= nextWaveTime) {
@@ -710,8 +730,8 @@ function update(_time, delta) {
 
   // Boss system (every 120 seconds)
   bossTimer += delta;
-  if (bossTimer >= nextBossTime - 5000 && bossTimer < nextBossTime && !warningActive) {
-    showWarning('🔥 BOSS APPROACHING!', 0xff0000);
+  if (bossTimer >= nextBossTime - 5000 && bossTimer < nextBossTime && !warnAct) {
+    showWarning('🔥 BOSS APPROACHING!', C.R);
     playTone(scene, 150, 0.5);
   }
   if (bossTimer >= nextBossTime) {
@@ -762,13 +782,13 @@ function update(_time, delta) {
   });
 
   // Update orbiting balls
-  updateOrbitingBalls(delta);
+  updOrbBalls(delta);
 
   // Update area damage
-  updateAreaDamage(delta);
+  updAreaDmg(delta);
 
   // Update boomerangs
-  updateBoomerangs(delta);
+  updBooms(delta);
 
   // Update UI
   updateUI();
@@ -877,7 +897,7 @@ function hitEnemy(proj, enemy) {
   enemy.setData('hp', hp);
 
   // Apply damage feedback (visual + knockback)
-  applyDamageFeedback(enemy, proj.x, proj.y, isCrit);
+  applyDmgFb(enemy, proj.x, proj.y, isCrit);
 
   // Increment projectile hit count
   proj.setData('hits', projHits + 1);
@@ -889,43 +909,7 @@ function hitEnemy(proj, enemy) {
 
   if (hp <= 0) {
     playTone(scene, 660, 0.1);
-    const xpValue = enemy.getData('xpValue') || 5;
-    const coinValue = enemy.getData('coinValue') || 1;
-    const isBoss = enemy.getData('isBoss');
-    const dropChance = enemy.getData('dropChance') || 0;
-    dropXP(enemy.x, enemy.y, xpValue);
-
-    // 25% chance to drop coins
-    if (Math.random() < 0.25) {
-      dropCoin(enemy.x, enemy.y, coinValue);
-    }
-
-    // Bosses drop weapon chests and mg
-    if (isBoss) {
-      dropChest(enemy.x, enemy.y);
-      dropMagnet(enemy.x + 40, enemy.y); // Offset slightly so they don't overlap
-    } else {
-      // Normal en have a chance to drop upgrade chests
-      const finalDropChance = dropChance * stats.lootChance;
-      if (Math.random() < finalDropChance) {
-        dropUpgradeChest(enemy.x, enemy.y);
-      }
-
-      // Small chance to drop magnet
-      const magnetDropChance = 0.015; // 1.5% chance
-      if (Math.random() < magnetDropChance * stats.lootChance) {
-        dropMagnet(enemy.x, enemy.y);
-      }
-
-      // Small chance to drop health heal
-      const healthDropChance = 0.015; // 1.5% chance
-      if (Math.random() < healthDropChance * stats.lootChance) {
-        dropHealthHeal(enemy.x, enemy.y);
-      }
-    }
-
-    enemy.destroy();
-    stats.enKilled++;
+    handleEnemyDeath(enemy);
   }
 }
 
@@ -1007,11 +991,11 @@ function collectChest(_pObj, chest) {
     showWeaponSelector(lockedWeapons);
   } else {
     // All weapons unlocked, show rare upgrade menu
-    showRareUpgradeMenu();
+    showRareUpg();
   }
 }
 
-function dropUpgradeChest(x, y) {
+function dropUpgCh(x, y) {
   const chest = uc.create(x, y, 'upgradeChest');
   chest.body.setCircle(10);
   // Chest stays in place (immovable)
@@ -1019,7 +1003,7 @@ function dropUpgradeChest(x, y) {
   chest.body.setAllowGravity(false);
 }
 
-function collectUpgradeChest(_pObj, chest) {
+function colUpgCh(_pObj, chest) {
   if (!chest.active) return;
   chest.destroy();
   playTone(scene, 1200, 0.2);
@@ -1057,7 +1041,7 @@ function collectMagnet(_pObj, magnet) {
   });
 }
 
-function collectHealthHeal(_pObj, healDrop) {
+function colHeal(_pObj, healDrop) {
   if (!healDrop.active) return;
   healDrop.destroy();
   stats.hp = Math.min(stats.maxHp, stats.hp + 30);
@@ -1071,13 +1055,13 @@ function levelUp() {
   stats.xpToNext = Math.floor(stats.xpToNext * 1.2);
 
   // Apply character passive ability
-  if (selectedCharacter) {
-    const passive = selectedCharacter.pt;
-    const value = selectedCharacter.pv;
+  if (selCh) {
+    const passive = selCh.pt;
+    const value = selCh.pv;
 
     if (passive === 1) {// damage
       // Banana: +5% weapon damage
-      const weapon = getWeapon(selectedCharacter.weapon);
+      const weapon = getWeapon(selCh.weapon);
       if (weapon) weapon.m = Math.floor(weapon.m * value);
     } else if (passive === 2) { // regen
       // Medusa: +5 HP regen
@@ -1130,19 +1114,13 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
 
   // Semi-transparent overlay
   const overlay = scene.add.graphics();
-  overlay.fillStyle(0x000000, 0.85);
+  overlay.fillStyle(C.B, 0.85);
   overlay.fillRect(0, 0, 800, 600);
   overlay.setScrollFactor(0);
   overlay.setDepth(100);
 
   // Title
-  const title = scene.add.text(400, 100, 'UPGRADE MENU', {
-    fontSize: '48px',
-    fontFamily: 'Arial',
-    color: '#ffff00',
-    stroke: '#000000',
-    strokeThickness: 6
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+  const title = mkTxt(400, 100, 'UPGRADE MENU', {[F]: '48px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 6});
 
   // Shuffle and pick 3 upgrades
   const shuffled = [...availableUpgrades].sort(() => Math.random() - 0.5).slice(0, 3);
@@ -1158,9 +1136,9 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   const canReroll = stats.coins >= rerollCost;
 
   const rerollBtn = scene.add.graphics();
-  rerollBtn.fillStyle(canReroll ? 0x554400 : 0x333333, 1);
+  rerollBtn.fillStyle(canReroll ? 0x554400 : C.VG, 1);
   rerollBtn.fillRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
-  rerollBtn.lineStyle(3, canReroll ? 0xFFD700 : 0x555555, 1);
+  rerollBtn.lineStyle(3, canReroll ? 0xFFD700 : C.DB, 1);
   rerollBtn.strokeRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
   rerollBtn.setScrollFactor(0);
   rerollBtn.setDepth(101);
@@ -1169,17 +1147,9 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     rerollBtn.setInteractive(new Phaser.Geom.Rectangle(rerollX - 150, rerollY - 40, 300, 80), Phaser.Geom.Rectangle.Contains);
   }
 
-  const rerollText = scene.add.text(rerollX, rerollY - 10, `REROLL (${rerollCost} Coins)`, {
-    fontSize: '24px',
-    fontFamily: 'Arial',
-    color: canReroll ? '#FFD700' : '#666666'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+  const rerollText = mkTxt(rerollX, rerollY - 10, `REROLL (${rerollCost} Coins)`, {[F]: '24px', [FF]: A, [CO]: canReroll ? CS.Go : '#666666'}, 102);
 
-  const coinsInfo = scene.add.text(rerollX, rerollY + 15, `Tienes: ${stats.coins} monedas`, {
-    fontSize: '14px',
-    fontFamily: 'Arial',
-    color: '#cccccc'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+  const coinsInfo = mkTxt(rerollX, rerollY + 15, `Tienes: ${stats.coins} monedas`, {[F]: '14px', [FF]: A, [CO]: CS.LG}, 102);
 
   // Reroll button click handler
   if (canReroll) {
@@ -1201,29 +1171,19 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
         const y = 300;
 
         const btn = scene.add.graphics();
-        btn.fillStyle(0x333333, 1);
+        btn.fillStyle(C.VG, 1);
         btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
-        btn.lineStyle(3, 0x00ff00, 1);
+        btn.lineStyle(3, C.G, 1);
         btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
         btn.setScrollFactor(0);
         btn.setDepth(101);
         btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 80, 180, 160), Phaser.Geom.Rectangle.Contains);
 
-        scene.add.text(x, y - 30, upgrade.icon, {
-          fontSize: '48px'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+        mkTxt(x, y - 30, upgrade.icon, {[F]: '48px'}, 102);
 
-        scene.add.text(x, y + 20, upgrade.name, {
-          fontSize: '20px',
-          fontFamily: 'Arial',
-          color: '#ffffff'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+        mkTxt(x, y + 20, upgrade.name, {[F]: '20px', [FF]: A, [CO]: CS.W}, 102);
 
-        scene.add.text(x, y + 50, upgrade.desc, {
-          fontSize: '14px',
-          fontFamily: 'Arial',
-          color: '#cccccc'
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+        mkTxt(x, y + 50, upgrade.desc, {[F]: '14px', [FF]: A, [CO]: CS.LG}, 102);
 
         menuOptions.push({ btn, upgrade, x, y });
         btn.on('pointerdown', () => selectUpgrade(upgrade));
@@ -1238,15 +1198,15 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
       // Update reroll button state
       const newCanReroll = stats.coins >= rerollCost;
       rerollBtn.clear();
-      rerollBtn.fillStyle(newCanReroll ? 0x554400 : 0x333333, 1);
+      rerollBtn.fillStyle(newCanReroll ? 0x554400 : C.VG, 1);
       rerollBtn.fillRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
-      rerollBtn.lineStyle(3, newCanReroll ? 0xFFD700 : 0x555555, 1);
+      rerollBtn.lineStyle(3, newCanReroll ? 0xFFD700 : C.DB, 1);
       rerollBtn.strokeRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
       rerollBtn.removeInteractive();
       if (newCanReroll) {
         rerollBtn.setInteractive(new Phaser.Geom.Rectangle(rerollX - 150, rerollY - 40, 300, 80), Phaser.Geom.Rectangle.Contains);
       }
-      rerollText.setColor(newCanReroll ? '#FFD700' : '#666666');
+      rerollText.setColor(newCanReroll ? CS.Go : '#666666');
       coinsInfo.setText(`Tienes: ${stats.coins} monedas`);
     });
   }
@@ -1277,9 +1237,9 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     menuOptions.forEach((option, i) => {
       const isSelected = i === selectedIndex;
       option.btn.clear();
-      option.btn.fillStyle(isSelected ? 0x555555 : 0x333333, 1);
+      option.btn.fillStyle(isSelected ? C.DB : C.VG, 1);
       option.btn.fillRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
-      option.btn.lineStyle(3, isSelected ? 0xffff00 : 0x00ff00, 1);
+      option.btn.lineStyle(3, isSelected ? C.Y : C.G, 1);
       option.btn.strokeRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
     });
 
@@ -1287,9 +1247,9 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     const currentCanReroll = stats.coins >= rerollCost;
     const rerollSelected = selectedIndex === 3;
     rerollBtn.clear();
-    rerollBtn.fillStyle(rerollSelected ? (currentCanReroll ? 0x776600 : 0x444444) : (currentCanReroll ? 0x554400 : 0x333333), 1);
+    rerollBtn.fillStyle(rerollSelected ? (currentCanReroll ? 0x776600 : 0x444444) : (currentCanReroll ? 0x554400 : C.VG), 1);
     rerollBtn.fillRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
-    rerollBtn.lineStyle(3, rerollSelected ? 0xffff00 : (currentCanReroll ? 0xFFD700 : 0x555555), 1);
+    rerollBtn.lineStyle(3, rerollSelected ? C.Y : (currentCanReroll ? 0xFFD700 : C.DB), 1);
     rerollBtn.strokeRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
   };
 
@@ -1299,32 +1259,22 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
 
     // Button background
     const btn = scene.add.graphics();
-    btn.fillStyle(0x333333, 1);
+    btn.fillStyle(C.VG, 1);
     btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
-    btn.lineStyle(3, 0x00ff00, 1);
+    btn.lineStyle(3, C.G, 1);
     btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
     btn.setScrollFactor(0);
     btn.setDepth(101);
     btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 80, 180, 160), Phaser.Geom.Rectangle.Contains);
 
     // Icon
-    scene.add.text(x, y - 30, upgrade.icon, {
-      fontSize: '48px'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+    mkTxt(x, y - 30, upgrade.icon, {[F]: '48px'}, 102);
 
     // Name
-    scene.add.text(x, y + 20, upgrade.name, {
-      fontSize: '20px',
-      fontFamily: 'Arial',
-      color: '#ffffff'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+    mkTxt(x, y + 20, upgrade.name, {[F]: '20px', [FF]: A, [CO]: CS.W}, 102);
 
     // Description
-    scene.add.text(x, y + 50, upgrade.desc, {
-      fontSize: '14px',
-      fontFamily: 'Arial',
-      color: '#cccccc'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+    mkTxt(x, y + 50, upgrade.desc, {[F]: '14px', [FF]: A, [CO]: CS.LG}, 102);
 
     // Store option reference
     menuOptions.push({ btn, upgrade, x, y });
@@ -1398,19 +1348,13 @@ function showWeaponSelector(weapons) {
 
   // Semi-transparent overlay
   const overlay = scene.add.graphics();
-  overlay.fillStyle(0x000000, 0.85);
+  overlay.fillStyle(C.B, 0.85);
   overlay.fillRect(0, 0, 800, 600);
   overlay.setScrollFactor(0);
   overlay.setDepth(100);
 
   // Title
-  const title = scene.add.text(400, 80, '⚔️ CHOOSE A WEAPON ⚔️', {
-    fontSize: '40px',
-    fontFamily: 'Arial',
-    color: '#ffaa00',
-    stroke: '#000000',
-    strokeThickness: 6
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+  const title = mkTxt(400, 80, '⚔️ CHOOSE A WEAPON ⚔️', {[F]: '40px', [FF]: A, [CO]: '#ffaa00', [STR]: CS.B, [STT]: 6});
 
   // Reset menu state
   selectedIndex = 0;
@@ -1422,11 +1366,11 @@ function showWeaponSelector(weapons) {
 
     // Initialize weapon
     if (weapon.i === 'o') {
-      initOrbitingBalls();
+      initOrbBalls();
     } else if (weapon.i === 'a') {
       initAreaDamage();
     } else if (weapon.i === 'b') {
-      initBoomerangWeapon();
+      initBoom();
     }
 
     // Clean up menu
@@ -1447,9 +1391,9 @@ function showWeaponSelector(weapons) {
     menuOptions.forEach((option, i) => {
       const isSelected = i === selectedIndex;
       option.btn.clear();
-      option.btn.fillStyle(isSelected ? 0x555555 : 0x333333, 1);
+      option.btn.fillStyle(isSelected ? C.DB : C.VG, 1);
       option.btn.fillRoundedRect(option.x - 90, option.y - 100, 180, 200, 10);
-      option.btn.lineStyle(3, isSelected ? 0xffff00 : 0xffaa00, 1);
+      option.btn.lineStyle(3, isSelected ? C.Y : 0xffaa00, 1);
       option.btn.strokeRoundedRect(option.x - 90, option.y - 100, 180, 200, 10);
     });
   };
@@ -1461,7 +1405,7 @@ function showWeaponSelector(weapons) {
 
     // Button background
     const btn = scene.add.graphics();
-    btn.fillStyle(0x333333, 1);
+    btn.fillStyle(C.VG, 1);
     btn.fillRoundedRect(x - 90, y - 100, 180, 200, 10);
     btn.lineStyle(3, 0xffaa00, 1);
     btn.strokeRoundedRect(x - 90, y - 100, 180, 200, 10);
@@ -1470,22 +1414,10 @@ function showWeaponSelector(weapons) {
     btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 100, 180, 200), Phaser.Geom.Rectangle.Contains);
 
     // Weapon name
-    scene.add.text(x, y - 40, weapon.n, {
-      fontSize: '20px',
-      fontFamily: 'Arial',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      wordWrap: { width: 160, useAdvancedWrap: true }
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+    mkTxt(x, y - 40, weapon.n, {[F]: '20px', [FF]: A, [CO]: CS.W, [FST]: 'bold', wordWrap: { width: 160, useAdvancedWrap: true }}, 102);
 
     // Description
-    scene.add.text(x, y + 20, weapon.d, {
-      fontSize: '14px',
-      fontFamily: 'Arial',
-      color: '#cccccc',
-      wordWrap: { width: 160, useAdvancedWrap: true },
-      align: 'center'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+    mkTxt(x, y + 20, weapon.d, {[F]: '14px', [FF]: A, [CO]: CS.LG, wordWrap: { width: 160, useAdvancedWrap: true }, align: 'center'}, 102);
 
     // Store option reference
     menuOptions.push({ btn, weapon, x, y });
@@ -1527,7 +1459,7 @@ function showWeaponSelector(weapons) {
   menuKeys.push(leftKey, rightKey, enterKey);
 }
 
-function showRareUpgradeMenu() {
+function showRareUpg() {
   selectingWeapon = true;
   scene.physics.pause();
 
@@ -1541,19 +1473,13 @@ function showRareUpgradeMenu() {
 
   // Semi-transparent overlay
   const overlay = scene.add.graphics();
-  overlay.fillStyle(0x000000, 0.85);
+  overlay.fillStyle(C.B, 0.85);
   overlay.fillRect(0, 0, 800, 600);
   overlay.setScrollFactor(0);
   overlay.setDepth(100);
 
   // Title
-  const title = scene.add.text(400, 100, '✨ RARE UPGRADE! ✨', {
-    fontSize: '48px',
-    fontFamily: 'Arial',
-    color: '#ff00ff',
-    stroke: '#000000',
-    strokeThickness: 6
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+  const title = mkTxt(400, 100, '✨ RARE UPGRADE! ✨', {[F]: '48px', [FF]: A, [CO]: '#ff00ff', [STR]: CS.B, [STT]: 6});
 
   // Shuffle and pick 3 rare upgrades
   const shuffled = [...available].sort(() => Math.random() - 0.5).slice(0, 3);
@@ -1586,7 +1512,7 @@ function showRareUpgradeMenu() {
       option.btn.clear();
       option.btn.fillStyle(isSelected ? 0x550055 : 0x330033, 1);
       option.btn.fillRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
-      option.btn.lineStyle(3, isSelected ? 0xffff00 : 0xff00ff, 1);
+      option.btn.lineStyle(3, isSelected ? C.Y : C.P, 1);
       option.btn.strokeRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
     });
   };
@@ -1599,31 +1525,20 @@ function showRareUpgradeMenu() {
     const btn = scene.add.graphics();
     btn.fillStyle(0x330033, 1);
     btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
-    btn.lineStyle(3, 0xff00ff, 1);
+    btn.lineStyle(3, C.P, 1);
     btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
     btn.setScrollFactor(0);
     btn.setDepth(101);
     btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 80, 180, 160), Phaser.Geom.Rectangle.Contains);
 
     // Icon
-    scene.add.text(x, y - 30, upgrade.icon, {
-      fontSize: '48px'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+    mkTxt(x, y - 30, upgrade.icon, {[F]: '48px'}, 102);
 
     // Name
-    scene.add.text(x, y + 20, upgrade.name, {
-      fontSize: '18px',
-      fontFamily: 'Arial',
-      color: '#ff00ff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+    mkTxt(x, y + 20, upgrade.name, {[F]: '18px', [FF]: A, [CO]: '#ff00ff', [FST]: 'bold'}, 102);
 
     // Description
-    scene.add.text(x, y + 50, upgrade.desc, {
-      fontSize: '14px',
-      fontFamily: 'Arial',
-      color: '#ffaaff'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+    mkTxt(x, y + 50, upgrade.desc, {[F]: '14px', [FF]: A, [CO]: '#ffaaff'}, 102);
 
     // Store option reference
     menuOptions.push({ btn, upgrade, x, y });
@@ -1668,73 +1583,51 @@ function showRareUpgradeMenu() {
 function showStartScreen() {
   // Semi-transparent overlay
   const overlay = scene.add.graphics();
-  overlay.fillStyle(0x000000, 0.9);
+  overlay.fillStyle(C.B, 0.9);
   overlay.fillRect(0, 0, 800, 600);
   overlay.setScrollFactor(0);
   overlay.setDepth(100);
 
   // Title
-  const title = scene.add.text(400, 80, 'BULLET HEAVEN', {
-    fontSize: '48px',
-    fontFamily: 'Arial',
-    color: '#ffff00',
-    stroke: '#000000',
-    strokeThickness: 6
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+  const title = mkTxt(400, 80, 'BULLET HEAVEN', {[F]: '48px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 6});
 
   // Subtitle
-  scene.add.text(400, 140, 'Choose your character', {
-    fontSize: '24px',
-    fontFamily: 'Arial',
-    color: '#ffffff'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+  mkTxt(400, 140, 'Choose your character', {[F]: '24px', [FF]: A, [CO]: CS.W});
 
   // Top 5 Leaderboard on right side
   const leaderboardX = 650;
   const leaderboardY = 200;
 
-  scene.add.text(leaderboardX, leaderboardY, 'TOP SCORES', {
-    fontSize: '20px',
-    fontFamily: 'Arial',
-    color: '#FFD700',
-    fontStyle: 'bold',
-    stroke: '#000000',
-    strokeThickness: 3
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+  mkTxt(leaderboardX, leaderboardY, 'TOP SCORES', {[F]: '20px', [FF]: A, [CO]: CS.Go, [FST]: 'bold', [STR]: CS.B, [STT]: 3});
 
   const entries = loadLeaderboard();
   const top5 = entries.slice(0, 5);
 
   if (top5.length === 0) {
-    scene.add.text(leaderboardX, leaderboardY + 40, 'No scores yet!', {
-      fontSize: '14px',
-      fontFamily: 'Arial',
-      color: '#888888',
-      align: 'center'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+    mkTxt(leaderboardX, leaderboardY + 40, 'No scores yet!', {[F]: '14px', [FF]: A, [CO]: CS.Gy, align: 'center'});
   } else {
     top5.forEach((entry, i) => {
-      let color = '#ffffff';
-      if (i === 0) color = '#FFD700'; // Gold
-      else if (i === 1) color = '#C0C0C0'; // Silver
-      else if (i === 2) color = '#CD7F32'; // Bronze
+      let color = CS.W;
+      if (i === 0) color = CS.Go; // Gold
+      else if (i === 1) color = CS.Si; // Silver
+      else if (i === 2) color = CS.Br; // Bronze
 
       const yPos = leaderboardY + 40 + (i * 28);
 
       // Rank and name
       scene.add.text(leaderboardX - 60, yPos, `${i + 1}. ${entry.name}`, {
-        fontSize: '16px',
-        fontFamily: 'Arial',
-        color: color,
-        fontStyle: 'bold'
+        [F]: '16px',
+        [FF]: A,
+        [CO]: color,
+        [FST]: 'bold'
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(101);
 
       // Kills count
       scene.add.text(leaderboardX + 70, yPos, entry.kills.toString(), {
-        fontSize: '16px',
-        fontFamily: 'Arial',
-        color: color,
-        fontStyle: 'bold'
+        [F]: '16px',
+        [FF]: A,
+        [CO]: color,
+        [FST]: 'bold'
       }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(101);
     });
   }
@@ -1747,7 +1640,7 @@ function showStartScreen() {
     playTone(scene, 1500, 0.2);
 
     // Set selected character
-    selectedCharacter = character;
+    selCh = character;
 
     // Change p texture
     p.setTexture(character.texture);
@@ -1759,11 +1652,11 @@ function showStartScreen() {
 
       // Initialize weapon if needed
       if (weapon.i === 'o') {
-        initOrbitingBalls();
+        initOrbBalls();
       } else if (weapon.i === 'a') {
         initAreaDamage();
       } else if (weapon.i === 'b') {
-        initBoomerangWeapon();
+        initBoom();
       }
     }
 
@@ -1785,9 +1678,9 @@ function showStartScreen() {
     menuOptions.forEach((option, i) => {
       const isSelected = i === selectedIndex;
       option.btn.clear();
-      option.btn.fillStyle(isSelected ? 0x555555 : 0x222222, 1);
+      option.btn.fillStyle(isSelected ? C.DB : C.DD, 1);
       option.btn.fillRoundedRect(option.x - 90, option.y - 100, 180, 200, 10);
-      option.btn.lineStyle(4, isSelected ? 0xffff00 : 0x666666, 1);
+      option.btn.lineStyle(4, isSelected ? C.Y : C.DG, 1);
       option.btn.strokeRoundedRect(option.x - 90, option.y - 100, 180, 200, 10);
     });
   };
@@ -1799,9 +1692,9 @@ function showStartScreen() {
 
     // Button background
     const btn = scene.add.graphics();
-    btn.fillStyle(0x222222, 1);
+    btn.fillStyle(C.DD, 1);
     btn.fillRoundedRect(x - 90, y - 100, 180, 200, 10);
-    btn.lineStyle(4, 0x666666, 1);
+    btn.lineStyle(4, C.DG, 1);
     btn.strokeRoundedRect(x - 90, y - 100, 180, 200, 10);
     btn.setScrollFactor(0);
     btn.setDepth(101);
@@ -1814,31 +1707,13 @@ function showStartScreen() {
     sprite.setDepth(102);
 
     // Character name
-    scene.add.text(x, y + 20, character.name, {
-      fontSize: '22px',
-      fontFamily: 'Arial',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      align: 'center'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+    mkTxt(x, y + 20, character.name, {[F]: '22px', [FF]: A, [CO]: CS.W, [FST]: 'bold', align: 'center'}, 102);
 
     // Description
-    scene.add.text(x, y + 50, character.desc, {
-      fontSize: '14px',
-      fontFamily: 'Arial',
-      color: '#cccccc',
-      wordWrap: { width: 160, useAdvancedWrap: true },
-      align: 'center'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+    mkTxt(x, y + 50, character.desc, {[F]: '14px', [FF]: A, [CO]: CS.LG, wordWrap: { width: 160, useAdvancedWrap: true }, align: 'center'}, 102);
 
     // Passive ability
-    scene.add.text(x, y + 75, character.passiveDesc, {
-      fontSize: '12px',
-      fontFamily: 'Arial',
-      color: '#00ff88',
-      wordWrap: { width: 160, useAdvancedWrap: true },
-      align: 'center'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+    mkTxt(x, y + 75, character.passiveDesc, {[F]: '12px', [FF]: A, [CO]: '#00ff88', wordWrap: { width: 160, useAdvancedWrap: true }, align: 'center'}, 102);
 
     // Store option reference
     menuOptions.push({ btn, character, x, y });
@@ -1883,44 +1758,44 @@ function showStartScreen() {
 function createUI() {
   // HP Bar label
   ui.hpText = scene.add.text(10, 10, 'HP:', {
-    fontSize: '16px',
-    fontFamily: 'Arial',
-    color: '#ffffff'
+    [F]: '16px',
+    [FF]: A,
+    [CO]: CS.W
   }).setScrollFactor(0);
 
   // XP Bar label
   ui.xpText = scene.add.text(300, 10, 'XP:', {
-    fontSize: '16px',
-    fontFamily: 'Arial',
-    color: '#ffffff'
+    [F]: '16px',
+    [FF]: A,
+    [CO]: CS.W
   }).setScrollFactor(0);
 
   // Level
   ui.levelText = scene.add.text(550, 10, 'Level: 1', {
-    fontSize: '16px',
-    fontFamily: 'Arial',
-    color: '#ffff00'
+    [F]: '16px',
+    [FF]: A,
+    [CO]: CS.Y
   }).setScrollFactor(0);
 
   // Coins
   ui.coinsText = scene.add.text(650, 10, 'Coins: 0', {
-    fontSize: '16px',
-    fontFamily: 'Arial',
-    color: '#FFD700'
+    [F]: '16px',
+    [FF]: A,
+    [CO]: CS.Go
   }).setScrollFactor(0);
 
   // Timer
   ui.timeText = scene.add.text(740, 10, '0:00', {
-    fontSize: '16px',
-    fontFamily: 'Arial',
-    color: '#00ffff'
+    [F]: '16px',
+    [FF]: A,
+    [CO]: CS.Cy
   }).setScrollFactor(0);
 
   // Stats indicator
-  ui.statsHint = scene.add.text(580, 580, '[S] Stats  [P] Pause  [R] Restart', {
-    fontSize: '14px',
-    fontFamily: 'Arial',
-    color: '#888888'
+  ui.statsHint = scene.add.text(580, 580, '[S]Stats [P]Pause [R]Retry', {
+    [F]: '14px',
+    [FF]: A,
+    [CO]: CS.Gy
   }).setScrollFactor(0).setDepth(10);
 }
 
@@ -1946,9 +1821,9 @@ function updateUI() {
   weaponTypes.forEach(weapon => {
     if (weapon.u && !weapon.i.startsWith('placeholder')) {
       const icon = scene.add.text(weaponX, weaponY, weapon.n.charAt(0), {
-        fontSize: '16px',
-        fontFamily: 'Arial',
-        color: '#ffaa00',
+        [F]: '16px',
+        [FF]: A,
+        [CO]: '#ffaa00',
         backgroundColor: '#333333',
         padding: { x: 6, y: 4 }
       }).setScrollFactor(0);
@@ -1963,15 +1838,15 @@ function drawUIBars() {
   gr.setScrollFactor(0);
 
   // HP Bar background
-  gr.fillStyle(0x440000, 1);
+  gr.fillStyle(C.DR, 1);
   gr.fillRect(50, 10, 200, 20);
 
   // HP Bar foreground
-  gr.fillStyle(0xff0000, 1);
+  gr.fillStyle(C.R, 1);
   gr.fillRect(50, 10, 200 * (stats.hp / stats.maxHp), 20);
 
   // HP Bar border
-  gr.lineStyle(2, 0xffffff, 1);
+  gr.lineStyle(2, C.W, 1);
   gr.strokeRect(50, 10, 200, 20);
 
   // XP Bar background
@@ -1979,11 +1854,11 @@ function drawUIBars() {
   gr.fillRect(330, 10, 180, 20);
 
   // XP Bar foreground
-  gr.fillStyle(0x00ffff, 1);
+  gr.fillStyle(C.Cy, 1);
   gr.fillRect(330, 10, 180 * (stats.xp / stats.xpToNext), 20);
 
   // XP Bar border
-  gr.lineStyle(2, 0xffffff, 1);
+  gr.lineStyle(2, C.W, 1);
   gr.strokeRect(330, 10, 180, 20);
 
   // Find active boss
@@ -2008,36 +1883,24 @@ function drawUIBars() {
     if (ui.bossHpText) ui.bossHpText.destroy();
 
     // Boss label
-    gr.fillStyle(0xffffff, 1);
-    ui.bossLabelText = scene.add.text(400, 40, '⚔️ BOSS ⚔️', {
-      fontSize: '20px',
-      fontFamily: 'Arial',
-      color: '#ff0000',
-      stroke: '#000000',
-      strokeThickness: 4
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
+    gr.fillStyle(C.W, 1);
+    ui.bossLabelText = mkTxt(400, 40, '⚔️ BOSS ⚔️', {[F]: '20px', [FF]: A, [CO]: CS.R, [STR]: CS.B, [STT]: 4}, 200);
 
     // Background
-    gr.fillStyle(0x440000, 1);
+    gr.fillStyle(C.DR, 1);
     gr.fillRect(x, y, barWidth, barHeight);
 
     // Foreground
-    gr.fillStyle(0xff0000, 1);
+    gr.fillStyle(C.R, 1);
     gr.fillRect(x, y, barWidth * (hp / maxHp), barHeight);
 
     // Border
-    gr.lineStyle(3, 0xffff00, 1);
+    gr.lineStyle(3, C.Y, 1);
     gr.strokeRect(x, y, barWidth, barHeight);
 
     // HP text
-    gr.fillStyle(0xffffff, 1);
-    ui.bossHpText = scene.add.text(400, 62, `${Math.ceil(hp)} / ${Math.ceil(maxHp)}`, {
-      fontSize: '14px',
-      fontFamily: 'Arial',
-      color: '#ffffff',
-      stroke: '#000000',
-      strokeThickness: 3
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
+    gr.fillStyle(C.W, 1);
+    ui.bossHpText = mkTxt(400, 62, `${Math.ceil(hp)} / ${Math.ceil(maxHp)}`, {[F]: '14px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 3}, 200);
   } else {
     // Destroy boss texts when no boss
     if (ui.bossLabelText) {
@@ -2057,41 +1920,23 @@ function endGame() {
 
   // Overlay
   const overlay = scene.add.graphics();
-  overlay.fillStyle(0x000000, 0.8);
+  overlay.fillStyle(C.B, 0.8);
   overlay.fillRect(0, 0, 800, 600);
   overlay.setScrollFactor(0);
   overlay.setDepth(100);
 
   // Game Over text
-  const gameOverText = scene.add.text(400, 200, 'GAME OVER', {
-    fontSize: '64px',
-    fontFamily: 'Arial',
-    color: '#ff0000',
-    stroke: '#000000',
-    strokeThickness: 8
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+  const gameOverText = mkTxt(400, 200, 'GAME OVER', {[F]: '64px', [FF]: A, [CO]: CS.R, [STR]: CS.B, [STT]: 8});
 
   // Stats
   const minutes = Math.floor(gameTime / 60000);
   const seconds = Math.floor((gameTime % 60000) / 1000);
 
-  const timeText = scene.add.text(400, 300, `Time Survived: ${minutes}:${seconds.toString().padStart(2, '0')}`, {
-    fontSize: '28px',
-    fontFamily: 'Arial',
-    color: '#00ffff'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+  const timeText = mkTxt(400, 300, `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`, {[F]: '28px', [FF]: A, [CO]: CS.Cy});
 
-  const levelText = scene.add.text(400, 350, `Level Reached: ${stats.level}`, {
-    fontSize: '28px',
-    fontFamily: 'Arial',
-    color: '#ffff00'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+  const levelText = mkTxt(400, 350, `Level: ${stats.level}`, {[F]: '28px', [FF]: A, [CO]: CS.Y});
 
-  const killsText = scene.add.text(400, 400, `Enemies Killed: ${stats.enKilled}`, {
-    fontSize: '28px',
-    fontFamily: 'Arial',
-    color: '#00ff00'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+  const killsText = mkTxt(400, 400, `Kills: ${stats.enKilled}`, {[F]: '28px', [FF]: A, [CO]: CS.G});
 
   // After 2 seconds, transition to leaderboard flow
   scene.time.delayedCall(2000, () => {
@@ -2103,7 +1948,7 @@ function endGame() {
     killsText.destroy();
 
     // Show leaderboard flow
-    if (qualifiesForLeaderboard(stats.enKilled)) {
+    if (qualForLb(stats.enKilled)) {
       showNameEntry();
     } else {
       showLeaderboard();
@@ -2124,7 +1969,7 @@ function restartGame() {
   regenTimer = 0;
   waveTimer = 0;
   bossTimer = 0;
-  warningActive = false;
+  warnAct = false;
 
   // Reset upgrade levels
   ul = {};
@@ -2165,7 +2010,7 @@ function addToLeaderboard(name, kills) {
   return position !== -1 ? position + 1 : null;
 }
 
-function qualifiesForLeaderboard(kills) {
+function qualForLb(kills) {
   const entries = loadLeaderboard();
   return entries.length < 10 || kills > entries[entries.length - 1].kills;
 }
@@ -2178,34 +2023,20 @@ function showNameEntry() {
 
   // Overlay
   const overlay = scene.add.graphics();
-  overlay.fillStyle(0x000000, 0.85);
+  overlay.fillStyle(C.B, 0.85);
   overlay.fillRect(0, 0, 800, 600);
   overlay.setScrollFactor(0);
   overlay.setDepth(150);
 
   // Title
-  const title = scene.add.text(400, 80, qualifiesForLeaderboard(stats.enKilled) ? 'NEW HIGH SCORE!' : 'ENTER YOUR NAME', {
-    fontSize: '48px',
-    fontFamily: 'Arial',
-    color: '#ffff00',
-    stroke: '#000000',
-    strokeThickness: 6
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+  const title = mkTxt(400, 80, qualForLb(stats.enKilled) ? 'NEW HIGH SCORE!' : 'ENTER YOUR NAME', {[F]: '48px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 6}, 151);
 
   // Stats
   const minutes = Math.floor(gameTime / 60000);
   const seconds = Math.floor((gameTime % 60000) / 1000);
-  scene.add.text(400, 150, `Enemies Killed: ${stats.enKilled}`, {
-    fontSize: '24px',
-    fontFamily: 'Arial',
-    color: '#00ff00'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+  mkTxt(400, 150, `Kills: ${stats.enKilled}`, {[F]: '24px', [FF]: A, [CO]: CS.G}, 151);
 
-  scene.add.text(400, 180, `Level: ${stats.level}  Time: ${minutes}:${seconds.toString().padStart(2, '0')}`, {
-    fontSize: '20px',
-    fontFamily: 'Arial',
-    color: '#ffffff'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+  mkTxt(400, 180, `Level: ${stats.level}  Time: ${minutes}:${seconds.toString().padStart(2, '0')}`, {[F]: '20px', [FF]: A, [CO]: CS.W}, 151);
 
   // Name input boxes
   const boxesY = 280;
@@ -2221,11 +2052,7 @@ function showNameEntry() {
     box.setScrollFactor(0).setDepth(151);
     boxes.push(box);
 
-    const letter = scene.add.text(x + boxWidth / 2, boxesY + 30, name[i], {
-      fontSize: '40px',
-      fontFamily: 'Arial',
-      color: '#ffffff'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(152);
+    const letter = mkTxt(x + boxWidth / 2, boxesY + 30, name[i], {[F]: '40px', [FF]: A, [CO]: CS.W}, 152);
     letters.push(letter);
   }
 
@@ -2234,29 +2061,21 @@ function showNameEntry() {
       box.clear();
       const x = startX + i * (boxWidth + boxGap);
       const isActive = i === cursorPos;
-      box.lineStyle(3, isActive ? 0xffff00 : 0x00ff00, 1);
+      box.lineStyle(3, isActive ? C.Y : C.G, 1);
       box.strokeRect(x, boxesY, boxWidth, 60);
       if (isActive) {
-        box.fillStyle(0xffff00, 0.2);
+        box.fillStyle(C.Y, 0.2);
         box.fillRect(x, boxesY, boxWidth, 60);
       }
       letters[i].setText(name[i]);
-      letters[i].setColor(i < cursorPos ? '#00ff00' : (isActive ? '#ffff00' : '#ffffff'));
+      letters[i].setColor(i < cursorPos ? CS.G : (isActive ? CS.Y : CS.W));
     });
   };
 
   // Hints
-  const hint1 = scene.add.text(400, 380, '↑↓ Change Letter  ←→ Move  ENTER Confirm Letter', {
-    fontSize: '18px',
-    fontFamily: 'Arial',
-    color: '#aaaaaa'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+  const hint1 = mkTxt(400, 380, '↑↓ Letter  ←→ Move  ⏎ OK', {[F]: '18px', [FF]: A, [CO]: '#aaaaaa'}, 151);
 
-  const hint2 = scene.add.text(400, 410, 'Hold ENTER to Submit Name', {
-    fontSize: '18px',
-    fontFamily: 'Arial',
-    color: '#ffaa00'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+  const hint2 = mkTxt(400, 410, 'Hold ENTER to Submit Name', {[F]: '18px', [FF]: A, [CO]: '#ffaa00'}, 151);
 
   updateBoxes();
 
@@ -2339,38 +2158,18 @@ function showLeaderboard(highlightPosition = null) {
 
   // Overlay
   const overlay = scene.add.graphics();
-  overlay.fillStyle(0x000000, 0.9);
+  overlay.fillStyle(C.B, 0.9);
   overlay.fillRect(0, 0, 800, 600);
   overlay.setScrollFactor(0);
   overlay.setDepth(150);
 
   // Title
-  scene.add.text(400, 60, '🏆 TOP 10 LEADERBOARD 🏆', {
-    fontSize: '40px',
-    fontFamily: 'Arial',
-    color: '#FFD700',
-    stroke: '#000000',
-    strokeThickness: 6
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+  mkTxt(400, 60, '🏆 TOP 10 LEADERBOARD 🏆', {[F]: '40px', [FF]: A, [CO]: CS.Go, [STR]: CS.B, [STT]: 6}, 151);
 
   // Header
-  scene.add.text(200, 130, '#', {
-    fontSize: '20px',
-    fontFamily: 'Arial',
-    color: '#aaaaaa'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
-
-  scene.add.text(350, 130, 'NAME', {
-    fontSize: '20px',
-    fontFamily: 'Arial',
-    color: '#aaaaaa'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
-
-  scene.add.text(550, 130, 'KILLS', {
-    fontSize: '20px',
-    fontFamily: 'Arial',
-    color: '#aaaaaa'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+  mkTxt(200, 130, '#', {[F]: '20px', [FF]: A, [CO]: '#aaaaaa'}, 151);
+  mkTxt(350, 130, 'NAME', {[F]: '20px', [FF]: A, [CO]: '#aaaaaa'}, 151);
+  mkTxt(550, 130, 'KILLS', {[F]: '20px', [FF]: A, [CO]: '#aaaaaa'}, 151);
 
   // Separator line
   const line = scene.add.graphics();
@@ -2387,55 +2186,33 @@ function showLeaderboard(highlightPosition = null) {
     // Highlight background
     if (isHighlight) {
       const highlight = scene.add.graphics();
-      highlight.fillStyle(0xffff00, 0.2);
+      highlight.fillStyle(C.Y, 0.2);
       highlight.fillRect(150, y - 15, 500, 30);
       highlight.setScrollFactor(0).setDepth(150);
     }
 
     // Color by position
-    let color = '#ffffff';
-    if (i === 0) color = '#FFD700'; // Gold
-    else if (i === 1) color = '#C0C0C0'; // Silver
-    else if (i === 2) color = '#CD7F32'; // Bronze
-    if (isHighlight) color = '#ffff00';
+    let color = CS.W;
+    if (i === 0) color = CS.Go; // Gold
+    else if (i === 1) color = CS.Si; // Silver
+    else if (i === 2) color = CS.Br; // Bronze
+    if (isHighlight) color = CS.Y;
 
-    scene.add.text(200, y, `${i + 1}`, {
-      fontSize: '24px',
-      fontFamily: 'Arial',
-      color: color
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
-
-    scene.add.text(350, y, entry.name, {
-      fontSize: '24px',
-      fontFamily: 'Arial',
-      color: color
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
-
-    scene.add.text(550, y, `${entry.kills}`, {
-      fontSize: '24px',
-      fontFamily: 'Arial',
-      color: color
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+    mkTxt(200, y, `${i + 1}`, {[F]: '24px', [FF]: A, [CO]: color}, 151);
+    mkTxt(350, y, entry.name, {[F]: '24px', [FF]: A, [CO]: color}, 151);
+    mkTxt(550, y, `${entry.kills}`, {[F]: '24px', [FF]: A, [CO]: color}, 151);
   }
 
   // Empty message
   if (entries.length === 0) {
-    scene.add.text(400, 300, 'No scores yet!', {
-      fontSize: '32px',
-      fontFamily: 'Arial',
-      color: '#666666'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+    mkTxt(400, 300, 'No scores yet!', {[F]: '32px', [FF]: A, [CO]: '#666666'}, 151);
   }
 
   // Hint
-  scene.add.text(400, 550, 'Press R to Restart', {
-    fontSize: '24px',
-    fontFamily: 'Arial',
-    color: '#ffffff'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+  mkTxt(400, 550, 'Press R', {[F]: '24px', [FF]: A, [CO]: CS.W}, 151);
 }
 
-function updateUnlockedTypes() {
+function updUnlockTypes() {
   enemyTypes.forEach(type => {
     if (gameTime >= type.u && !unlockedTypes.includes(type)) {
       unlockedTypes.push(type);
@@ -2444,7 +2221,7 @@ function updateUnlockedTypes() {
 }
 
 function spawnWave() {
-  warningActive = false;
+  warnAct = false;
   playTone(scene, 800, 0.2);
 
   // Spawn 15-20 en in a circle around p
@@ -2476,7 +2253,7 @@ function spawnWave() {
 }
 
 function spawnBoss() {
-  warningActive = false;
+  warnAct = false;
   playTone(scene, 100, 0.4);
 
   // Select highest unlocked type for boss
@@ -2508,7 +2285,7 @@ function spawnBoss() {
 }
 
 function showWarning(text, color) {
-  warningActive = true;
+  warnAct = true;
 
   // Create warning overlay
   const warning = scene.add.graphics();
@@ -2518,13 +2295,7 @@ function showWarning(text, color) {
   warning.setDepth(50);
 
   // Warning text
-  const warningText = scene.add.text(400, 300, text, {
-    fontSize: '48px',
-    fontFamily: 'Arial',
-    color: '#ffffff',
-    stroke: '#000000',
-    strokeThickness: 6
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(51);
+  const warningText = mkTxt(400, 300, text, {[F]: '48px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 6}, 51);
 
   // Flash animation
   scene.tweens.add({
@@ -2547,7 +2318,7 @@ function showWarning(text, color) {
   });
 }
 
-function initOrbitingBalls() {
+function initOrbBalls() {
   // Clear existing balls
   orbitingBalls.forEach(ball => ball.destroy());
   orbitingBalls = [];
@@ -2568,10 +2339,10 @@ function initOrbitingBalls() {
   }
 
   // Set up overlap (not collider, so balls don't block)
-  scene.physics.add.overlap(orbitingBalls, en, hitEnemyWithBall, null, scene);
+  scene.physics.add.overlap(orbitingBalls, en, hitEnBall, null, scene);
 }
 
-function updateOrbitingBalls(delta) {
+function updOrbBalls(delta) {
   const weapon = getWeapon('o');
   if (!weapon.u) return;
 
@@ -2587,7 +2358,7 @@ function updateOrbitingBalls(delta) {
 
       ball.setData('lastHitTime', {});
       orbitingBalls.push(ball);
-      scene.physics.add.overlap([ball], en, hitEnemyWithBall, null, scene);
+      scene.physics.add.overlap([ball], en, hitEnBall, null, scene);
     }
   }
 
@@ -2612,7 +2383,7 @@ function updateOrbitingBalls(delta) {
   });
 }
 
-function hitEnemyWithBall(ball, enemy) {
+function hitEnBall(ball, enemy) {
   if (!enemy.active || !ball.active) return;
 
   const weapon = getWeapon('o');
@@ -2640,34 +2411,12 @@ function hitEnemyWithBall(ball, enemy) {
   enemy.setData('hp', hp);
 
   // Apply damage feedback (visual + knockback)
-  applyDamageFeedback(enemy, ball.x, ball.y, isCrit);
+  applyDmgFb(enemy, ball.x, ball.y, isCrit);
 
   playTone(scene, 1100, 0.05);
 
   if (hp <= 0) {
-    const xpValue = enemy.getData('xpValue') || 5;
-    const coinValue = enemy.getData('coinValue') || 1;
-    const isBoss = enemy.getData('isBoss');
-    const dropChance = enemy.getData('dropChance') || 0;
-    dropXP(enemy.x, enemy.y, xpValue);
-
-    // 25% chance to drop coins
-    if (Math.random() < 0.25) {
-      dropCoin(enemy.x, enemy.y, coinValue);
-    }
-
-    if (isBoss) {
-      dropChest(enemy.x, enemy.y);
-    } else {
-      // Normal en have a chance to drop upgrade chests
-      const finalDropChance = dropChance * stats.lootChance;
-      if (Math.random() < finalDropChance) {
-        dropUpgradeChest(enemy.x, enemy.y);
-      }
-    }
-
-    enemy.destroy();
-    stats.enKilled++;
+    handleEnemyDeath(enemy);
   }
 }
 
@@ -2679,7 +2428,7 @@ function initAreaDamage() {
   adc.setDepth(-1);
 }
 
-function updateAreaDamage(delta) {
+function updAreaDmg(delta) {
   const weapon = getWeapon('a');
   if (!weapon.u) return;
 
@@ -2718,39 +2467,11 @@ function updateAreaDamage(delta) {
         enemy.setData('hp', hp);
 
         // Apply damage feedback (visual + knockback)
-        applyDamageFeedback(enemy, p.x, p.y, isCrit);
+        applyDmgFb(enemy, p.x, p.y, isCrit);
 
         if (hp <= 0) {
           playTone(scene, 660, 0.1);
-          const xpValue = enemy.getData('xpValue') || 5;
-          const coinValue = enemy.getData('coinValue') || 1;
-          const isBoss = enemy.getData('isBoss');
-          const dropChance = enemy.getData('dropChance') || 0;
-          dropXP(enemy.x, enemy.y, xpValue);
-
-          // 25% chance to drop coins
-          if (Math.random() < 0.25) {
-            dropCoin(enemy.x, enemy.y, coinValue);
-          }
-
-          if (isBoss) {
-            dropChest(enemy.x, enemy.y);
-          } else {
-            // Normal en have a chance to drop upgrade chests
-            const finalDropChance = dropChance * stats.lootChance;
-            if (Math.random() < finalDropChance) {
-              dropUpgradeChest(enemy.x, enemy.y);
-            }
-
-            // Small chance to drop health heal
-            const healthDropChance = 0.015; // 1.5% chance
-            if (Math.random() < healthDropChance * stats.lootChance) {
-              dropHealthHeal(enemy.x, enemy.y);
-            }
-          }
-
-          enemy.destroy();
-          stats.enKilled++;
+          handleEnemyDeath(enemy);
         }
       }
     });
@@ -2762,15 +2483,15 @@ function updateAreaDamage(delta) {
   }
 }
 
-function initBoomerangWeapon() {
+function initBoom() {
   const weapon = getWeapon('b');
-  availableBoomerangs = weapon.c;
+  avB = weapon.c;
   boomerangs = [];
 }
 
 function shootBoomerang() {
   const weapon = getWeapon('b');
-  if (!weapon.u || availableBoomerangs <= 0) return;
+  if (!weapon.u || avB <= 0) return;
 
   const target = findClosestEnemy();
   if (!target) return;
@@ -2795,16 +2516,16 @@ function shootBoomerang() {
   boom.setData('rotation', 0);
 
   boomerangs.push(boom);
-  availableBoomerangs--;
+  avB--;
 
   // Setup collision
-  scene.physics.add.overlap(boom, en, hitEnemyWithBoomerang, null, scene);
-  scene.physics.add.overlap(boom, p, collectBoomerang, null, scene);
+  scene.physics.add.overlap(boom, en, hitEnBoom, null, scene);
+  scene.physics.add.overlap(boom, p, colBoom, null, scene);
 
   playTone(scene, 1200, 0.1);
 }
 
-function updateBoomerangs(delta) {
+function updBooms(delta) {
   const weapon = getWeapon('b');
   if (!weapon.u) return;
 
@@ -2850,7 +2571,7 @@ function updateBoomerangs(delta) {
         // Destroy sprite
         boom.destroy();
         // Recharge
-        availableBoomerangs++;
+        avB++;
         playTone(scene, 1500, 0.1);
         return;
       }
@@ -2865,7 +2586,7 @@ function updateBoomerangs(delta) {
   });
 }
 
-function hitEnemyWithBoomerang(boom, enemy) {
+function hitEnBoom(boom, enemy) {
   if (!boom.active || !enemy.active) return;
 
   const weapon = getWeapon('b');
@@ -2893,49 +2614,16 @@ function hitEnemyWithBoomerang(boom, enemy) {
   enemy.setData('hp', hp);
 
   // Apply damage feedback
-  applyDamageFeedback(enemy, boom.x, boom.y, isCrit);
+  applyDmgFb(enemy, boom.x, boom.y, isCrit);
 
   playTone(scene, 1000, 0.05);
 
   if (hp <= 0) {
-    const xpValue = enemy.getData('xpValue') || 5;
-    const coinValue = enemy.getData('coinValue') || 1;
-    const isBoss = enemy.getData('isBoss');
-    const dropChance = enemy.getData('dropChance') || 0;
-    dropXP(enemy.x, enemy.y, xpValue);
-
-    // 25% chance to drop coins
-    if (Math.random() < 0.25) {
-      dropCoin(enemy.x, enemy.y, coinValue);
-    }
-
-    if (isBoss) {
-      dropChest(enemy.x, enemy.y);
-      dropMagnet(enemy.x + 40, enemy.y);
-    } else {
-      const finalDropChance = dropChance * stats.lootChance;
-      if (Math.random() < finalDropChance) {
-        dropUpgradeChest(enemy.x, enemy.y);
-      }
-
-      const magnetDropChance = 0.015;
-      if (Math.random() < magnetDropChance * stats.lootChance) {
-        dropMagnet(enemy.x, enemy.y);
-      }
-
-      // Small chance to drop health heal
-      const healthDropChance = 0.015; // 1.5% chance
-      if (Math.random() < healthDropChance * stats.lootChance) {
-        dropHealthHeal(enemy.x, enemy.y);
-      }
-    }
-
-    enemy.destroy();
-    stats.enKilled++;
+    handleEnemyDeath(enemy);
   }
 }
 
-function collectBoomerang(_pObj, boom) {
+function colBoom(_pObj, boom) {
   if (!boom.active) return;
   if (boom.getData('state') !== 'returning') return;
 
@@ -2949,17 +2637,17 @@ function collectBoomerang(_pObj, boom) {
   boom.destroy();
 
   // Recharge
-  availableBoomerangs++;
+  avB++;
 
   playTone(scene, 1500, 0.1);
 }
 
-function applyDamageFeedback(enemy, sourceX, sourceY, isCrit = false) {
+function applyDmgFb(enemy, sourceX, sourceY, isCrit = false) {
   if (!enemy.active) return;
 
   // Apply tint based on crit (yellow for crit, red for normal)
   if (isCrit) {
-    enemy.setTintFill(0xffff00);
+    enemy.setTintFill(C.Y);
     // Scale up briefly for crit
     const originalScale = enemy.scaleX;
     enemy.setScale(originalScale * 1.3);
@@ -2970,7 +2658,7 @@ function applyDamageFeedback(enemy, sourceX, sourceY, isCrit = false) {
       }
     });
   } else {
-    enemy.setTintFill(0xff0000);
+    enemy.setTintFill(C.R);
     scene.time.delayedCall(100, () => {
       if (enemy && enemy.active) {
         enemy.clearTint();
@@ -2998,7 +2686,7 @@ function toggleStatsPanel() {
   if (showStats) {
     // Opening stats panel
     // Save if game was already paused (levelingUp or selectingWeapon)
-    wasPausedBeforeStats = levelingUp || selectingWeapon;
+    wasPaused = levelingUp || selectingWeapon;
 
     // Pause the game
     scene.physics.pause();
@@ -3011,7 +2699,7 @@ function toggleStatsPanel() {
     statsPanel = null;
 
     // Resume game only if it wasn't paused before (no active menus)
-    if (!wasPausedBeforeStats && !levelingUp && !selectingWeapon) {
+    if (!wasPaused && !levelingUp && !selectingWeapon) {
       scene.physics.resume();
     }
   }
@@ -3026,7 +2714,7 @@ function createStatsPanel() {
 
   // Background overlay
   const bg = scene.add.graphics();
-  bg.fillStyle(0x000000, 0.85);
+  bg.fillStyle(C.B, 0.85);
   bg.fillRoundedRect(50, 50, 700, 500, 10);
   bg.lineStyle(3, 0xffaa00, 1);
   bg.strokeRoundedRect(50, 50, 700, 500, 10);
@@ -3035,29 +2723,24 @@ function createStatsPanel() {
   statsPanel.push(bg);
 
   // Title
-  const title = scene.add.text(400, 75, 'STATS [S to close]', {
-    fontSize: '28px',
-    fontFamily: 'Arial',
-    color: '#ffaa00',
-    fontStyle: 'bold'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+  const title = mkTxt(400, 75, 'STATS [S to close]', {[F]: '28px', [FF]: A, [CO]: '#ffaa00', [FST]: 'bold'}, 151);
   statsPanel.push(title);
 
   // Player Stats
   let y = 120;
-  const addStat = (label, value, color = '#ffffff') => {
+  const addStat = (label, value, color = CS.W) => {
     const t = scene.add.text(80, y, `${label}: ${value}`, {
-      fontSize: '16px',
-      fontFamily: 'Arial',
-      color: color
+      [F]: '16px',
+      [FF]: A,
+      [CO]: color
     }).setScrollFactor(0).setDepth(151);
     statsPanel.push(t);
     y += 25;
   };
 
   // Character info
-  if (selectedCharacter) {
-    addStat(`Character: ${selectedCharacter.name}`, '', '#ffff00');
+  if (selCh) {
+    addStat(`Character: ${selCh.name}`, '', CS.Y);
   }
 
   addStat('HP', `${Math.floor(stats.hp)}/${stats.maxHp}`, '#ff6666');
@@ -3072,10 +2755,10 @@ function createStatsPanel() {
   // Weapons Section
   y += 10;
   const weaponsTitle = scene.add.text(80, y, 'WEAPONS:', {
-    fontSize: '20px',
-    fontFamily: 'Arial',
-    color: '#ffaa00',
-    fontStyle: 'bold'
+    [F]: '20px',
+    [FF]: A,
+    [CO]: '#ffaa00',
+    [FST]: 'bold'
   }).setScrollFactor(0).setDepth(151);
   statsPanel.push(weaponsTitle);
   y += 30;
@@ -3084,43 +2767,43 @@ function createStatsPanel() {
   weaponTypes.forEach(weapon => {
     if (weapon.u) {
       const wTitle = scene.add.text(100, y, weapon.n, {
-        fontSize: '18px',
-        fontFamily: 'Arial',
-        color: '#ffdd00',
-        fontStyle: 'bold'
+        [F]: '18px',
+        [FF]: A,
+        [CO]: '#ffdd00',
+        [FST]: 'bold'
       }).setScrollFactor(0).setDepth(151);
       statsPanel.push(wTitle);
       y += 22;
 
       if (weapon.i === 'p') {
         const w = scene.add.text(120, y, `Count: ${weapon.c} | Fire Rate: ${weapon.f}ms | Damage: ${weapon.m} | Penetration: ${weapon.e}`, {
-          fontSize: '14px',
-          fontFamily: 'Arial',
-          color: '#cccccc'
+          [F]: '14px',
+          [FF]: A,
+          [CO]: CS.LG
         }).setScrollFactor(0).setDepth(151);
         statsPanel.push(w);
         y += 20;
       } else if (weapon.i === 'o') {
         const w = scene.add.text(120, y, `Count: ${weapon.c} | Rot Speed: ${weapon.r} | Radius: ${weapon.a} | Ball Size: ${weapon.b} | Damage: ${weapon.m}`, {
-          fontSize: '14px',
-          fontFamily: 'Arial',
-          color: '#cccccc'
+          [F]: '14px',
+          [FF]: A,
+          [CO]: CS.LG
         }).setScrollFactor(0).setDepth(151);
         statsPanel.push(w);
         y += 20;
       } else if (weapon.i === 'a') {
         const w = scene.add.text(120, y, `Radius: ${weapon.a} | DPS: ${weapon.p} | Tick Rate: ${weapon.t}ms`, {
-          fontSize: '14px',
-          fontFamily: 'Arial',
-          color: '#cccccc'
+          [F]: '14px',
+          [FF]: A,
+          [CO]: CS.LG
         }).setScrollFactor(0).setDepth(151);
         statsPanel.push(w);
         y += 20;
       } else if (weapon.i === 'b') {
-        const w = scene.add.text(120, y, `Available: ${availableBoomerangs}/${weapon.c} | Damage: ${weapon.m} | Speed: ${Math.floor(weapon.s)} | Range: ${weapon.x} | Size: ${weapon.z.toFixed(1)}x`, {
-          fontSize: '14px',
-          fontFamily: 'Arial',
-          color: '#cccccc'
+        const w = scene.add.text(120, y, `Available: ${avB}/${weapon.c} | Damage: ${weapon.m} | Speed: ${Math.floor(weapon.s)} | Range: ${weapon.x} | Size: ${weapon.z.toFixed(1)}x`, {
+          [F]: '14px',
+          [FF]: A,
+          [CO]: CS.LG
         }).setScrollFactor(0).setDepth(151);
         statsPanel.push(w);
         y += 20;
