@@ -31,13 +31,13 @@ let ul = {};
 
 // Enemy types: n=name, c=color, h=hpMult, s=speedMult, d=damageMult, x=xp, cn=coins, r=dropRate, u=unlockTime
 const enemyTypes = [
-  { n: 'g', c: 0x00ff00, h: 1.0, s: 1.0, d: 1.0, x: 5, cn: 1, r: 0.02, u: 0 },
-  { n: 'b', c: 0x0088ff, h: 1.5, s: 0.95, d: 1.2, x: 8, cn: 2, r: 0.03, u: 20000 },
-  { n: 'c', c: 0x00ffff, h: 2.0, s: 1.05, d: 1.4, x: 10, cn: 2, r: 0.035, u: 40000 },
-  { n: 'y', c: 0xffff00, h: 2.5, s: 0.9, d: 1.6, x: 15, cn: 3, r: 0.04, u: 60000 },
-  { n: 'o', c: 0xff8800, h: 3.0, s: 1.1, d: 1.8, x: 20, cn: 3, r: 0.045, u: 90000 },
-  { n: 'r', c: 0xff0000, h: 4.0, s: 0.85, d: 2.0, x: 25, cn: 4, r: 0.05, u: 120000 },
-  { n: 'p', c: 0xff00ff, h: 5.0, s: 1.15, d: 2.5, x: 35, cn: 5, r: 0.055, u: 150000 }
+  { n: 'g', c: 0x00ff00, h: 1.0, s: 0.5, d: 1.0, x: 5, cn: 1, r: 0.02, u: 0 },
+  { n: 'b', c: 0x0088ff, h: 1.5, s: 0.55, d: 1.2, x: 8, cn: 2, r: 0.03, u: 20000 },
+  { n: 'c', c: 0x00ffff, h: 2.0, s: 1.6, d: 1.4, x: 10, cn: 2, r: 0.035, u: 40000 },
+  { n: 'y', c: 0xffff00, h: 2.5, s: 0.65, d: 1.6, x: 15, cn: 3, r: 0.04, u: 60000 },
+  { n: 'o', c: 0xff8800, h: 3.0, s: 0.7, d: 1.8, x: 20, cn: 3, r: 0.045, u: 90000 },
+  { n: 'r', c: 0xff0000, h: 4.0, s: 0.8, d: 2.0, x: 25, cn: 4, r: 0.05, u: 120000 },
+  { n: 'p', c: 0xff00ff, h: 5.0, s: 0.9, d: 2.5, x: 35, cn: 5, r: 0.055, u: 150000 }
 ];
 
 let unlockedTypes = [];
@@ -49,9 +49,9 @@ const iwt = [ // initial weapon types
   // Orbit Ball: c=count, r=rotSpeed, a=radius, b=ballRadius, m=damage
   { i: 'o', n: 'Orbit Ball', d: 'Defensive orbit', u: false, c: 2, r: 2, a: 80, b: 8, m: 15 },
   // Area DMG: a=radius, p=dps, t=tickRate, l=lastTick
-  { i: 'a', n: 'Area DMG', d: 'Area damage', u: false, a: 150, p: 10, t: 500, l: 0 },
+  { i: 'a', n: 'Area DMG', d: 'Area damage', u: false, a: 75, p: 10, t: 500, l: 0 },
   // Boomerang: c=count, m=damage, s=speed, w=returnSpeed, x=maxDistance, z=size
-  { i: 'b', n: 'Boomerang', d: 'Returns', u: false, c: 2, m: 12, s: 350, w: 250, x: 300, z: 1 }
+  { i: 'b', n: 'Boomerang', d: 'Returns', u: false, c: 2, m: 12, s: 350, w: 250, x: 150, z: 1 }
 ];
 
 let weaponTypes = JSON.parse(JSON.stringify(iwt));
@@ -115,7 +115,7 @@ const inS = { // initial stats
   critChance: 0.05,
   critDamage: 1.5,
   xp: 0,
-  coins: 0,
+  coins: 1000,
   level: 1,
   xpToNext: 10,
   enKilled: 0
@@ -124,7 +124,7 @@ const inS = { // initial stats
 let stats = JSON.parse(JSON.stringify(inS));
 
 let inD = { // initial difficulty
-  spawnRate: 2000,
+  spawnRate: 1000,
   enemyHp: 20,
   enemyDamage: 10,
   enemySpeed: 80
@@ -166,7 +166,7 @@ const orbitingBallUpgrades = [
 ];
 
 const areaDamageUpgrades = [
-  { id: 'ar', name: 'Area Radius', desc: '+30 Area Range', icon: '🔴', weaponId: 'a', maxLevel: 5, apply: () => { getWeapon('a').a += 30; ul['ar'] = (ul['ar'] || 0) + 1; } },
+  { id: 'ar', name: 'Area Radius', desc: '+15 Area Range', icon: '🔴', weaponId: 'a', maxLevel: 5, apply: () => { getWeapon('a').a += 15; ul['ar'] = (ul['ar'] || 0) + 1; } },
   { id: 'ad', name: 'Area DPS', desc: '+3 Damage/Second', icon: '🔥', weaponId: 'a', maxLevel: 10, apply: () => { getWeapon('a').p += 3; ul['ad'] = (ul['ad'] || 0) + 1; } },
   { id: 'at', name: 'Tick Speed', desc: '-15% Pulse Delay', icon: '⚡', weaponId: 'a', maxLevel: 8, apply: () => { getWeapon('a').t = Math.max(150, getWeapon('a').t * 0.85); ul['at'] = (ul['at'] || 0) + 1; } }
 ];
