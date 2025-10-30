@@ -1689,6 +1689,56 @@ function showStartScreen() {
     color: '#ffffff'
   }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
 
+  // Top 5 Leaderboard on right side
+  const leaderboardX = 650;
+  const leaderboardY = 200;
+
+  scene.add.text(leaderboardX, leaderboardY, 'TOP SCORES', {
+    fontSize: '20px',
+    fontFamily: 'Arial',
+    color: '#FFD700',
+    fontStyle: 'bold',
+    stroke: '#000000',
+    strokeThickness: 3
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+
+  const entries = loadLeaderboard();
+  const top5 = entries.slice(0, 5);
+
+  if (top5.length === 0) {
+    scene.add.text(leaderboardX, leaderboardY + 40, 'No scores yet!', {
+      fontSize: '14px',
+      fontFamily: 'Arial',
+      color: '#888888',
+      align: 'center'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+  } else {
+    top5.forEach((entry, i) => {
+      let color = '#ffffff';
+      if (i === 0) color = '#FFD700'; // Gold
+      else if (i === 1) color = '#C0C0C0'; // Silver
+      else if (i === 2) color = '#CD7F32'; // Bronze
+
+      const yPos = leaderboardY + 40 + (i * 28);
+
+      // Rank and name
+      scene.add.text(leaderboardX - 60, yPos, `${i + 1}. ${entry.name}`, {
+        fontSize: '16px',
+        fontFamily: 'Arial',
+        color: color,
+        fontStyle: 'bold'
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(101);
+
+      // Kills count
+      scene.add.text(leaderboardX + 70, yPos, entry.kills.toString(), {
+        fontSize: '16px',
+        fontFamily: 'Arial',
+        color: color,
+        fontStyle: 'bold'
+      }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(101);
+    });
+  }
+
   // Reset menu state
   selectedIndex = 0;
   menuOptions = [];
@@ -2010,52 +2060,54 @@ function endGame() {
   overlay.fillStyle(0x000000, 0.8);
   overlay.fillRect(0, 0, 800, 600);
   overlay.setScrollFactor(0);
+  overlay.setDepth(100);
 
   // Game Over text
-  scene.add.text(400, 200, 'GAME OVER', {
+  const gameOverText = scene.add.text(400, 200, 'GAME OVER', {
     fontSize: '64px',
     fontFamily: 'Arial',
     color: '#ff0000',
     stroke: '#000000',
     strokeThickness: 8
-  }).setOrigin(0.5).setScrollFactor(0);
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
 
   // Stats
   const minutes = Math.floor(gameTime / 60000);
   const seconds = Math.floor((gameTime % 60000) / 1000);
 
-  scene.add.text(400, 300, `Time Survived: ${minutes}:${seconds.toString().padStart(2, '0')}`, {
+  const timeText = scene.add.text(400, 300, `Time Survived: ${minutes}:${seconds.toString().padStart(2, '0')}`, {
     fontSize: '28px',
     fontFamily: 'Arial',
     color: '#00ffff'
-  }).setOrigin(0.5).setScrollFactor(0);
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
 
-  scene.add.text(400, 350, `Level Reached: ${stats.level}`, {
+  const levelText = scene.add.text(400, 350, `Level Reached: ${stats.level}`, {
     fontSize: '28px',
     fontFamily: 'Arial',
     color: '#ffff00'
-  }).setOrigin(0.5).setScrollFactor(0);
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
 
-  scene.add.text(400, 400, `Enemies Killed: ${stats.enKilled}`, {
+  const killsText = scene.add.text(400, 400, `Enemies Killed: ${stats.enKilled}`, {
     fontSize: '28px',
     fontFamily: 'Arial',
     color: '#00ff00'
-  }).setOrigin(0.5).setScrollFactor(0);
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
 
-  // Restart text
-  const restartText = scene.add.text(400, 500, 'Press R to Restart', {
-    fontSize: '24px',
-    fontFamily: 'Arial',
-    color: '#ffffff'
-  }).setOrigin(0.5).setScrollFactor(0);
+  // After 2 seconds, transition to leaderboard flow
+  scene.time.delayedCall(2000, () => {
+    // Clean up game over screen
+    overlay.destroy();
+    gameOverText.destroy();
+    timeText.destroy();
+    levelText.destroy();
+    killsText.destroy();
 
-  // Blink animation
-  scene.tweens.add({
-    targets: restartText,
-    alpha: 0.3,
-    duration: 600,
-    yoyo: true,
-    repeat: -1
+    // Show leaderboard flow
+    if (qualifiesForLeaderboard(stats.enKilled)) {
+      showNameEntry();
+    } else {
+      showLeaderboard();
+    }
   });
 }
 
@@ -2090,6 +2142,297 @@ function restartGame() {
   difficulty = { ...inD };
 
   scene.scene.restart();
+}
+
+// Leaderboard functions
+function loadLeaderboard() {
+  const stored = localStorage.getItem('bhl');
+  return stored ? JSON.parse(stored) : [];
+}
+
+function saveLeaderboard(entries) {
+  localStorage.setItem('bhl', JSON.stringify(entries));
+}
+
+function addToLeaderboard(name, kills) {
+  const entries = loadLeaderboard();
+  entries.push({ name: name.trim(), kills, date: Date.now() });
+  entries.sort((a, b) => b.kills - a.kills);
+  const trimmed = entries.slice(0, 10);
+  saveLeaderboard(trimmed);
+
+  const position = trimmed.findIndex(e => e.kills === kills && e.name === name.trim());
+  return position !== -1 ? position + 1 : null;
+}
+
+function qualifiesForLeaderboard(kills) {
+  const entries = loadLeaderboard();
+  return entries.length < 10 || kills > entries[entries.length - 1].kills;
+}
+
+function showNameEntry() {
+  const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-. ';
+  let name = ['A', 'A', 'A', ' ', ' ', ' '];
+  let cursorPos = 0;
+  let charIndex = 0;
+
+  // Overlay
+  const overlay = scene.add.graphics();
+  overlay.fillStyle(0x000000, 0.85);
+  overlay.fillRect(0, 0, 800, 600);
+  overlay.setScrollFactor(0);
+  overlay.setDepth(150);
+
+  // Title
+  const title = scene.add.text(400, 80, qualifiesForLeaderboard(stats.enKilled) ? 'NEW HIGH SCORE!' : 'ENTER YOUR NAME', {
+    fontSize: '48px',
+    fontFamily: 'Arial',
+    color: '#ffff00',
+    stroke: '#000000',
+    strokeThickness: 6
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+
+  // Stats
+  const minutes = Math.floor(gameTime / 60000);
+  const seconds = Math.floor((gameTime % 60000) / 1000);
+  scene.add.text(400, 150, `Enemies Killed: ${stats.enKilled}`, {
+    fontSize: '24px',
+    fontFamily: 'Arial',
+    color: '#00ff00'
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+
+  scene.add.text(400, 180, `Level: ${stats.level}  Time: ${minutes}:${seconds.toString().padStart(2, '0')}`, {
+    fontSize: '20px',
+    fontFamily: 'Arial',
+    color: '#ffffff'
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+
+  // Name input boxes
+  const boxesY = 280;
+  const boxWidth = 60;
+  const boxGap = 10;
+  const startX = 400 - (6 * boxWidth + 5 * boxGap) / 2;
+
+  const boxes = [];
+  const letters = [];
+  for (let i = 0; i < 6; i++) {
+    const x = startX + i * (boxWidth + boxGap);
+    const box = scene.add.graphics();
+    box.setScrollFactor(0).setDepth(151);
+    boxes.push(box);
+
+    const letter = scene.add.text(x + boxWidth / 2, boxesY + 30, name[i], {
+      fontSize: '40px',
+      fontFamily: 'Arial',
+      color: '#ffffff'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(152);
+    letters.push(letter);
+  }
+
+  const updateBoxes = () => {
+    boxes.forEach((box, i) => {
+      box.clear();
+      const x = startX + i * (boxWidth + boxGap);
+      const isActive = i === cursorPos;
+      box.lineStyle(3, isActive ? 0xffff00 : 0x00ff00, 1);
+      box.strokeRect(x, boxesY, boxWidth, 60);
+      if (isActive) {
+        box.fillStyle(0xffff00, 0.2);
+        box.fillRect(x, boxesY, boxWidth, 60);
+      }
+      letters[i].setText(name[i]);
+      letters[i].setColor(i < cursorPos ? '#00ff00' : (isActive ? '#ffff00' : '#ffffff'));
+    });
+  };
+
+  // Hints
+  const hint1 = scene.add.text(400, 380, '↑↓ Change Letter  ←→ Move  ENTER Confirm Letter', {
+    fontSize: '18px',
+    fontFamily: 'Arial',
+    color: '#aaaaaa'
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+
+  const hint2 = scene.add.text(400, 410, 'Hold ENTER to Submit Name', {
+    fontSize: '18px',
+    fontFamily: 'Arial',
+    color: '#ffaa00'
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+
+  updateBoxes();
+
+  // Input
+  const upKey = scene.input.keyboard.addKey('UP');
+  const downKey = scene.input.keyboard.addKey('DOWN');
+  const leftKey = scene.input.keyboard.addKey('LEFT');
+  const rightKey = scene.input.keyboard.addKey('RIGHT');
+  const enterKey = scene.input.keyboard.addKey('ENTER');
+
+  let enterHoldTime = 0;
+
+  upKey.on('down', () => {
+    charIndex = (charIndex + 1) % CHARS.length;
+    name[cursorPos] = CHARS[charIndex];
+    updateBoxes();
+    playTone(scene, 800, 0.05);
+  });
+
+  downKey.on('down', () => {
+    charIndex = (charIndex - 1 + CHARS.length) % CHARS.length;
+    name[cursorPos] = CHARS[charIndex];
+    updateBoxes();
+    playTone(scene, 800, 0.05);
+  });
+
+  rightKey.on('down', () => {
+    if (cursorPos < 5) {
+      cursorPos++;
+      charIndex = CHARS.indexOf(name[cursorPos]);
+      updateBoxes();
+      playTone(scene, 900, 0.05);
+    }
+  });
+
+  leftKey.on('down', () => {
+    if (cursorPos > 0) {
+      cursorPos--;
+      charIndex = CHARS.indexOf(name[cursorPos]);
+      updateBoxes();
+      playTone(scene, 700, 0.05);
+    }
+  });
+
+  const cleanup = () => {
+    overlay.destroy();
+    title.destroy();
+    boxes.forEach(b => b.destroy());
+    letters.forEach(l => l.destroy());
+    hint1.destroy();
+    hint2.destroy();
+    scene.children.list.filter(c => c.depth === 151 || c.depth === 152).forEach(c => c.destroy());
+    upKey.removeAllListeners();
+    downKey.removeAllListeners();
+    leftKey.removeAllListeners();
+    rightKey.removeAllListeners();
+    enterKey.removeAllListeners();
+  };
+
+  enterKey.on('down', () => {
+    enterHoldTime = Date.now();
+  });
+
+  enterKey.on('up', () => {
+    const holdDuration = Date.now() - enterHoldTime;
+    if (holdDuration >= 500) {
+      const finalName = name.join('').trim();
+      if (finalName.length > 0) {
+        cleanup();
+        playTone(scene, 1200, 0.2);
+        const position = addToLeaderboard(name.join(''), stats.enKilled);
+        showLeaderboard(position);
+      }
+    }
+  });
+}
+
+function showLeaderboard(highlightPosition = null) {
+  const entries = loadLeaderboard();
+
+  // Overlay
+  const overlay = scene.add.graphics();
+  overlay.fillStyle(0x000000, 0.9);
+  overlay.fillRect(0, 0, 800, 600);
+  overlay.setScrollFactor(0);
+  overlay.setDepth(150);
+
+  // Title
+  scene.add.text(400, 60, '🏆 TOP 10 LEADERBOARD 🏆', {
+    fontSize: '40px',
+    fontFamily: 'Arial',
+    color: '#FFD700',
+    stroke: '#000000',
+    strokeThickness: 6
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+
+  // Header
+  scene.add.text(200, 130, '#', {
+    fontSize: '20px',
+    fontFamily: 'Arial',
+    color: '#aaaaaa'
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+
+  scene.add.text(350, 130, 'NAME', {
+    fontSize: '20px',
+    fontFamily: 'Arial',
+    color: '#aaaaaa'
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+
+  scene.add.text(550, 130, 'KILLS', {
+    fontSize: '20px',
+    fontFamily: 'Arial',
+    color: '#aaaaaa'
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+
+  // Separator line
+  const line = scene.add.graphics();
+  line.lineStyle(2, 0x444444, 1);
+  line.lineBetween(150, 150, 650, 150);
+  line.setScrollFactor(0).setDepth(151);
+
+  // Entries
+  for (let i = 0; i < Math.min(10, entries.length); i++) {
+    const entry = entries[i];
+    const y = 180 + i * 35;
+    const isHighlight = highlightPosition && (i + 1) === highlightPosition;
+
+    // Highlight background
+    if (isHighlight) {
+      const highlight = scene.add.graphics();
+      highlight.fillStyle(0xffff00, 0.2);
+      highlight.fillRect(150, y - 15, 500, 30);
+      highlight.setScrollFactor(0).setDepth(150);
+    }
+
+    // Color by position
+    let color = '#ffffff';
+    if (i === 0) color = '#FFD700'; // Gold
+    else if (i === 1) color = '#C0C0C0'; // Silver
+    else if (i === 2) color = '#CD7F32'; // Bronze
+    if (isHighlight) color = '#ffff00';
+
+    scene.add.text(200, y, `${i + 1}`, {
+      fontSize: '24px',
+      fontFamily: 'Arial',
+      color: color
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+
+    scene.add.text(350, y, entry.name, {
+      fontSize: '24px',
+      fontFamily: 'Arial',
+      color: color
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+
+    scene.add.text(550, y, `${entry.kills}`, {
+      fontSize: '24px',
+      fontFamily: 'Arial',
+      color: color
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+  }
+
+  // Empty message
+  if (entries.length === 0) {
+    scene.add.text(400, 300, 'No scores yet!', {
+      fontSize: '32px',
+      fontFamily: 'Arial',
+      color: '#666666'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+  }
+
+  // Hint
+  scene.add.text(400, 550, 'Press R to Restart', {
+    fontSize: '24px',
+    fontFamily: 'Arial',
+    color: '#ffffff'
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
 }
 
 function updateUnlockedTypes() {
