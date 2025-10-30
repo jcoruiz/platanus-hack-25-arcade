@@ -29,96 +29,59 @@ let upgradeLevels = {};
 
 // Enemy types: n=name, c=color, h=hpMult, s=speedMult, d=damageMult, x=xp, r=dropRate, u=unlockTime
 const enemyTypes = [
-  { n: 'green', c: 0x00ff00, h: 1.0, s: 1.0, d: 1.0, x: 5, r: 0.02, u: 0 },
-  { n: 'blue', c: 0x0088ff, h: 1.5, s: 0.95, d: 1.2, x: 8, r: 0.03, u: 20000 },
-  { n: 'cyan', c: 0x00ffff, h: 2.0, s: 1.05, d: 1.4, x: 10, r: 0.035, u: 40000 },
-  { n: 'yellow', c: 0xffff00, h: 2.5, s: 0.9, d: 1.6, x: 15, r: 0.04, u: 60000 },
-  { n: 'orange', c: 0xff8800, h: 3.0, s: 1.1, d: 1.8, x: 20, r: 0.045, u: 90000 },
-  { n: 'red', c: 0xff0000, h: 4.0, s: 0.85, d: 2.0, x: 25, r: 0.05, u: 120000 },
-  { n: 'purple', c: 0xff00ff, h: 5.0, s: 1.15, d: 2.5, x: 35, r: 0.055, u: 150000 }
+  { n: 'g', c: 0x00ff00, h: 1.0, s: 1.0, d: 1.0, x: 5, r: 0.02, u: 0 },
+  { n: 'b', c: 0x0088ff, h: 1.5, s: 0.95, d: 1.2, x: 8, r: 0.03, u: 20000 },
+  { n: 'c', c: 0x00ffff, h: 2.0, s: 1.05, d: 1.4, x: 10, r: 0.035, u: 40000 },
+  { n: 'y', c: 0xffff00, h: 2.5, s: 0.9, d: 1.6, x: 15, r: 0.04, u: 60000 },
+  { n: 'o', c: 0xff8800, h: 3.0, s: 1.1, d: 1.8, x: 20, r: 0.045, u: 90000 },
+  { n: 'r', c: 0xff0000, h: 4.0, s: 0.85, d: 2.0, x: 25, r: 0.05, u: 120000 },
+  { n: 'p', c: 0xff00ff, h: 5.0, s: 1.15, d: 2.5, x: 35, r: 0.055, u: 150000 }
 ];
 
 let unlockedTypes = [];
 
+// Weapon types: i=id, n=name, d=desc, u=unlocked, c=count, f=fireRate, m=damage, e=penetration
+// r=rotSpeed, a=radius, b=ballRadius, p=dps, t=tickRate, l=lastTick, s=speed, w=returnSpeed, x=maxDistance, z=size
 const weaponTypes = [
-  {
-    id: 'projectile',
-    name: 'Proyectiles',
-    desc: 'Dispara al más cercano',
-    unlocked: false,
-    count: 1,
-    fireRate: 500,
-    damage: 10,
-    penetration: 0
-  },
-  {
-    id: 'orbitingBall',
-    name: 'Bola Orbital',
-    desc: 'Bola orbital defensiva',
-    unlocked: false,
-    count: 2,
-    rotSpeed: 2,
-    radius: 80,
-    ballRadius: 8,
-    damage: 15
-  },
-  {
-    id: 'areaDamage',
-    name: 'Área de Daño',
-    desc: 'Daño de área continuo',
-    unlocked: false,
-    radius: 150,
-    dps: 10,
-    tickRate: 500,
-    lastTick: 0
-  },
-  {
-    id: 'boomerang',
-    name: 'Boomerangs',
-    desc: 'Boomerangs retornantes',
-    unlocked: false,
-    count: 2,
-    damage: 12,
-    speed: 350,
-    returnSpeed: 250,
-    maxDistance: 300,
-    size: 1
-  }
+  { i: 'p', n: 'Projectiles', d: 'Shoots nearest', u: false, c: 1, f: 500, m: 10, e: 0 },
+  { i: 'o', n: 'Orbit Ball', d: 'Defensive orbit', u: false, c: 2, r: 2, a: 80, b: 8, m: 15 },
+  { i: 'a', n: 'Area DMG', d: 'Area damage', u: false, a: 150, p: 10, t: 500, l: 0 },
+  { i: 'b', n: 'Boomerang', d: 'Returns', u: false, c: 2, m: 12, s: 350, w: 250, x: 300, z: 1 }
 ];
 
 const characters = [
   {
-    name: 'Banana',
-    desc: 'Boomerangs retornantes',
-    weapon: 'boomerang',
-    texture: 'player',
+    name: 'Bananza',
+    desc: 'Bananas',
+    weapon: 'b',
+    texture: 'p_b',
     passiveType: 'damage',
     passiveValue: 1.05,
     passiveDesc: '+5% Daño/niv'
   },
   {
-    name: 'Medusa',
-    desc: 'Daño por área',
-    weapon: 'areaDamage',
-    texture: 'player_jellyfish',
+    name: 'Medusin',
+    desc: 'Area Damage',
+    weapon: 'a',
+    texture: 'p_j',
     passiveType: 'regen',
     passiveValue: 5,
     passiveDesc: '+5 HP/niv'
   },
   {
-    name: 'Orbe',
-    desc: 'Bolas orbitales',
-    weapon: 'orbitingBall',
-    texture: 'player_orb',
+    name: 'Orb',
+    desc: 'Orbs',
+    weapon: 'o',
+    texture: 'p_o',
     passiveType: 'crit',
     passiveValue: 0.02,
     passiveDesc: '+2% Crit/niv'
   },
   {
-    name: 'Tren Bala',
-    desc: 'Disparos rápidos',
-    weapon: 'projectile',
-    texture: 'player_bullettrain',
+    name: 'Train',
+    desc: 'Fast shoots',
+    weapon: 'p',
+    texture: 'p_t',
     passiveType: 'speed',
     passiveValue: 1.03,
     passiveDesc: '+3% Vel/niv'
@@ -162,7 +125,7 @@ let statsPanel = null;
 let wasPausedBeforeStats = false;
 
 function getWeapon(id) {
-  return weaponTypes.find(w => w.id === id);
+  return weaponTypes.find(w => w.i === id);
 }
 
 const playerUpgrades = [
@@ -177,40 +140,40 @@ const playerUpgrades = [
 ];
 
 const projectileUpgrades = [
-  { id: 'multishot', name: 'Multi Shot', desc: '+1 Projectile', icon: '🔫', weaponId: 'projectile', maxLevel: 10, apply: () => { getWeapon('projectile').count++; upgradeLevels['multishot'] = (upgradeLevels['multishot'] || 0) + 1; } },
-  { id: 'firerate', name: 'Fire Rate', desc: '-15% Fire Delay', icon: '⚡', weaponId: 'projectile', maxLevel: 8, apply: () => { getWeapon('projectile').fireRate = Math.max(150, getWeapon('projectile').fireRate * 0.85); upgradeLevels['firerate'] = (upgradeLevels['firerate'] || 0) + 1; } },
-  { id: 'projdamage', name: 'Projectile Damage', desc: '+5 Damage', icon: '🗡️', weaponId: 'projectile', maxLevel: 10, apply: () => { getWeapon('projectile').damage += 5; upgradeLevels['projdamage'] = (upgradeLevels['projdamage'] || 0) + 1; } },
-  { id: 'penetration', name: 'Penetration', desc: '+1 Enemy Pierced', icon: '⚔️', weaponId: 'projectile', maxLevel: 5, apply: () => { getWeapon('projectile').penetration++; upgradeLevels['penetration'] = (upgradeLevels['penetration'] || 0) + 1; } }
+  { id: 'multishot', name: 'Multi Shot', desc: '+1 Projectile', icon: '🔫', weaponId: 'p', maxLevel: 10, apply: () => { getWeapon('p').c++; upgradeLevels['multishot'] = (upgradeLevels['multishot'] || 0) + 1; } },
+  { id: 'firerate', name: 'Fire Rate', desc: '-15% Fire Delay', icon: '⚡', weaponId: 'p', maxLevel: 8, apply: () => { getWeapon('p').f = Math.max(150, getWeapon('p').f * 0.85); upgradeLevels['firerate'] = (upgradeLevels['firerate'] || 0) + 1; } },
+  { id: 'projdamage', name: 'Projectile Damage', desc: '+5 Damage', icon: '🗡️', weaponId: 'p', maxLevel: 10, apply: () => { getWeapon('p').m += 5; upgradeLevels['projdamage'] = (upgradeLevels['projdamage'] || 0) + 1; } },
+  { id: 'penetration', name: 'Penetration', desc: '+1 Enemy Pierced', icon: '⚔️', weaponId: 'p', maxLevel: 5, apply: () => { getWeapon('p').e++; upgradeLevels['penetration'] = (upgradeLevels['penetration'] || 0) + 1; } }
 ];
 
 const orbitingBallUpgrades = [
-  { id: 'moreballs', name: 'More Balls', desc: '+1 Orbiting Ball', icon: '⚪', weaponId: 'orbitingBall', maxLevel: 10, apply: () => { getWeapon('orbitingBall').count++; upgradeLevels['moreballs'] = (upgradeLevels['moreballs'] || 0) + 1; } },
-  { id: 'rotspeed', name: 'Rotation Speed', desc: '+0.5 Rotation Speed', icon: '🌀', weaponId: 'orbitingBall', maxLevel: 10, apply: () => { getWeapon('orbitingBall').rotSpeed += 0.5; upgradeLevels['rotspeed'] = (upgradeLevels['rotspeed'] || 0) + 1; } },
-  { id: 'ballsize', name: 'Ball Size', desc: '+2 Ball Radius', icon: '⭕', weaponId: 'orbitingBall', maxLevel: 8, apply: () => { getWeapon('orbitingBall').ballRadius += 2; upgradeLevels['ballsize'] = (upgradeLevels['ballsize'] || 0) + 1; } },
-  { id: 'balldamage', name: 'Ball Damage', desc: '+8 Ball Damage', icon: '💥', weaponId: 'orbitingBall', maxLevel: 10, apply: () => { getWeapon('orbitingBall').damage += 8; upgradeLevels['balldamage'] = (upgradeLevels['balldamage'] || 0) + 1; } }
+  { id: 'moreballs', name: 'More Balls', desc: '+1 Orbiting Ball', icon: '⚪', weaponId: 'o', maxLevel: 10, apply: () => { getWeapon('o').c++; upgradeLevels['moreballs'] = (upgradeLevels['moreballs'] || 0) + 1; } },
+  { id: 'rotspeed', name: 'Rotation Speed', desc: '+0.5 Rotation Speed', icon: '🌀', weaponId: 'o', maxLevel: 10, apply: () => { getWeapon('o').r += 0.5; upgradeLevels['rotspeed'] = (upgradeLevels['rotspeed'] || 0) + 1; } },
+  { id: 'ballsize', name: 'Ball Size', desc: '+2 Ball Radius', icon: '⭕', weaponId: 'o', maxLevel: 8, apply: () => { getWeapon('o').b += 2; upgradeLevels['ballsize'] = (upgradeLevels['ballsize'] || 0) + 1; } },
+  { id: 'balldamage', name: 'Ball Damage', desc: '+8 Ball Damage', icon: '💥', weaponId: 'o', maxLevel: 10, apply: () => { getWeapon('o').m += 8; upgradeLevels['balldamage'] = (upgradeLevels['balldamage'] || 0) + 1; } }
 ];
 
 const areaDamageUpgrades = [
-  { id: 'arearadius', name: 'Area Radius', desc: '+30 Area Range', icon: '🔴', weaponId: 'areaDamage', maxLevel: 5, apply: () => { getWeapon('areaDamage').radius += 30; upgradeLevels['arearadius'] = (upgradeLevels['arearadius'] || 0) + 1; } },
-  { id: 'areadps', name: 'Area DPS', desc: '+3 Damage/Second', icon: '🔥', weaponId: 'areaDamage', maxLevel: 10, apply: () => { getWeapon('areaDamage').dps += 3; upgradeLevels['areadps'] = (upgradeLevels['areadps'] || 0) + 1; } },
-  { id: 'areatickrate', name: 'Tick Speed', desc: '-15% Pulse Delay', icon: '⚡', weaponId: 'areaDamage', maxLevel: 8, apply: () => { getWeapon('areaDamage').tickRate = Math.max(150, getWeapon('areaDamage').tickRate * 0.85); upgradeLevels['areatickrate'] = (upgradeLevels['areatickrate'] || 0) + 1; } }
+  { id: 'arearadius', name: 'Area Radius', desc: '+30 Area Range', icon: '🔴', weaponId: 'a', maxLevel: 5, apply: () => { getWeapon('a').a += 30; upgradeLevels['arearadius'] = (upgradeLevels['arearadius'] || 0) + 1; } },
+  { id: 'areadps', name: 'Area DPS', desc: '+3 Damage/Second', icon: '🔥', weaponId: 'a', maxLevel: 10, apply: () => { getWeapon('a').p += 3; upgradeLevels['areadps'] = (upgradeLevels['areadps'] || 0) + 1; } },
+  { id: 'areatickrate', name: 'Tick Speed', desc: '-15% Pulse Delay', icon: '⚡', weaponId: 'a', maxLevel: 8, apply: () => { getWeapon('a').t = Math.max(150, getWeapon('a').t * 0.85); upgradeLevels['areatickrate'] = (upgradeLevels['areatickrate'] || 0) + 1; } }
 ];
 
 const boomerangUpgrades = [
-  { id: 'boomerangdamage', name: 'Boomerang Damage', desc: '+8 Damage', icon: '💥', weaponId: 'boomerang', maxLevel: 10, apply: () => { getWeapon('boomerang').damage += 8; upgradeLevels['boomerangdamage'] = (upgradeLevels['boomerangdamage'] || 0) + 1; } },
-  { id: 'boomerangsize', name: 'Boomerang Size', desc: '+30% Size', icon: '📏', weaponId: 'boomerang', maxLevel: 8, apply: () => { getWeapon('boomerang').size += 0.3; upgradeLevels['boomerangsize'] = (upgradeLevels['boomerangsize'] || 0) + 1; } },
-  { id: 'boomerangspeed', name: 'Boomerang Speed', desc: '+15% Speed', icon: '💨', weaponId: 'boomerang', maxLevel: 8, apply: () => { getWeapon('boomerang').speed *= 1.15; getWeapon('boomerang').returnSpeed *= 1.15; upgradeLevels['boomerangspeed'] = (upgradeLevels['boomerangspeed'] || 0) + 1; } },
-  { id: 'boomerangcount', name: 'More Boomerangs', desc: '+1 Boomerang', icon: '🪃', weaponId: 'boomerang', maxLevel: 5, apply: () => { getWeapon('boomerang').count++; availableBoomerangs++; upgradeLevels['boomerangcount'] = (upgradeLevels['boomerangcount'] || 0) + 1; } }
+  { id: 'boomerangdamage', name: 'Boomerang Damage', desc: '+8 Damage', icon: '💥', weaponId: 'b', maxLevel: 10, apply: () => { getWeapon('b').m += 8; upgradeLevels['boomerangdamage'] = (upgradeLevels['boomerangdamage'] || 0) + 1; } },
+  { id: 'boomerangsize', name: 'Boomerang Size', desc: '+30% Size', icon: '📏', weaponId: 'b', maxLevel: 8, apply: () => { getWeapon('b').z += 0.3; upgradeLevels['boomerangsize'] = (upgradeLevels['boomerangsize'] || 0) + 1; } },
+  { id: 'boomerangspeed', name: 'Boomerang Speed', desc: '+15% Speed', icon: '💨', weaponId: 'b', maxLevel: 8, apply: () => { getWeapon('b').s *= 1.15; getWeapon('b').w *= 1.15; upgradeLevels['boomerangspeed'] = (upgradeLevels['boomerangspeed'] || 0) + 1; } },
+  { id: 'boomerangcount', name: 'More Boomerangs', desc: '+1 Boomerang', icon: '🪃', weaponId: 'b', maxLevel: 5, apply: () => { getWeapon('b').c++; availableBoomerangs++; upgradeLevels['boomerangcount'] = (upgradeLevels['boomerangcount'] || 0) + 1; } }
 ];
 
 const rareUpgrades = [
-  { id: 'rare_tripleshot', name: 'Triple Shot', desc: '+3 Projectiles', icon: '🔫🔫', weaponId: 'projectile', maxLevel: 2, apply: () => { getWeapon('projectile').count += 3; upgradeLevels['rare_tripleshot'] = (upgradeLevels['rare_tripleshot'] || 0) + 1; } },
-  { id: 'rare_rapidfire', name: 'Rapid Fire', desc: '-40% Fire Delay', icon: '⚡⚡', weaponId: 'projectile', maxLevel: 3, apply: () => { getWeapon('projectile').fireRate = Math.max(100, getWeapon('projectile').fireRate * 0.6); upgradeLevels['rare_rapidfire'] = (upgradeLevels['rare_rapidfire'] || 0) + 1; } },
-  { id: 'rare_massdmg', name: 'Massive Damage', desc: '+30 Projectile Damage', icon: '🗡️🗡️', weaponId: 'projectile', maxLevel: 3, apply: () => { getWeapon('projectile').damage += 30; upgradeLevels['rare_massdmg'] = (upgradeLevels['rare_massdmg'] || 0) + 1; } },
-  { id: 'rare_doubleballs', name: 'Double Balls', desc: '+2 Orbiting Balls', icon: '⚪⚪', weaponId: 'orbitingBall', maxLevel: 2, apply: () => { getWeapon('orbitingBall').count += 2; upgradeLevels['rare_doubleballs'] = (upgradeLevels['rare_doubleballs'] || 0) + 1; } },
-  { id: 'rare_megaballdmg', name: 'Mega Ball Damage', desc: '+25 Ball Damage', icon: '💥💥', weaponId: 'orbitingBall', maxLevel: 3, apply: () => { getWeapon('orbitingBall').damage += 25; upgradeLevels['rare_megaballdmg'] = (upgradeLevels['rare_megaballdmg'] || 0) + 1; } },
-  { id: 'rare_hugearea', name: 'Huge Area', desc: '+100 Area Range', icon: '🔴🔴', weaponId: 'areaDamage', maxLevel: 2, apply: () => { getWeapon('areaDamage').radius += 100; upgradeLevels['rare_hugearea'] = (upgradeLevels['rare_hugearea'] || 0) + 1; } },
-  { id: 'rare_devastdps', name: 'Devastating DPS', desc: '+15 Damage/Second', icon: '🔥🔥', weaponId: 'areaDamage', maxLevel: 3, apply: () => { getWeapon('areaDamage').dps += 15; upgradeLevels['rare_devastdps'] = (upgradeLevels['rare_devastdps'] || 0) + 1; } }
+  { id: 'rare_tripleshot', name: 'Triple Shot', desc: '+3 Projectiles', icon: '🔫', weaponId: 'p', maxLevel: 2, apply: () => { getWeapon('p').c += 3; upgradeLevels['rare_tripleshot'] = (upgradeLevels['rare_tripleshot'] || 0) + 1; } },
+  { id: 'rare_rapidfire', name: 'Rapid Fire', desc: '-40% Fire Delay', icon: '⚡', weaponId: 'p', maxLevel: 3, apply: () => { getWeapon('p').f = Math.max(100, getWeapon('p').f * 0.6); upgradeLevels['rare_rapidfire'] = (upgradeLevels['rare_rapidfire'] || 0) + 1; } },
+  { id: 'rare_massdmg', name: 'Massive Damage', desc: '+30 Projectile Damage', icon: '🗡️', weaponId: 'p', maxLevel: 3, apply: () => { getWeapon('p').m += 30; upgradeLevels['rare_massdmg'] = (upgradeLevels['rare_massdmg'] || 0) + 1; } },
+  { id: 'rare_doubleballs', name: 'Double Balls', desc: '+2 Orbiting Balls', icon: '⚪', weaponId: 'o', maxLevel: 2, apply: () => { getWeapon('o').c += 2; upgradeLevels['rare_doubleballs'] = (upgradeLevels['rare_doubleballs'] || 0) + 1; } },
+  { id: 'rare_megaballdmg', name: 'Mega Ball Damage', desc: '+25 Ball Damage', icon: '💥', weaponId: 'o', maxLevel: 3, apply: () => { getWeapon('o').m += 25; upgradeLevels['rare_megaballdmg'] = (upgradeLevels['rare_megaballdmg'] || 0) + 1; } },
+  { id: 'rare_hugearea', name: 'Huge Area', desc: '+100 Area Range', icon: '🔴', weaponId: 'a', maxLevel: 2, apply: () => { getWeapon('a').a += 100; upgradeLevels['rare_hugearea'] = (upgradeLevels['rare_hugearea'] || 0) + 1; } },
+  { id: 'rare_devastdps', name: 'Devastating DPS', desc: '+15 Damage/Second', icon: '🔥', weaponId: 'a', maxLevel: 3, apply: () => { getWeapon('a').p += 15; upgradeLevels['rare_devastdps'] = (upgradeLevels['rare_devastdps'] || 0) + 1; } }
 ];
 
 function preload() {
@@ -224,7 +187,7 @@ function preload() {
   g.fillEllipse(18, 16, 6, 20);
   g.fillStyle(0x885500, 1);
   g.fillRect(14, 4, 4, 6);
-  g.generateTexture('player', 32, 32);
+  g.generateTexture('p_b', 32, 32);
   g.clear();
 
   // Medusa/Jellyfish texture
@@ -239,7 +202,7 @@ function preload() {
   g.fillStyle(0x000000, 1);
   g.fillCircle(12, 11, 2);
   g.fillCircle(20, 11, 2);
-  g.generateTexture('player_jellyfish', 32, 32);
+  g.generateTexture('p_j', 32, 32);
   g.clear();
 
   // Orbe texture (half purple, half blue)
@@ -255,7 +218,7 @@ function preload() {
   // Center glow
   g.fillStyle(0xffffff, 0.8);
   g.fillCircle(16, 16, 4);
-  g.generateTexture('player_orb', 32, 32);
+  g.generateTexture('p_o', 32, 32);
   g.clear();
 
   // Bullet Train texture
@@ -272,7 +235,7 @@ function preload() {
   g.fillRect(12, 13, 3, 3);
   g.fillRect(17, 13, 3, 3);
   g.fillRect(22, 13, 3, 3);
-  g.generateTexture('player_bullettrain', 32, 32);
+  g.generateTexture('p_t', 32, 32);
   g.clear();
 
   // Boomerang texture
@@ -296,27 +259,27 @@ function preload() {
   g.lineStyle(2, 0x884400, 1);
   g.strokeRect(8, 4, 4, 8);
   g.strokeRect(12, 8, 8, 4);
-  g.generateTexture('boomerang', 16, 16);
+  g.generateTexture('b', 16, 16);
   g.clear();
 
   // Enemy textures (one for each type) - different shapes
   enemyTypes.forEach(type => {
     // Normal enemy
     g.fillStyle(type.c, 1);
-    if (type.n === 'green') {
+    if (type.n === 'g') {
       // Triangle
       g.fillTriangle(10, 2, 2, 18, 18, 18);
       g.fillStyle(0xffffff, 1);
       g.fillCircle(7, 10, 2);
       g.fillCircle(13, 10, 2);
-    } else if (type.n === 'blue') {
+    } else if (type.n === 'b') {
       // Diamond
       g.fillTriangle(10, 2, 2, 10, 10, 18);
       g.fillTriangle(10, 2, 18, 10, 10, 18);
       g.fillStyle(0xffffff, 1);
       g.fillCircle(8, 8, 2);
       g.fillCircle(12, 8, 2);
-    } else if (type.n === 'cyan') {
+    } else if (type.n === 'c') {
       // Pentagon-ish
       g.fillCircle(10, 10, 9);
       g.fillStyle(0xffffff, 1);
@@ -324,14 +287,14 @@ function preload() {
       g.fillCircle(13, 9, 2);
       g.fillStyle(type.c, 0.7);
       g.fillCircle(10, 6, 3);
-    } else if (type.n === 'yellow') {
+    } else if (type.n === 'y') {
       // Square
       g.fillRect(3, 3, 14, 14);
       g.fillStyle(0x000000, 1);
       g.fillCircle(7, 8, 2);
       g.fillCircle(13, 8, 2);
       g.fillRect(6, 13, 8, 2);
-    } else if (type.n === 'orange') {
+    } else if (type.n === 'o') {
       // Star-like
       g.fillCircle(10, 10, 9);
       g.fillTriangle(10, 1, 7, 8, 13, 8);
@@ -341,7 +304,7 @@ function preload() {
       g.fillStyle(0xffffff, 1);
       g.fillCircle(7, 8, 2);
       g.fillCircle(13, 8, 2);
-    } else if (type.n === 'red') {
+    } else if (type.n === 'r') {
       // Hexagon-ish with horns
       g.fillCircle(10, 10, 9);
       g.fillTriangle(3, 5, 5, 2, 7, 5);
@@ -350,7 +313,7 @@ function preload() {
       g.fillCircle(7, 9, 2);
       g.fillCircle(13, 9, 2);
       g.fillRect(7, 14, 6, 2);
-    } else if (type.n === 'purple') {
+    } else if (type.n === 'p') {
       // Alien-like
       g.fillRect(4, 6, 12, 10);
       g.fillCircle(6, 6, 3);
@@ -367,31 +330,31 @@ function preload() {
 
     // Boss texture (3x size) - similar shapes scaled up
     g.fillStyle(type.c, 1);
-    if (type.n === 'green') {
+    if (type.n === 'g') {
       g.fillTriangle(30, 6, 6, 54, 54, 54);
       g.fillStyle(0xffffff, 1);
       g.fillCircle(21, 30, 6);
       g.fillCircle(39, 30, 6);
-    } else if (type.n === 'blue') {
+    } else if (type.n === 'b') {
       g.fillTriangle(30, 6, 6, 30, 30, 54);
       g.fillTriangle(30, 6, 54, 30, 30, 54);
       g.fillStyle(0xffffff, 1);
       g.fillCircle(24, 24, 6);
       g.fillCircle(36, 24, 6);
-    } else if (type.n === 'cyan') {
+    } else if (type.n === 'c') {
       g.fillCircle(30, 30, 27);
       g.fillStyle(0xffffff, 1);
       g.fillCircle(21, 27, 6);
       g.fillCircle(39, 27, 6);
       g.fillStyle(type.c, 0.7);
       g.fillCircle(30, 18, 9);
-    } else if (type.n === 'yellow') {
+    } else if (type.n === 'y') {
       g.fillRect(9, 9, 42, 42);
       g.fillStyle(0x000000, 1);
       g.fillCircle(21, 24, 6);
       g.fillCircle(39, 24, 6);
       g.fillRect(18, 39, 24, 6);
-    } else if (type.n === 'orange') {
+    } else if (type.n === 'o') {
       g.fillCircle(30, 30, 27);
       g.fillTriangle(30, 3, 21, 24, 39, 24);
       g.fillTriangle(30, 57, 21, 36, 39, 36);
@@ -400,7 +363,7 @@ function preload() {
       g.fillStyle(0xffffff, 1);
       g.fillCircle(21, 24, 6);
       g.fillCircle(39, 24, 6);
-    } else if (type.n === 'red') {
+    } else if (type.n === 'r') {
       g.fillCircle(30, 30, 27);
       g.fillTriangle(9, 15, 15, 6, 21, 15);
       g.fillTriangle(51, 15, 45, 6, 39, 15);
@@ -408,7 +371,7 @@ function preload() {
       g.fillCircle(21, 27, 6);
       g.fillCircle(39, 27, 6);
       g.fillRect(21, 42, 18, 6);
-    } else if (type.n === 'purple') {
+    } else if (type.n === 'p') {
       g.fillRect(12, 18, 36, 30);
       g.fillCircle(18, 18, 9);
       g.fillCircle(42, 18, 9);
@@ -426,7 +389,7 @@ function preload() {
   // Projectile texture (orange circle)
   g.fillStyle(0xff8800, 1);
   g.fillCircle(4, 4, 4);
-  g.generateTexture('projectile', 8, 8);
+  g.generateTexture('p', 8, 8);
   g.clear();
 
   // XP orb texture (cyan circle)
@@ -479,7 +442,7 @@ function preload() {
   g.fillCircle(8, 8, 8);
   g.fillStyle(0xffffaa, 0.5);
   g.fillCircle(8, 8, 6);
-  g.generateTexture('orbitingBall', 16, 16);
+  g.generateTexture('o', 16, 16);
   g.clear();
 
   g.destroy();
@@ -491,20 +454,21 @@ function create() {
 
   // Create starfield background with parallax
   const starLayers = [
-    { count: 50, size: 1, alpha: 0.4, scrollFactor: 0.2 },
-    { count: 40, size: 1.5, alpha: 0.6, scrollFactor: 0.5 },
-    { count: 30, size: 2, alpha: 0.8, scrollFactor: 0.8 }
+    // c: count, s: size, a: alpha, f: scrollFactor
+    { c: 50, s: 1, a: 0.4, f: 0.2 },
+    { c: 40, s: 1.5, a: 0.6, f: 0.5 },
+    { c: 30, s: 2, a: 0.8, f: 0.8 }
   ];
 
   starLayers.forEach((layer, i) => {
     const stars = this.add.graphics();
-    stars.fillStyle(0xffffff, layer.alpha);
-    for (let j = 0; j < layer.count; j++) {
+    stars.fillStyle(0xffffff, layer.a);
+    for (let j = 0; j < layer.c; j++) {
       const x = Math.random() * 2400;
       const y = Math.random() * 1800;
-      stars.fillCircle(x, y, layer.size);
+      stars.fillCircle(x, y, layer.s);
     }
-    stars.setScrollFactor(layer.scrollFactor);
+    stars.setScrollFactor(layer.f);
     stars.setDepth(-10 + i);
   });
 
@@ -666,15 +630,15 @@ function update(_time, delta) {
   }
 
   // Auto shoot (projectile weapon)
-  const projectileWeapon = getWeapon('projectile');
-  if (projectileWeapon.unlocked && shootTimer >= projectileWeapon.fireRate) {
+  const projectileWeapon = getWeapon('p');
+  if (projectileWeapon.u && shootTimer >= projectileWeapon.f) {
     shootTimer = 0;
     shoot();
   }
 
   // Auto shoot (boomerang weapon)
-  const boomerangWeapon = getWeapon('boomerang');
-  if (boomerangWeapon.unlocked) {
+  const boomerangWeapon = getWeapon('b');
+  if (boomerangWeapon.u) {
     boomerangShootTimer += delta;
     if (boomerangShootTimer >= 200 && availableBoomerangs > 0) {
       boomerangShootTimer = 0;
@@ -771,25 +735,25 @@ function shoot() {
   const target = findClosestEnemy();
   if (!target) return;
 
-  const weapon = getWeapon('projectile');
+  const weapon = getWeapon('p');
   playTone(scene, 880, 0.05);
 
   // Calculate angles for multiple projectiles
   const baseAngle = Phaser.Math.Angle.Between(player.x, player.y, target.x, target.y);
-  const spread = weapon.count > 1 ? 0.3 : 0;
-  const startOffset = -(weapon.count - 1) * spread / 2;
+  const spread = weapon.c > 1 ? 0.3 : 0;
+  const startOffset = -(weapon.c - 1) * spread / 2;
 
-  for (let i = 0; i < weapon.count; i++) {
+  for (let i = 0; i < weapon.c; i++) {
     const angle = baseAngle + startOffset + i * spread;
     const vx = Math.cos(angle) * 300;
     const vy = Math.sin(angle) * 300;
 
     // Create using the group (important!)
-    const proj = projectiles.create(player.x, player.y, 'projectile');
+    const proj = projectiles.create(player.x, player.y, 'p');
     proj.body.setCircle(4);
     proj.body.setVelocity(vx, vy);
-    proj.setData('damage', weapon.damage);
-    proj.setData('penetration', weapon.penetration);
+    proj.setData('damage', weapon.m);
+    proj.setData('penetration', weapon.e);
     proj.setData('hits', 0);
 
     // Auto-destroy after 2 seconds
@@ -957,7 +921,7 @@ function collectChest(_playerObj, chest) {
   playTone(scene, 1500, 0.3);
 
   // Check if there are weapons to unlock
-  const lockedWeapons = weaponTypes.filter(w => !w.unlocked && !w.id.startsWith('placeholder'));
+  const lockedWeapons = weaponTypes.filter(w => !w.u && !w.i.startsWith('placeholder'));
 
   if (lockedWeapons.length > 0) {
     showWeaponSelector(lockedWeapons);
@@ -984,16 +948,16 @@ function collectUpgradeChest(_playerObj, chest) {
   let availableUpgrades = [...playerUpgrades];
 
   // Add weapon-specific upgrades if unlocked
-  if (getWeapon('projectile').unlocked) {
+  if (getWeapon('p').u) {
     availableUpgrades.push(...projectileUpgrades);
   }
-  if (getWeapon('orbitingBall').unlocked) {
+  if (getWeapon('o').u) {
     availableUpgrades.push(...orbitingBallUpgrades);
   }
-  if (getWeapon('areaDamage').unlocked) {
+  if (getWeapon('a').u) {
     availableUpgrades.push(...areaDamageUpgrades);
   }
-  if (getWeapon('boomerang').unlocked) {
+  if (getWeapon('b').u) {
     availableUpgrades.push(...boomerangUpgrades);
   }
 
@@ -1172,7 +1136,7 @@ function levelUp() {
     if (passive === 'damage') {
       // Banana: +5% weapon damage
       const weapon = getWeapon(selectedCharacter.weapon);
-      if (weapon) weapon.damage = Math.floor(weapon.damage * value);
+      if (weapon) weapon.m = Math.floor(weapon.m * value);
     } else if (passive === 'regen') {
       // Medusa: +5 HP regen
       stats.hpRegen += value;
@@ -1198,22 +1162,22 @@ function showUpgradeMenu() {
   let availableUpgrades = [...playerUpgrades];
 
   // Add projectile upgrades if unlocked
-  if (getWeapon('projectile').unlocked) {
+  if (getWeapon('p').u) {
     availableUpgrades.push(...projectileUpgrades);
   }
 
   // Add orbiting ball upgrades if unlocked
-  if (getWeapon('orbitingBall').unlocked) {
+  if (getWeapon('o').u) {
     availableUpgrades.push(...orbitingBallUpgrades);
   }
 
   // Add area damage upgrades if unlocked
-  if (getWeapon('areaDamage').unlocked) {
+  if (getWeapon('a').u) {
     availableUpgrades.push(...areaDamageUpgrades);
   }
 
   // Add boomerang upgrades if unlocked
-  if (getWeapon('boomerang').unlocked) {
+  if (getWeapon('b').u) {
     availableUpgrades.push(...boomerangUpgrades);
   }
 
@@ -1372,15 +1336,15 @@ function showWeaponSelector(weapons) {
   menuOptions = [];
 
   const selectWeapon = (weapon) => {
-    weapon.unlocked = true;
+    weapon.u = true;
     playTone(scene, 1500, 0.2);
 
     // Initialize weapon
-    if (weapon.id === 'orbitingBall') {
+    if (weapon.i === 'o') {
       initOrbitingBalls();
-    } else if (weapon.id === 'areaDamage') {
+    } else if (weapon.i === 'a') {
       initAreaDamage();
-    } else if (weapon.id === 'boomerang') {
+    } else if (weapon.i === 'b') {
       initBoomerangWeapon();
     }
 
@@ -1425,7 +1389,7 @@ function showWeaponSelector(weapons) {
     btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 100, 180, 200), Phaser.Geom.Rectangle.Contains);
 
     // Weapon name
-    scene.add.text(x, y - 40, weapon.name, {
+    scene.add.text(x, y - 40, weapon.n, {
       fontSize: '20px',
       fontFamily: 'Arial',
       color: '#ffffff',
@@ -1434,7 +1398,7 @@ function showWeaponSelector(weapons) {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
 
     // Description
-    scene.add.text(x, y + 20, weapon.desc, {
+    scene.add.text(x, y + 20, weapon.d, {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: '#cccccc',
@@ -1489,7 +1453,7 @@ function showRareUpgradeMenu() {
   // Filter rare upgrades to only unlocked weapons and not maxed
   const available = rareUpgrades.filter(u => {
     if (!u.weaponId) return true; // Player upgrades
-    const isUnlocked = getWeapon(u.weaponId).unlocked;
+    const isUnlocked = getWeapon(u.weaponId).u;
     const notMaxed = (upgradeLevels[u.id] || 0) < u.maxLevel;
     return isUnlocked && notMaxed;
   });
@@ -1658,16 +1622,16 @@ function showStartScreen() {
     player.setTexture(character.texture);
 
     // Get and unlock character's weapon
-    const weapon = weaponTypes.find(w => w.id === character.weapon);
+    const weapon = weaponTypes.find(w => w.i === character.weapon);
     if (weapon) {
-      weapon.unlocked = true;
+      weapon.u = true;
 
       // Initialize weapon if needed
-      if (weapon.id === 'orbitingBall') {
+      if (weapon.i === 'o') {
         initOrbitingBalls();
-      } else if (weapon.id === 'areaDamage') {
+      } else if (weapon.i === 'a') {
         initAreaDamage();
-      } else if (weapon.id === 'boomerang') {
+      } else if (weapon.i === 'b') {
         initBoomerangWeapon();
       }
     }
@@ -1841,8 +1805,8 @@ function updateUI() {
 
   // Show unlocked weapons
   weaponTypes.forEach(weapon => {
-    if (weapon.unlocked && !weapon.id.startsWith('placeholder')) {
-      const icon = scene.add.text(weaponX, weaponY, weapon.name.charAt(0), {
+    if (weapon.u && !weapon.i.startsWith('placeholder')) {
+      const icon = scene.add.text(weaponX, weaponY, weapon.n.charAt(0), {
         fontSize: '16px',
         fontFamily: 'Arial',
         color: '#ffaa00',
@@ -2025,28 +1989,28 @@ function restartGame() {
   upgradeLevels = {};
 
   // Reset weapons (all locked, player will choose one)
-  weaponTypes.forEach(weapon => {
-    if (weapon.id === 'projectile') {
-      weapon.unlocked = false;
-      weapon.count = 1;
-      weapon.fireRate = 500;
-      weapon.damage = 10;
-      weapon.penetration = 0;
-    } else if (weapon.id === 'orbitingBall') {
-      weapon.unlocked = false;
-      weapon.count = 2;
-      weapon.rotSpeed = 2;
-      weapon.radius = 80;
-      weapon.ballRadius = 8;
-      weapon.damage = 15;
-    } else if (weapon.id === 'areaDamage') {
-      weapon.unlocked = false;
-      weapon.radius = 150;
-      weapon.dps = 10;
-      weapon.tickRate = 500;
-      weapon.lastTick = 0;
+  weaponTypes.forEach(w => {
+    if (weapon.i === 'p') {
+      weapon.u = false;
+      weapon.c = 1;
+      weapon.f = 500;
+      weapon.m = 10;
+      weapon.e = 0;
+    } else if (weapon.i === 'o') {
+      weapon.u = false;
+      weapon.c = 2;
+      weapon.r = 2;
+      weapon.a = 80;
+      weapon.b = 8;
+      weapon.m = 15;
+    } else if (weapon.i === 'a') {
+      weapon.u = false;
+      weapon.a = 150;
+      weapon.p = 10;
+      weapon.t = 500;
+      weapon.l = 0;
     } else {
-      weapon.unlocked = false;
+      weapon.u = false;
     }
   });
 
@@ -2196,14 +2160,14 @@ function initOrbitingBalls() {
   orbitAngle = 0;
 
   // Create initial balls
-  const weapon = getWeapon('orbitingBall');
-  for (let i = 0; i < weapon.count; i++) {
-    const ball = scene.physics.add.image(player.x, player.y, 'orbitingBall');
+  const weapon = getWeapon('o');
+  for (let i = 0; i < weapon.c; i++) {
+    const ball = scene.physics.add.image(player.x, player.y, 'o');
 
     // Update both hitbox and visual size
-    const scale = weapon.ballRadius / 8; // 8 is base radius
+    const scale = weapon.b / 8; // 8 is base radius
     ball.setScale(scale);
-    ball.body.setCircle(weapon.ballRadius);
+    ball.body.setCircle(weapon.b);
 
     ball.setData('lastHitTime', {});
     orbitingBalls.push(ball);
@@ -2214,18 +2178,18 @@ function initOrbitingBalls() {
 }
 
 function updateOrbitingBalls(delta) {
-  const weapon = getWeapon('orbitingBall');
-  if (!weapon.unlocked) return;
+  const weapon = getWeapon('o');
+  if (!weapon.u) return;
 
   // Add/remove balls if count changed
-  if (orbitingBalls.length < weapon.count) {
-    for (let i = orbitingBalls.length; i < weapon.count; i++) {
-      const ball = scene.physics.add.image(player.x, player.y, 'orbitingBall');
+  if (orbitingBalls.length < weapon.c) {
+    for (let i = orbitingBalls.length; i < weapon.c; i++) {
+      const ball = scene.physics.add.image(player.x, player.y, 'o');
 
       // Update both hitbox and visual size
-      const scale = weapon.ballRadius / 8; // 8 is base radius
+      const scale = weapon.b / 8; // 8 is base radius
       ball.setScale(scale);
-      ball.body.setCircle(weapon.ballRadius);
+      ball.body.setCircle(weapon.b);
 
       ball.setData('lastHitTime', {});
       orbitingBalls.push(ball);
@@ -2234,30 +2198,30 @@ function updateOrbitingBalls(delta) {
   }
 
   // Update ball size if changed (both visual and hitbox)
-  const scale = weapon.ballRadius / 8; // 8 is base radius
+  const scale = weapon.b / 8; // 8 is base radius
   orbitingBalls.forEach((ball) => {
     if (!ball || !ball.active) return;
     ball.setScale(scale);
-    ball.body.setCircle(weapon.ballRadius);
+    ball.body.setCircle(weapon.b);
   });
 
   // Update angle
-  orbitAngle += (weapon.rotSpeed * delta) / 1000;
+  orbitAngle += (weapon.r * delta) / 1000;
 
   // Update ball positions
   orbitingBalls.forEach((ball, i) => {
     if (!ball || !ball.active) return;
-    const angleOffset = (Math.PI * 2 / weapon.count) * i;
+    const angleOffset = (Math.PI * 2 / weapon.c) * i;
     const angle = orbitAngle + angleOffset;
-    ball.x = player.x + Math.cos(angle) * weapon.radius;
-    ball.y = player.y + Math.sin(angle) * weapon.radius;
+    ball.x = player.x + Math.cos(angle) * weapon.a;
+    ball.y = player.y + Math.sin(angle) * weapon.a;
   });
 }
 
 function hitEnemyWithBall(ball, enemy) {
   if (!enemy.active || !ball.active) return;
 
-  const weapon = getWeapon('orbitingBall');
+  const weapon = getWeapon('o');
   const now = Date.now();
   const lastHitTimes = ball.getData('lastHitTime');
   const enemyId = enemy.getData('id') || enemy.body.id;
@@ -2272,7 +2236,7 @@ function hitEnemyWithBall(ball, enemy) {
 
   // Check for critical hit
   const isCrit = Math.random() < stats.critChance;
-  let damage = weapon.damage;
+  let damage = weapon.m;
   if (isCrit) {
     damage *= stats.critDamage;
   }
@@ -2316,22 +2280,22 @@ function initAreaDamage() {
 }
 
 function updateAreaDamage(delta) {
-  const weapon = getWeapon('areaDamage');
-  if (!weapon.unlocked) return;
+  const weapon = getWeapon('a');
+  if (!weapon.u) return;
 
   // Update visual circle position
   if (areaDamageCircle) {
     areaDamageCircle.clear();
     areaDamageCircle.lineStyle(2, 0xffaa00, 0.5);
     areaDamageCircle.fillStyle(0xffaa00, 0.15);
-    areaDamageCircle.fillCircle(player.x, player.y, weapon.radius);
-    areaDamageCircle.strokeCircle(player.x, player.y, weapon.radius);
+    areaDamageCircle.fillCircle(player.x, player.y, weapon.a);
+    areaDamageCircle.strokeCircle(player.x, player.y, weapon.a);
   }
 
   // Damage tick
-  weapon.lastTick += delta;
-  if (weapon.lastTick >= weapon.tickRate) {
-    weapon.lastTick = 0;
+  weapon.l += delta;
+  if (weapon.l >= weapon.t) {
+    weapon.l = 0;
 
     let hitAnyEnemy = false;
 
@@ -2339,12 +2303,12 @@ function updateAreaDamage(delta) {
     enemies.children.entries.forEach(enemy => {
       if (!enemy.active) return;
       const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
-      if (dist <= weapon.radius) {
+      if (dist <= weapon.a) {
         hitAnyEnemy = true;
 
         // Check for critical hit
         const isCrit = Math.random() < stats.critChance;
-        let damage = weapon.dps;
+        let damage = weapon.p;
         if (isCrit) {
           damage *= stats.critDamage;
         }
@@ -2387,27 +2351,27 @@ function updateAreaDamage(delta) {
 }
 
 function initBoomerangWeapon() {
-  const weapon = getWeapon('boomerang');
-  availableBoomerangs = weapon.count;
+  const weapon = getWeapon('b');
+  availableBoomerangs = weapon.c;
   boomerangs = [];
 }
 
 function shootBoomerang() {
-  const weapon = getWeapon('boomerang');
-  if (!weapon.unlocked || availableBoomerangs <= 0) return;
+  const weapon = getWeapon('b');
+  if (!weapon.u || availableBoomerangs <= 0) return;
 
   const target = findClosestEnemy();
   if (!target) return;
 
   // Calculate angle toward target
   const angle = Phaser.Math.Angle.Between(player.x, player.y, target.x, target.y);
-  const vx = Math.cos(angle) * weapon.speed;
-  const vy = Math.sin(angle) * weapon.speed;
+  const vx = Math.cos(angle) * weapon.s;
+  const vy = Math.sin(angle) * weapon.s;
 
   // Create boomerang sprite
-  const boom = scene.physics.add.sprite(player.x, player.y, 'boomerang');
-  boom.setScale(weapon.size);
-  boom.body.setCircle(8 * weapon.size);
+  const boom = scene.physics.add.sprite(player.x, player.y, 'b');
+  boom.setScale(weapon.z);
+  boom.body.setCircle(8 * weapon.z);
   boom.body.setVelocity(vx, vy);
 
   // Set data
@@ -2429,8 +2393,8 @@ function shootBoomerang() {
 }
 
 function updateBoomerangs(delta) {
-  const weapon = getWeapon('boomerang');
-  if (!weapon.unlocked) return;
+  const weapon = getWeapon('b');
+  if (!weapon.u) return;
 
   boomerangs.forEach((boom, index) => {
     if (!boom || !boom.active) {
@@ -2453,14 +2417,14 @@ function updateBoomerangs(delta) {
 
     if (state === 'outbound') {
       // Check if reached max distance
-      if (dist >= weapon.maxDistance) {
+      if (dist >= weapon.x) {
         boom.setData('state', 'returning');
 
         // Start returning to player
         const angleToPlayer = Phaser.Math.Angle.Between(boom.x, boom.y, player.x, player.y);
         boom.body.setVelocity(
-          Math.cos(angleToPlayer) * weapon.returnSpeed,
-          Math.sin(angleToPlayer) * weapon.returnSpeed
+          Math.cos(angleToPlayer) * weapon.w,
+          Math.sin(angleToPlayer) * weapon.w
         );
       }
     } else if (state === 'returning') {
@@ -2482,8 +2446,8 @@ function updateBoomerangs(delta) {
       // Update direction to player (homing)
       const angleToPlayer = Phaser.Math.Angle.Between(boom.x, boom.y, player.x, player.y);
       boom.body.setVelocity(
-        Math.cos(angleToPlayer) * weapon.returnSpeed,
-        Math.sin(angleToPlayer) * weapon.returnSpeed
+        Math.cos(angleToPlayer) * weapon.w,
+        Math.sin(angleToPlayer) * weapon.w
       );
     }
   });
@@ -2492,7 +2456,7 @@ function updateBoomerangs(delta) {
 function hitEnemyWithBoomerang(boom, enemy) {
   if (!boom.active || !enemy.active) return;
 
-  const weapon = getWeapon('boomerang');
+  const weapon = getWeapon('b');
   const now = Date.now();
   const lastHitTimes = boom.getData('lastHitTimes');
   const enemyId = enemy.getData('id') || enemy.body.id;
@@ -2507,7 +2471,7 @@ function hitEnemyWithBoomerang(boom, enemy) {
 
   // Check for critical hit
   const isCrit = Math.random() < stats.critChance;
-  let damage = weapon.damage;
+  let damage = weapon.m;
   if (isCrit) {
     damage *= stats.critDamage;
   }
@@ -2680,8 +2644,6 @@ function createStatsPanel() {
   addStat('Luck', `${stats.lootChance.toFixed(1)}x`, '#66ffcc');
   addStat('Crit Chance', `${(stats.critChance * 100).toFixed(0)}%`, '#ff88ff');
   addStat('Crit Damage', `${stats.critDamage.toFixed(2)}x`, '#ff66ff');
-  addStat('Level', stats.level, '#aaaaff');
-  addStat('Enemies Killed', stats.enemiesKilled, '#ffaa66');
 
   // Weapons Section
   y += 10;
@@ -2696,8 +2658,8 @@ function createStatsPanel() {
 
   // Show each unlocked weapon
   weaponTypes.forEach(weapon => {
-    if (weapon.unlocked) {
-      const wTitle = scene.add.text(100, y, weapon.name, {
+    if (weapon.u) {
+      const wTitle = scene.add.text(100, y, weapon.n, {
         fontSize: '18px',
         fontFamily: 'Arial',
         color: '#ffdd00',
@@ -2706,32 +2668,32 @@ function createStatsPanel() {
       statsPanel.push(wTitle);
       y += 22;
 
-      if (weapon.id === 'projectile') {
-        const w = scene.add.text(120, y, `Count: ${weapon.count} | Fire Rate: ${weapon.fireRate}ms | Damage: ${weapon.damage} | Penetration: ${weapon.penetration}`, {
+      if (weapon.i === 'p') {
+        const w = scene.add.text(120, y, `Count: ${weapon.c} | Fire Rate: ${weapon.f}ms | Damage: ${weapon.m} | Penetration: ${weapon.e}`, {
           fontSize: '14px',
           fontFamily: 'Arial',
           color: '#cccccc'
         }).setScrollFactor(0).setDepth(151);
         statsPanel.push(w);
         y += 20;
-      } else if (weapon.id === 'orbitingBall') {
-        const w = scene.add.text(120, y, `Count: ${weapon.count} | Rot Speed: ${weapon.rotSpeed} | Radius: ${weapon.radius} | Ball Size: ${weapon.ballRadius} | Damage: ${weapon.damage}`, {
+      } else if (weapon.i === 'o') {
+        const w = scene.add.text(120, y, `Count: ${weapon.c} | Rot Speed: ${weapon.r} | Radius: ${weapon.a} | Ball Size: ${weapon.b} | Damage: ${weapon.m}`, {
           fontSize: '14px',
           fontFamily: 'Arial',
           color: '#cccccc'
         }).setScrollFactor(0).setDepth(151);
         statsPanel.push(w);
         y += 20;
-      } else if (weapon.id === 'areaDamage') {
-        const w = scene.add.text(120, y, `Radius: ${weapon.radius} | DPS: ${weapon.dps} | Tick Rate: ${weapon.tickRate}ms`, {
+      } else if (weapon.i === 'a') {
+        const w = scene.add.text(120, y, `Radius: ${weapon.a} | DPS: ${weapon.p} | Tick Rate: ${weapon.t}ms`, {
           fontSize: '14px',
           fontFamily: 'Arial',
           color: '#cccccc'
         }).setScrollFactor(0).setDepth(151);
         statsPanel.push(w);
         y += 20;
-      } else if (weapon.id === 'boomerang') {
-        const w = scene.add.text(120, y, `Available: ${availableBoomerangs}/${weapon.count} | Damage: ${weapon.damage} | Speed: ${Math.floor(weapon.speed)} | Range: ${weapon.maxDistance} | Size: ${weapon.size.toFixed(1)}x`, {
+      } else if (weapon.i === 'b') {
+        const w = scene.add.text(120, y, `Available: ${availableBoomerangs}/${weapon.c} | Damage: ${weapon.m} | Speed: ${Math.floor(weapon.s)} | Range: ${weapon.x} | Size: ${weapon.z.toFixed(1)}x`, {
           fontSize: '14px',
           fontFamily: 'Arial',
           color: '#cccccc'
