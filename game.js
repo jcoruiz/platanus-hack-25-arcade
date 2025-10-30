@@ -360,6 +360,25 @@ function create() {
   scene = this;
   graphics = this.add.graphics();
 
+  // Create starfield background with parallax
+  const starLayers = [
+    { count: 50, size: 1, alpha: 0.4, scrollFactor: 0.2 },
+    { count: 40, size: 1.5, alpha: 0.6, scrollFactor: 0.5 },
+    { count: 30, size: 2, alpha: 0.8, scrollFactor: 0.8 }
+  ];
+
+  starLayers.forEach((layer, i) => {
+    const stars = this.add.graphics();
+    stars.fillStyle(0xffffff, layer.alpha);
+    for (let j = 0; j < layer.count; j++) {
+      const x = Math.random() * 2400;
+      const y = Math.random() * 1800;
+      stars.fillCircle(x, y, layer.size);
+    }
+    stars.setScrollFactor(layer.scrollFactor);
+    stars.setDepth(-10 + i);
+  });
+
   // Expand world bounds (3x larger than screen)
   this.physics.world.setBounds(0, 0, 2400, 1800);
 
