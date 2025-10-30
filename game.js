@@ -27,14 +27,15 @@ let menuKeys = [];
 
 let upgradeLevels = {};
 
+// Enemy types: n=name, c=color, h=hpMult, s=speedMult, d=damageMult, x=xp, r=dropRate, u=unlockTime
 const enemyTypes = [
-  { name: 'green', color: 0x00ff00, hpMult: 1.0, speedMult: 1.0, damageMult: 1.0, xp: 5, dropChance: 0.02, unlockTime: 0 },
-  { name: 'blue', color: 0x0088ff, hpMult: 1.5, speedMult: 0.95, damageMult: 1.2, xp: 8, dropChance: 0.03, unlockTime: 20000 },
-  { name: 'cyan', color: 0x00ffff, hpMult: 2.0, speedMult: 1.05, damageMult: 1.4, xp: 10, dropChance: 0.035, unlockTime: 40000 },
-  { name: 'yellow', color: 0xffff00, hpMult: 2.5, speedMult: 0.9, damageMult: 1.6, xp: 15, dropChance: 0.04, unlockTime: 60000 },
-  { name: 'orange', color: 0xff8800, hpMult: 3.0, speedMult: 1.1, damageMult: 1.8, xp: 20, dropChance: 0.045, unlockTime: 90000 },
-  { name: 'red', color: 0xff0000, hpMult: 4.0, speedMult: 0.85, damageMult: 2.0, xp: 25, dropChance: 0.05, unlockTime: 120000 },
-  { name: 'purple', color: 0xff00ff, hpMult: 5.0, speedMult: 1.15, damageMult: 2.5, xp: 35, dropChance: 0.055, unlockTime: 150000 }
+  { n: 'green', c: 0x00ff00, h: 1.0, s: 1.0, d: 1.0, x: 5, r: 0.02, u: 0 },
+  { n: 'blue', c: 0x0088ff, h: 1.5, s: 0.95, d: 1.2, x: 8, r: 0.03, u: 20000 },
+  { n: 'cyan', c: 0x00ffff, h: 2.0, s: 1.05, d: 1.4, x: 10, r: 0.035, u: 40000 },
+  { n: 'yellow', c: 0xffff00, h: 2.5, s: 0.9, d: 1.6, x: 15, r: 0.04, u: 60000 },
+  { n: 'orange', c: 0xff8800, h: 3.0, s: 1.1, d: 1.8, x: 20, r: 0.045, u: 90000 },
+  { n: 'red', c: 0xff0000, h: 4.0, s: 0.85, d: 2.0, x: 25, r: 0.05, u: 120000 },
+  { n: 'purple', c: 0xff00ff, h: 5.0, s: 1.15, d: 2.5, x: 35, r: 0.055, u: 150000 }
 ];
 
 let unlockedTypes = [];
@@ -301,36 +302,36 @@ function preload() {
   // Enemy textures (one for each type) - different shapes
   enemyTypes.forEach(type => {
     // Normal enemy
-    g.fillStyle(type.color, 1);
-    if (type.name === 'green') {
+    g.fillStyle(type.c, 1);
+    if (type.n === 'green') {
       // Triangle
       g.fillTriangle(10, 2, 2, 18, 18, 18);
       g.fillStyle(0xffffff, 1);
       g.fillCircle(7, 10, 2);
       g.fillCircle(13, 10, 2);
-    } else if (type.name === 'blue') {
+    } else if (type.n === 'blue') {
       // Diamond
       g.fillTriangle(10, 2, 2, 10, 10, 18);
       g.fillTriangle(10, 2, 18, 10, 10, 18);
       g.fillStyle(0xffffff, 1);
       g.fillCircle(8, 8, 2);
       g.fillCircle(12, 8, 2);
-    } else if (type.name === 'cyan') {
+    } else if (type.n === 'cyan') {
       // Pentagon-ish
       g.fillCircle(10, 10, 9);
       g.fillStyle(0xffffff, 1);
       g.fillCircle(7, 9, 2);
       g.fillCircle(13, 9, 2);
-      g.fillStyle(type.color, 0.7);
+      g.fillStyle(type.c, 0.7);
       g.fillCircle(10, 6, 3);
-    } else if (type.name === 'yellow') {
+    } else if (type.n === 'yellow') {
       // Square
       g.fillRect(3, 3, 14, 14);
       g.fillStyle(0x000000, 1);
       g.fillCircle(7, 8, 2);
       g.fillCircle(13, 8, 2);
       g.fillRect(6, 13, 8, 2);
-    } else if (type.name === 'orange') {
+    } else if (type.n === 'orange') {
       // Star-like
       g.fillCircle(10, 10, 9);
       g.fillTriangle(10, 1, 7, 8, 13, 8);
@@ -340,7 +341,7 @@ function preload() {
       g.fillStyle(0xffffff, 1);
       g.fillCircle(7, 8, 2);
       g.fillCircle(13, 8, 2);
-    } else if (type.name === 'red') {
+    } else if (type.n === 'red') {
       // Hexagon-ish with horns
       g.fillCircle(10, 10, 9);
       g.fillTriangle(3, 5, 5, 2, 7, 5);
@@ -349,7 +350,7 @@ function preload() {
       g.fillCircle(7, 9, 2);
       g.fillCircle(13, 9, 2);
       g.fillRect(7, 14, 6, 2);
-    } else if (type.name === 'purple') {
+    } else if (type.n === 'purple') {
       // Alien-like
       g.fillRect(4, 6, 12, 10);
       g.fillCircle(6, 6, 3);
@@ -361,36 +362,36 @@ function preload() {
       g.fillCircle(7, 10, 2);
       g.fillCircle(13, 10, 2);
     }
-    g.generateTexture(`enemy_${type.name}`, 20, 20);
+    g.generateTexture(`enemy_${type.n}`, 20, 20);
     g.clear();
 
     // Boss texture (3x size) - similar shapes scaled up
-    g.fillStyle(type.color, 1);
-    if (type.name === 'green') {
+    g.fillStyle(type.c, 1);
+    if (type.n === 'green') {
       g.fillTriangle(30, 6, 6, 54, 54, 54);
       g.fillStyle(0xffffff, 1);
       g.fillCircle(21, 30, 6);
       g.fillCircle(39, 30, 6);
-    } else if (type.name === 'blue') {
+    } else if (type.n === 'blue') {
       g.fillTriangle(30, 6, 6, 30, 30, 54);
       g.fillTriangle(30, 6, 54, 30, 30, 54);
       g.fillStyle(0xffffff, 1);
       g.fillCircle(24, 24, 6);
       g.fillCircle(36, 24, 6);
-    } else if (type.name === 'cyan') {
+    } else if (type.n === 'cyan') {
       g.fillCircle(30, 30, 27);
       g.fillStyle(0xffffff, 1);
       g.fillCircle(21, 27, 6);
       g.fillCircle(39, 27, 6);
-      g.fillStyle(type.color, 0.7);
+      g.fillStyle(type.c, 0.7);
       g.fillCircle(30, 18, 9);
-    } else if (type.name === 'yellow') {
+    } else if (type.n === 'yellow') {
       g.fillRect(9, 9, 42, 42);
       g.fillStyle(0x000000, 1);
       g.fillCircle(21, 24, 6);
       g.fillCircle(39, 24, 6);
       g.fillRect(18, 39, 24, 6);
-    } else if (type.name === 'orange') {
+    } else if (type.n === 'orange') {
       g.fillCircle(30, 30, 27);
       g.fillTriangle(30, 3, 21, 24, 39, 24);
       g.fillTriangle(30, 57, 21, 36, 39, 36);
@@ -399,7 +400,7 @@ function preload() {
       g.fillStyle(0xffffff, 1);
       g.fillCircle(21, 24, 6);
       g.fillCircle(39, 24, 6);
-    } else if (type.name === 'red') {
+    } else if (type.n === 'red') {
       g.fillCircle(30, 30, 27);
       g.fillTriangle(9, 15, 15, 6, 21, 15);
       g.fillTriangle(51, 15, 45, 6, 39, 15);
@@ -407,7 +408,7 @@ function preload() {
       g.fillCircle(21, 27, 6);
       g.fillCircle(39, 27, 6);
       g.fillRect(21, 42, 18, 6);
-    } else if (type.name === 'purple') {
+    } else if (type.n === 'purple') {
       g.fillRect(12, 18, 36, 30);
       g.fillCircle(18, 18, 9);
       g.fillCircle(42, 18, 9);
@@ -418,7 +419,7 @@ function preload() {
       g.fillCircle(21, 30, 6);
       g.fillCircle(39, 30, 6);
     }
-    g.generateTexture(`boss_${type.name}`, 60, 60);
+    g.generateTexture(`boss_${type.n}`, 60, 60);
     g.clear();
   });
 
@@ -835,15 +836,15 @@ function spawnEnemy() {
   const type = unlockedTypes[Math.floor(Math.random() * unlockedTypes.length)];
 
   // Create using the group with appropriate texture
-  const enemy = enemies.create(x, y, `enemy_${type.name}`);
+  const enemy = enemies.create(x, y, `enemy_${type.n}`);
   enemy.body.setCircle(10);
 
   // Apply type multipliers to difficulty base stats
-  enemy.setData('hp', difficulty.enemyHp * type.hpMult);
-  enemy.setData('speed', difficulty.enemySpeed * type.speedMult);
-  enemy.setData('damage', difficulty.enemyDamage * type.damageMult);
-  enemy.setData('xpValue', type.xp);
-  enemy.setData('dropChance', type.dropChance);
+  enemy.setData('hp', difficulty.enemyHp * type.h);
+  enemy.setData('speed', difficulty.enemySpeed * type.s);
+  enemy.setData('damage', difficulty.enemyDamage * type.d);
+  enemy.setData('xpValue', type.x);
+  enemy.setData('dropChance', type.r);
   enemy.setData('knockbackUntil', 0);
 }
 
@@ -2080,7 +2081,7 @@ function restartGame() {
 
 function updateUnlockedTypes() {
   enemyTypes.forEach(type => {
-    if (gameTime >= type.unlockTime && !unlockedTypes.includes(type)) {
+    if (gameTime >= type.u && !unlockedTypes.includes(type)) {
       unlockedTypes.push(type);
     }
   });
@@ -2107,12 +2108,12 @@ function spawnWave() {
     // Select random type from unlocked
     const type = unlockedTypes[Math.floor(Math.random() * unlockedTypes.length)];
 
-    const enemy = enemies.create(x, y, `enemy_${type.name}`);
+    const enemy = enemies.create(x, y, `enemy_${type.n}`);
     enemy.body.setCircle(10);
-    enemy.setData('hp', difficulty.enemyHp * type.hpMult * 1.5);
-    enemy.setData('speed', difficulty.enemySpeed * type.speedMult);
-    enemy.setData('damage', difficulty.enemyDamage * type.damageMult);
-    enemy.setData('xpValue', type.xp);
+    enemy.setData('hp', difficulty.enemyHp * type.h * 1.5);
+    enemy.setData('speed', difficulty.enemySpeed * type.s);
+    enemy.setData('damage', difficulty.enemyDamage * type.d);
+    enemy.setData('xpValue', type.x);
     enemy.setData('knockbackUntil', 0);
   }
 }
@@ -2137,13 +2138,13 @@ function spawnBoss() {
   x = Math.max(50, Math.min(2350, x));
   y = Math.max(50, Math.min(1750, y));
 
-  const boss = enemies.create(x, y, `boss_${type.name}`);
+  const boss = enemies.create(x, y, `boss_${type.n}`);
   boss.body.setCircle(30);
-  boss.setData('hp', difficulty.enemyHp * type.hpMult * 10);
-  boss.setData('maxHp', difficulty.enemyHp * type.hpMult * 10);
-  boss.setData('speed', difficulty.enemySpeed * type.speedMult * 0.7);
-  boss.setData('damage', difficulty.enemyDamage * type.damageMult * 2);
-  boss.setData('xpValue', type.xp * 10);
+  boss.setData('hp', difficulty.enemyHp * type.h * 10);
+  boss.setData('maxHp', difficulty.enemyHp * type.h * 10);
+  boss.setData('speed', difficulty.enemySpeed * type.s * 0.7);
+  boss.setData('damage', difficulty.enemyDamage * type.d * 2);
+  boss.setData('xpValue', type.x * 10);
   boss.setData('isBoss', true);
   boss.setData('knockbackUntil', 0);
 }
