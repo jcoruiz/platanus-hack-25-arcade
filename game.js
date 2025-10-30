@@ -81,6 +81,36 @@ const weaponTypes = [
   }
 ];
 
+// Character selection
+const characters = [
+  {
+    id: 'banana',
+    name: 'Banana',
+    desc: 'Disparos rápidos',
+    weapon: 'projectile',
+    texture: 'player',
+    emoji: '🍌'
+  },
+  {
+    id: 'jellyfish',
+    name: 'Medusa',
+    desc: 'Bolas orbitales',
+    weapon: 'orbitingBall',
+    texture: 'player_jellyfish',
+    emoji: '🎐'
+  },
+  {
+    id: 'orb',
+    name: 'Orbe',
+    desc: 'Daño por área',
+    weapon: 'areaDamage',
+    texture: 'player_orb',
+    emoji: '🔮'
+  }
+];
+
+let selectedCharacter = null;
+
 let orbitingBalls = [];
 let orbitAngle = 0;
 
@@ -168,6 +198,37 @@ function preload() {
   g.fillStyle(0x885500, 1);
   g.fillRect(14, 4, 4, 6);
   g.generateTexture('player', 32, 32);
+  g.clear();
+
+  // Medusa/Jellyfish texture
+  g.fillStyle(0xff88dd, 1); // Pink body
+  g.fillCircle(16, 12, 10); // Head/body
+  // Tentacles
+  g.fillStyle(0xff88dd, 0.7);
+  g.fillRect(8, 18, 3, 12);
+  g.fillRect(13, 20, 3, 10);
+  g.fillRect(18, 19, 3, 11);
+  // Eyes
+  g.fillStyle(0x000000, 1);
+  g.fillCircle(12, 11, 2);
+  g.fillCircle(20, 11, 2);
+  g.generateTexture('player_jellyfish', 32, 32);
+  g.clear();
+
+  // Orbe texture (half purple, half blue)
+  g.fillStyle(0xcc00ff, 1); // Purple left half
+  g.slice(16, 16, 12, Phaser.Math.DegToRad(90), Phaser.Math.DegToRad(270), false);
+  g.fillPath();
+  g.fillStyle(0x0088ff, 1); // Blue right half
+  g.slice(16, 16, 12, Phaser.Math.DegToRad(270), Phaser.Math.DegToRad(90), false);
+  g.fillPath();
+  // Dividing line
+  g.lineStyle(2, 0xffffff, 1);
+  g.lineBetween(16, 4, 16, 28);
+  // Center glow
+  g.fillStyle(0xffffff, 0.8);
+  g.fillCircle(16, 16, 4);
+  g.generateTexture('player_orb', 32, 32);
   g.clear();
 
   // Enemy textures (one for each type) - different shapes
@@ -1404,7 +1465,7 @@ function showStartScreen() {
   overlay.setDepth(100);
 
   // Title
-  const title = scene.add.text(400, 80, '🍌 BANANA SURVIVORS 🍌', {
+  const title = scene.add.text(400, 80, 'BULLET HEAVEN', {
     fontSize: '48px',
     fontFamily: 'Arial',
     color: '#ffff00',
@@ -1413,30 +1474,36 @@ function showStartScreen() {
   }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
 
   // Subtitle
-  scene.add.text(400, 140, 'Choose your starting weapon', {
+  scene.add.text(400, 140, 'Choose your character', {
     fontSize: '24px',
     fontFamily: 'Arial',
     color: '#ffffff'
   }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
 
-  // Get the 3 main weapons (not placeholders)
-  const startWeapons = weaponTypes.filter(w => !w.id.startsWith('placeholder'));
-
   // Reset menu state
   selectedIndex = 0;
   menuOptions = [];
 
-  const selectWeapon = (weapon) => {
+  const selectCharacter = (character) => {
     playTone(scene, 1500, 0.2);
 
-    // Unlock selected weapon
-    weapon.unlocked = true;
+    // Set selected character
+    selectedCharacter = character;
 
-    // Initialize weapon if needed
-    if (weapon.id === 'orbitingBall') {
-      initOrbitingBalls();
-    } else if (weapon.id === 'areaDamage') {
-      initAreaDamage();
+    // Change player texture
+    player.setTexture(character.texture);
+
+    // Get and unlock character's weapon
+    const weapon = weaponTypes.find(w => w.id === character.weapon);
+    if (weapon) {
+      weapon.unlocked = true;
+
+      // Initialize weapon if needed
+      if (weapon.id === 'orbitingBall') {
+        initOrbitingBalls();
+      } else if (weapon.id === 'areaDamage') {
+        initAreaDamage();
+      }
     }
 
     // Clean up menu
@@ -1464,8 +1531,8 @@ function showStartScreen() {
     });
   };
 
-  // Show weapons
-  startWeapons.forEach((weapon, i) => {
+  // Show characters
+  characters.forEach((character, i) => {
     const x = 150 + i * 250;
     const y = 350;
 
@@ -1479,18 +1546,23 @@ function showStartScreen() {
     btn.setDepth(101);
     btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 100, 180, 200), Phaser.Geom.Rectangle.Contains);
 
-    // Weapon name
-    scene.add.text(x, y - 50, weapon.name, {
+    // Character sprite
+    const sprite = scene.add.sprite(x, y - 40, character.texture);
+    sprite.setScale(2);
+    sprite.setScrollFactor(0);
+    sprite.setDepth(102);
+
+    // Character name
+    scene.add.text(x, y + 20, character.name, {
       fontSize: '22px',
       fontFamily: 'Arial',
       color: '#ffffff',
       fontStyle: 'bold',
-      wordWrap: { width: 160, useAdvancedWrap: true },
       align: 'center'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
 
     // Description
-    scene.add.text(x, y + 10, weapon.desc, {
+    scene.add.text(x, y + 50, character.desc, {
       fontSize: '14px',
       fontFamily: 'Arial',
       color: '#cccccc',
@@ -1499,10 +1571,10 @@ function showStartScreen() {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
 
     // Store option reference
-    menuOptions.push({ btn, weapon, x, y });
+    menuOptions.push({ btn, character, x, y });
 
     // Click handler
-    btn.on('pointerdown', () => selectWeapon(weapon));
+    btn.on('pointerdown', () => selectCharacter(character));
 
     // Hover effect
     btn.on('pointerover', () => {
@@ -1532,7 +1604,7 @@ function showStartScreen() {
   });
 
   enterKey.on('down', () => {
-    selectWeapon(menuOptions[selectedIndex].weapon);
+    selectCharacter(menuOptions[selectedIndex].character);
   });
 
   menuKeys.push(leftKey, rightKey, enterKey);
