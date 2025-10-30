@@ -78,6 +78,18 @@ const weaponTypes = [
     dps: 10,
     tickRate: 500,
     lastTick: 0
+  },
+  {
+    id: 'boomerang',
+    name: 'Boomerangs',
+    desc: 'Boomerangs que retornan tras alcanzar objetivo',
+    unlocked: false,
+    count: 2,
+    damage: 12,
+    speed: 350,
+    returnSpeed: 250,
+    maxDistance: 300,
+    size: 1
   }
 ];
 
@@ -106,6 +118,14 @@ const characters = [
     weapon: 'areaDamage',
     texture: 'player_orb',
     emoji: '🔮'
+  },
+  {
+    id: 'bullettrain',
+    name: 'Tren Bala',
+    desc: 'Boomerangs retornantes',
+    weapon: 'boomerang',
+    texture: 'player_bullettrain',
+    emoji: '🚄'
   }
 ];
 
@@ -113,6 +133,10 @@ let selectedCharacter = null;
 
 let orbitingBalls = [];
 let orbitAngle = 0;
+
+let boomerangs = [];
+let availableBoomerangs = 0;
+let boomerangShootTimer = 0;
 
 // Player stats
 let stats = {
@@ -181,6 +205,13 @@ const areaDamageUpgrades = [
   { id: 'areatickrate', name: 'Tick Speed', desc: '-15% Pulse Delay', icon: '⚡', weaponId: 'areaDamage', maxLevel: 8, apply: () => { getWeapon('areaDamage').tickRate = Math.max(150, getWeapon('areaDamage').tickRate * 0.85); upgradeLevels['areatickrate'] = (upgradeLevels['areatickrate'] || 0) + 1; } }
 ];
 
+const boomerangUpgrades = [
+  { id: 'boomerangdamage', name: 'Boomerang Damage', desc: '+8 Damage', icon: '💥', weaponId: 'boomerang', maxLevel: 10, apply: () => { getWeapon('boomerang').damage += 8; upgradeLevels['boomerangdamage'] = (upgradeLevels['boomerangdamage'] || 0) + 1; } },
+  { id: 'boomerangsize', name: 'Boomerang Size', desc: '+30% Size', icon: '📏', weaponId: 'boomerang', maxLevel: 8, apply: () => { getWeapon('boomerang').size += 0.3; upgradeLevels['boomerangsize'] = (upgradeLevels['boomerangsize'] || 0) + 1; } },
+  { id: 'boomerangspeed', name: 'Boomerang Speed', desc: '+15% Speed', icon: '💨', weaponId: 'boomerang', maxLevel: 8, apply: () => { getWeapon('boomerang').speed *= 1.15; getWeapon('boomerang').returnSpeed *= 1.15; upgradeLevels['boomerangspeed'] = (upgradeLevels['boomerangspeed'] || 0) + 1; } },
+  { id: 'boomerangcount', name: 'More Boomerangs', desc: '+1 Boomerang', icon: '🪃', weaponId: 'boomerang', maxLevel: 5, apply: () => { getWeapon('boomerang').count++; availableBoomerangs++; upgradeLevels['boomerangcount'] = (upgradeLevels['boomerangcount'] || 0) + 1; } }
+];
+
 // Rare upgrades (more powerful versions)
 const rareUpgrades = [
   { id: 'rare_tripleshot', name: 'Triple Shot', desc: '+3 Projectiles', icon: '🔫🔫', weaponId: 'projectile', maxLevel: 2, apply: () => { getWeapon('projectile').count += 3; upgradeLevels['rare_tripleshot'] = (upgradeLevels['rare_tripleshot'] || 0) + 1; } },
@@ -235,6 +266,47 @@ function preload() {
   g.fillStyle(0xffffff, 0.8);
   g.fillCircle(16, 16, 4);
   g.generateTexture('player_orb', 32, 32);
+  g.clear();
+
+  // Bullet Train texture
+  g.fillStyle(0xe0e0e0, 1); // Silver body
+  g.fillRoundedRect(6, 10, 20, 12, 3);
+  g.fillStyle(0xffffff, 1); // White front
+  g.fillTriangle(4, 16, 10, 12, 10, 20);
+  g.fillStyle(0x0088ff, 1); // Blue stripe
+  g.fillRect(8, 15, 18, 2);
+  g.fillStyle(0xff0000, 1); // Red stripe
+  g.fillRect(8, 18, 18, 2);
+  // Windows
+  g.fillStyle(0x4444ff, 0.7);
+  g.fillRect(12, 13, 3, 3);
+  g.fillRect(17, 13, 3, 3);
+  g.fillRect(22, 13, 3, 3);
+  g.generateTexture('player_bullettrain', 32, 32);
+  g.clear();
+
+  // Boomerang texture
+  g.lineStyle(0);
+  g.fillStyle(0xffaa00, 1); // Orange
+  g.beginPath();
+  g.moveTo(8, 12);
+  g.lineTo(8, 4);
+  g.lineTo(12, 8);
+  g.lineTo(12, 12);
+  g.closePath();
+  g.fillPath();
+  g.beginPath();
+  g.moveTo(12, 12);
+  g.lineTo(20, 12);
+  g.lineTo(16, 8);
+  g.lineTo(12, 8);
+  g.closePath();
+  g.fillPath();
+  // Outline
+  g.lineStyle(2, 0x884400, 1);
+  g.strokeRect(8, 4, 4, 8);
+  g.strokeRect(12, 8, 8, 4);
+  g.generateTexture('boomerang', 16, 16);
   g.clear();
 
   // Enemy textures (one for each type) - different shapes
@@ -570,6 +642,16 @@ function update(_time, delta) {
     shoot();
   }
 
+  // Auto shoot (boomerang weapon)
+  const boomerangWeapon = getWeapon('boomerang');
+  if (boomerangWeapon.unlocked) {
+    boomerangShootTimer += delta;
+    if (boomerangShootTimer >= 200 && availableBoomerangs > 0) {
+      boomerangShootTimer = 0;
+      shootBoomerang();
+    }
+  }
+
   // Spawn enemies
   if (spawnTimer >= difficulty.spawnRate) {
     spawnTimer = 0;
@@ -644,6 +726,9 @@ function update(_time, delta) {
 
   // Update area damage
   updateAreaDamage(delta);
+
+  // Update boomerangs
+  updateBoomerangs(delta);
 
   // Update UI
   updateUI();
@@ -878,6 +963,9 @@ function collectUpgradeChest(_playerObj, chest) {
   if (getWeapon('areaDamage').unlocked) {
     availableUpgrades.push(...areaDamageUpgrades);
   }
+  if (getWeapon('boomerang').unlocked) {
+    availableUpgrades.push(...boomerangUpgrades);
+  }
 
   // Filter out maxed upgrades
   availableUpgrades = availableUpgrades.filter(u =>
@@ -1073,6 +1161,11 @@ function showUpgradeMenu() {
     availableUpgrades.push(...areaDamageUpgrades);
   }
 
+  // Add boomerang upgrades if unlocked
+  if (getWeapon('boomerang').unlocked) {
+    availableUpgrades.push(...boomerangUpgrades);
+  }
+
   // Filter out upgrades that have reached max level
   availableUpgrades = availableUpgrades.filter(u =>
     (upgradeLevels[u.id] || 0) < u.maxLevel
@@ -1236,6 +1329,8 @@ function showWeaponSelector(weapons) {
       initOrbitingBalls();
     } else if (weapon.id === 'areaDamage') {
       initAreaDamage();
+    } else if (weapon.id === 'boomerang') {
+      initBoomerangWeapon();
     }
 
     // Clean up menu
@@ -1521,6 +1616,8 @@ function showStartScreen() {
         initOrbitingBalls();
       } else if (weapon.id === 'areaDamage') {
         initAreaDamage();
+      } else if (weapon.id === 'boomerang') {
+        initBoomerangWeapon();
       }
     }
 
@@ -1551,7 +1648,7 @@ function showStartScreen() {
 
   // Show characters
   characters.forEach((character, i) => {
-    const x = 150 + i * 250;
+    const x = 100 + i * 200;
     const y = 350;
 
     // Button background
@@ -2228,6 +2325,186 @@ function updateAreaDamage(delta) {
   }
 }
 
+function initBoomerangWeapon() {
+  const weapon = getWeapon('boomerang');
+  availableBoomerangs = weapon.count;
+  boomerangs = [];
+}
+
+function shootBoomerang() {
+  const weapon = getWeapon('boomerang');
+  if (!weapon.unlocked || availableBoomerangs <= 0) return;
+
+  const target = findClosestEnemy();
+  if (!target) return;
+
+  // Calculate angle toward target
+  const angle = Phaser.Math.Angle.Between(player.x, player.y, target.x, target.y);
+  const vx = Math.cos(angle) * weapon.speed;
+  const vy = Math.sin(angle) * weapon.speed;
+
+  // Create boomerang sprite
+  const boom = scene.physics.add.sprite(player.x, player.y, 'boomerang');
+  boom.setScale(weapon.size);
+  boom.body.setCircle(8 * weapon.size);
+  boom.body.setVelocity(vx, vy);
+
+  // Set data
+  boom.setData('state', 'outbound');
+  boom.setData('startX', player.x);
+  boom.setData('startY', player.y);
+  boom.setData('distanceTraveled', 0);
+  boom.setData('lastHitTimes', {});
+  boom.setData('rotation', 0);
+
+  boomerangs.push(boom);
+  availableBoomerangs--;
+
+  // Setup collision
+  scene.physics.add.overlap(boom, enemies, hitEnemyWithBoomerang, null, scene);
+  scene.physics.add.overlap(boom, player, collectBoomerang, null, scene);
+
+  playTone(scene, 1200, 0.1);
+}
+
+function updateBoomerangs(delta) {
+  const weapon = getWeapon('boomerang');
+  if (!weapon.unlocked) return;
+
+  boomerangs.forEach((boom, index) => {
+    if (!boom || !boom.active) {
+      boomerangs.splice(index, 1);
+      return;
+    }
+
+    const state = boom.getData('state');
+    const startX = boom.getData('startX');
+    const startY = boom.getData('startY');
+
+    // Update rotation (spin effect)
+    let rotation = boom.getData('rotation') + delta * 0.01;
+    boom.setData('rotation', rotation);
+    boom.setRotation(rotation);
+
+    // Calculate distance from start
+    const dist = Phaser.Math.Distance.Between(startX, startY, boom.x, boom.y);
+    boom.setData('distanceTraveled', dist);
+
+    if (state === 'outbound') {
+      // Check if reached max distance
+      if (dist >= weapon.maxDistance) {
+        boom.setData('state', 'returning');
+
+        // Start returning to player
+        const angleToPlayer = Phaser.Math.Angle.Between(boom.x, boom.y, player.x, player.y);
+        boom.body.setVelocity(
+          Math.cos(angleToPlayer) * weapon.returnSpeed,
+          Math.sin(angleToPlayer) * weapon.returnSpeed
+        );
+      }
+    } else if (state === 'returning') {
+      // Check distance to player
+      const distToPlayer = Phaser.Math.Distance.Between(boom.x, boom.y, player.x, player.y);
+
+      // Collect if close enough (within 30 pixels)
+      if (distToPlayer < 30) {
+        // Remove from array
+        boomerangs.splice(index, 1);
+        // Destroy sprite
+        boom.destroy();
+        // Recharge
+        availableBoomerangs++;
+        playTone(scene, 1500, 0.1);
+        return;
+      }
+
+      // Update direction to player (homing)
+      const angleToPlayer = Phaser.Math.Angle.Between(boom.x, boom.y, player.x, player.y);
+      boom.body.setVelocity(
+        Math.cos(angleToPlayer) * weapon.returnSpeed,
+        Math.sin(angleToPlayer) * weapon.returnSpeed
+      );
+    }
+  });
+}
+
+function hitEnemyWithBoomerang(boom, enemy) {
+  if (!boom.active || !enemy.active) return;
+
+  const weapon = getWeapon('boomerang');
+  const now = Date.now();
+  const lastHitTimes = boom.getData('lastHitTimes');
+  const enemyId = enemy.getData('id') || enemy.body.id;
+
+  // Cooldown: 200ms per enemy
+  if (lastHitTimes[enemyId] && now - lastHitTimes[enemyId] < 200) {
+    return;
+  }
+
+  lastHitTimes[enemyId] = now;
+  boom.setData('lastHitTimes', lastHitTimes);
+
+  // Check for critical hit
+  const isCrit = Math.random() < stats.critChance;
+  let damage = weapon.damage;
+  if (isCrit) {
+    damage *= stats.critDamage;
+  }
+
+  // Apply damage
+  const hp = enemy.getData('hp') - damage;
+  enemy.setData('hp', hp);
+
+  // Apply damage feedback
+  applyDamageFeedback(enemy, boom.x, boom.y, isCrit);
+
+  playTone(scene, 1000, 0.05);
+
+  if (hp <= 0) {
+    const xpValue = enemy.getData('xpValue') || 5;
+    const isBoss = enemy.getData('isBoss');
+    const dropChance = enemy.getData('dropChance') || 0;
+    dropXP(enemy.x, enemy.y, xpValue);
+
+    if (isBoss) {
+      dropChest(enemy.x, enemy.y);
+      dropMagnet(enemy.x + 40, enemy.y);
+    } else {
+      const finalDropChance = dropChance * stats.lootChance;
+      if (Math.random() < finalDropChance) {
+        dropUpgradeChest(enemy.x, enemy.y);
+      }
+
+      const magnetDropChance = 0.015;
+      if (Math.random() < magnetDropChance * stats.lootChance) {
+        dropMagnet(enemy.x, enemy.y);
+      }
+    }
+
+    enemy.destroy();
+    stats.enemiesKilled++;
+  }
+}
+
+function collectBoomerang(_playerObj, boom) {
+  if (!boom.active) return;
+  if (boom.getData('state') !== 'returning') return;
+
+  // Remove from array
+  const index = boomerangs.indexOf(boom);
+  if (index > -1) {
+    boomerangs.splice(index, 1);
+  }
+
+  // Destroy sprite
+  boom.destroy();
+
+  // Recharge
+  availableBoomerangs++;
+
+  playTone(scene, 1500, 0.1);
+}
+
 function applyDamageFeedback(enemy, sourceX, sourceY, isCrit = false) {
   if (!enemy.active) return;
 
@@ -2386,6 +2663,14 @@ function createStatsPanel() {
         y += 20;
       } else if (weapon.id === 'areaDamage') {
         const w = scene.add.text(120, y, `Radius: ${weapon.radius} | DPS: ${weapon.dps} | Tick Rate: ${weapon.tickRate}ms`, {
+          fontSize: '14px',
+          fontFamily: 'Arial',
+          color: '#cccccc'
+        }).setScrollFactor(0).setDepth(151);
+        statsPanel.push(w);
+        y += 20;
+      } else if (weapon.id === 'boomerang') {
+        const w = scene.add.text(120, y, `Available: ${availableBoomerangs}/${weapon.count} | Damage: ${weapon.damage} | Speed: ${Math.floor(weapon.speed)} | Range: ${weapon.maxDistance} | Size: ${weapon.size.toFixed(1)}x`, {
           fontSize: '14px',
           fontFamily: 'Arial',
           color: '#cccccc'
