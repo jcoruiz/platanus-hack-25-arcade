@@ -1,6 +1,3 @@
-// Bullet Heaven - Vampire Survivors style arcade game
-// Survive endless waves, level up, and get stronger!
-
 const config = {
   type: Phaser.AUTO,
   width: 800,
@@ -15,7 +12,6 @@ const config = {
 
 new Phaser.Game(config);
 
-// Game state
 let player, cursors, enemies, projectiles, xpOrbs, obstacles, weaponChests, upgradeChests, magnets, graphics;
 let areaDamageCircle = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, showStats = false, paused = false;
@@ -25,15 +21,12 @@ let nextWaveTime = 60000, nextBossTime = 120000;
 let warningActive = false;
 let scene;
 
-// Menu selection state
 let selectedIndex = 0;
 let menuOptions = [];
 let menuKeys = [];
 
-// Upgrade level tracking
 let upgradeLevels = {};
 
-// Enemy types configuration
 const enemyTypes = [
   { name: 'green', color: 0x00ff00, hpMult: 1.0, speedMult: 1.0, damageMult: 1.0, xp: 5, dropChance: 0.02, unlockTime: 0 },
   { name: 'blue', color: 0x0088ff, hpMult: 1.5, speedMult: 0.95, damageMult: 1.2, xp: 8, dropChance: 0.03, unlockTime: 20000 },
@@ -46,12 +39,11 @@ const enemyTypes = [
 
 let unlockedTypes = [];
 
-// Weapon system
 const weaponTypes = [
   {
     id: 'projectile',
     name: 'Proyectiles',
-    desc: 'Dispara automáticamente al enemigo más cercano',
+    desc: 'Dispara al más cercano',
     unlocked: false,
     count: 1,
     fireRate: 500,
@@ -61,7 +53,7 @@ const weaponTypes = [
   {
     id: 'orbitingBall',
     name: 'Bola Orbital',
-    desc: 'Bola que gira alrededor del jugador y daña enemigos',
+    desc: 'Bola orbital defensiva',
     unlocked: false,
     count: 2,
     rotSpeed: 2,
@@ -72,7 +64,7 @@ const weaponTypes = [
   {
     id: 'areaDamage',
     name: 'Área de Daño',
-    desc: 'Daña continuamente a enemigos cercanos',
+    desc: 'Daño de área continuo',
     unlocked: false,
     radius: 150,
     dps: 10,
@@ -82,7 +74,7 @@ const weaponTypes = [
   {
     id: 'boomerang',
     name: 'Boomerangs',
-    desc: 'Boomerangs que retornan tras alcanzar objetivo',
+    desc: 'Boomerangs retornantes',
     unlocked: false,
     count: 2,
     damage: 12,
@@ -93,51 +85,42 @@ const weaponTypes = [
   }
 ];
 
-// Character selection
 const characters = [
   {
-    id: 'banana',
-    name: 'Bananza',
+    name: 'Banana',
     desc: 'Boomerangs retornantes',
     weapon: 'boomerang',
     texture: 'player',
-    emoji: '🍌',
     passiveType: 'damage',
     passiveValue: 1.05,
-    passiveDesc: '+5% Weapon Damage/nivel'
+    passiveDesc: '+5% Daño/niv'
   },
   {
-    id: 'jellyfish',
-    name: 'Medusin',
+    name: 'Medusa',
     desc: 'Daño por área',
     weapon: 'areaDamage',
     texture: 'player_jellyfish',
-    emoji: '🎐',
     passiveType: 'regen',
     passiveValue: 5,
-    passiveDesc: '+5 HP Regen/nivel'
+    passiveDesc: '+5 HP/niv'
   },
   {
-    id: 'orb',
-    name: 'Lab Studio',
+    name: 'Orbe',
     desc: 'Bolas orbitales',
     weapon: 'orbitingBall',
     texture: 'player_orb',
-    emoji: '🔮',
     passiveType: 'crit',
     passiveValue: 0.02,
-    passiveDesc: '+2% Crit Chance/nivel'
+    passiveDesc: '+2% Crit/niv'
   },
   {
-    id: 'bullettrain',
     name: 'Tren Bala',
     desc: 'Disparos rápidos',
     weapon: 'projectile',
     texture: 'player_bullettrain',
-    emoji: '🚄',
     passiveType: 'speed',
     passiveValue: 1.03,
-    passiveDesc: '+3% Velocidad/nivel'
+    passiveDesc: '+3% Vel/niv'
   }
 ];
 
@@ -150,7 +133,6 @@ let boomerangs = [];
 let availableBoomerangs = 0;
 let boomerangShootTimer = 0;
 
-// Player stats
 let stats = {
   hp: 100,
   maxHp: 100,
@@ -167,7 +149,6 @@ let stats = {
   enemiesKilled: 0
 };
 
-// Difficulty scaling
 let difficulty = {
   spawnRate: 2000,
   enemyHp: 20,
@@ -175,17 +156,14 @@ let difficulty = {
   enemySpeed: 80
 };
 
-// UI elements
 let ui = {};
 let statsPanel = null;
 let wasPausedBeforeStats = false;
 
-// Helper to get weapon by id
 function getWeapon(id) {
   return weaponTypes.find(w => w.id === id);
 }
 
-// Upgrade options (organized by category)
 const playerUpgrades = [
   { id: 'speed', name: 'Speed', desc: '+15% Move Speed', icon: '👟', maxLevel: 8, apply: () => { stats.speed *= 1.15; upgradeLevels['speed'] = (upgradeLevels['speed'] || 0) + 1; } },
   { id: 'maxhp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: 10, apply: () => { stats.maxHp += 20; stats.hp += 20; upgradeLevels['maxhp'] = (upgradeLevels['maxhp'] || 0) + 1; } },
@@ -224,7 +202,6 @@ const boomerangUpgrades = [
   { id: 'boomerangcount', name: 'More Boomerangs', desc: '+1 Boomerang', icon: '🪃', weaponId: 'boomerang', maxLevel: 5, apply: () => { getWeapon('boomerang').count++; availableBoomerangs++; upgradeLevels['boomerangcount'] = (upgradeLevels['boomerangcount'] || 0) + 1; } }
 ];
 
-// Rare upgrades (more powerful versions)
 const rareUpgrades = [
   { id: 'rare_tripleshot', name: 'Triple Shot', desc: '+3 Projectiles', icon: '🔫🔫', weaponId: 'projectile', maxLevel: 2, apply: () => { getWeapon('projectile').count += 3; upgradeLevels['rare_tripleshot'] = (upgradeLevels['rare_tripleshot'] || 0) + 1; } },
   { id: 'rare_rapidfire', name: 'Rapid Fire', desc: '-40% Fire Delay', icon: '⚡⚡', weaponId: 'projectile', maxLevel: 3, apply: () => { getWeapon('projectile').fireRate = Math.max(100, getWeapon('projectile').fireRate * 0.6); upgradeLevels['rare_rapidfire'] = (upgradeLevels['rare_rapidfire'] || 0) + 1; } },
