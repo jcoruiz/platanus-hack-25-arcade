@@ -123,6 +123,8 @@ let stats = {
   hpRegen: 0,
   xpMultiplier: 1.0,
   lootChance: 1.0,
+  critChance: 0.05,
+  critDamage: 1.5,
   xp: 0,
   level: 1,
   xpToNext: 10,
@@ -152,7 +154,9 @@ const playerUpgrades = [
   { id: 'knockback', name: 'Knockback', desc: '+30% Enemy Pushback', icon: '💨', maxLevel: 6, apply: () => { stats.knockback *= 1.3; upgradeLevels['knockback'] = (upgradeLevels['knockback'] || 0) + 1; } },
   { id: 'hpregen', name: 'HP Regen', desc: '+10 HP/min', icon: '💚', maxLevel: 10, apply: () => { stats.hpRegen += 10; upgradeLevels['hpregen'] = (upgradeLevels['hpregen'] || 0) + 1; } },
   { id: 'xpboost', name: 'XP Boost', desc: '+50% XP Gain', icon: '⭐', maxLevel: 8, apply: () => { stats.xpMultiplier += 0.5; upgradeLevels['xpboost'] = (upgradeLevels['xpboost'] || 0) + 1; } },
-  { id: 'loot', name: 'Luck', desc: '+50% Chest Drop Rate', icon: '🍀', maxLevel: 10, apply: () => { stats.lootChance += 0.5; upgradeLevels['loot'] = (upgradeLevels['loot'] || 0) + 1; } }
+  { id: 'loot', name: 'Luck', desc: '+50% Chest Drop Rate', icon: '🍀', maxLevel: 10, apply: () => { stats.lootChance += 0.5; upgradeLevels['loot'] = (upgradeLevels['loot'] || 0) + 1; } },
+  { id: 'critchance', name: 'Crit Chance', desc: '+5% Crit Probability', icon: '🎯', maxLevel: 10, apply: () => { stats.critChance += 0.05; upgradeLevels['critchance'] = (upgradeLevels['critchance'] || 0) + 1; } },
+  { id: 'critdamage', name: 'Crit Damage', desc: '+25% Crit Multiplier', icon: '💢', maxLevel: 10, apply: () => { stats.critDamage += 0.25; upgradeLevels['critdamage'] = (upgradeLevels['critdamage'] || 0) + 1; } }
 ];
 
 const projectileUpgrades = [
@@ -724,16 +728,22 @@ function spawnEnemy() {
 function hitEnemy(proj, enemy) {
   if (!enemy.active || !proj.active) return;
 
-  const projDamage = proj.getData('damage') || 10;
+  let projDamage = proj.getData('damage') || 10;
   const projPenetration = proj.getData('penetration') || 0;
   const projHits = proj.getData('hits') || 0;
+
+  // Check for critical hit
+  const isCrit = Math.random() < stats.critChance;
+  if (isCrit) {
+    projDamage *= stats.critDamage;
+  }
 
   // Apply damage to enemy
   const hp = enemy.getData('hp') - projDamage;
   enemy.setData('hp', hp);
 
   // Apply damage feedback (visual + knockback)
-  applyDamageFeedback(enemy, proj.x, proj.y);
+  applyDamageFeedback(enemy, proj.x, proj.y, isCrit);
 
   // Increment projectile hit count
   proj.setData('hits', projHits + 1);
@@ -2087,12 +2097,19 @@ function hitEnemyWithBall(ball, enemy) {
   lastHitTimes[enemyId] = now;
   ball.setData('lastHitTime', lastHitTimes);
 
+  // Check for critical hit
+  const isCrit = Math.random() < stats.critChance;
+  let damage = weapon.damage;
+  if (isCrit) {
+    damage *= stats.critDamage;
+  }
+
   // Apply damage
-  const hp = enemy.getData('hp') - weapon.damage;
+  const hp = enemy.getData('hp') - damage;
   enemy.setData('hp', hp);
 
   // Apply damage feedback (visual + knockback)
-  applyDamageFeedback(enemy, ball.x, ball.y);
+  applyDamageFeedback(enemy, ball.x, ball.y, isCrit);
 
   playTone(scene, 1100, 0.05);
 
@@ -2152,12 +2169,19 @@ function updateAreaDamage(delta) {
       if (dist <= weapon.radius) {
         hitAnyEnemy = true;
 
+        // Check for critical hit
+        const isCrit = Math.random() < stats.critChance;
+        let damage = weapon.dps;
+        if (isCrit) {
+          damage *= stats.critDamage;
+        }
+
         // Apply damage
-        const hp = enemy.getData('hp') - weapon.dps;
+        const hp = enemy.getData('hp') - damage;
         enemy.setData('hp', hp);
 
         // Apply damage feedback (visual + knockback)
-        applyDamageFeedback(enemy, player.x, player.y);
+        applyDamageFeedback(enemy, player.x, player.y, isCrit);
 
         if (hp <= 0) {
           playTone(scene, 660, 0.1);
@@ -2189,22 +2213,33 @@ function updateAreaDamage(delta) {
   }
 }
 
-function applyDamageFeedback(enemy, sourceX, sourceY) {
+function applyDamageFeedback(enemy, sourceX, sourceY, isCrit = false) {
   if (!enemy.active) return;
 
-  // Apply red tint fill (completely fills sprite with red, more visible)
-  enemy.setTintFill(0xff0000);
-
-  // Restore original appearance after 100ms
-  scene.time.delayedCall(100, () => {
-    if (enemy && enemy.active) {
-      enemy.clearTint();
-    }
-  });
+  // Apply tint based on crit (yellow for crit, red for normal)
+  if (isCrit) {
+    enemy.setTintFill(0xffff00);
+    // Scale up briefly for crit
+    const originalScale = enemy.scaleX;
+    enemy.setScale(originalScale * 1.3);
+    scene.time.delayedCall(100, () => {
+      if (enemy && enemy.active) {
+        enemy.clearTint();
+        enemy.setScale(originalScale);
+      }
+    });
+  } else {
+    enemy.setTintFill(0xff0000);
+    scene.time.delayedCall(100, () => {
+      if (enemy && enemy.active) {
+        enemy.clearTint();
+      }
+    });
+  }
 
   // Calculate knockback direction (away from source)
   const angle = Phaser.Math.Angle.Between(sourceX, sourceY, enemy.x, enemy.y);
-  const knockbackForce = stats.knockback;
+  const knockbackForce = isCrit ? stats.knockback * 1.5 : stats.knockback;
 
   // Set knockback state (enemy won't update velocity for 150ms)
   enemy.setData('knockbackUntil', gameTime + 150);
