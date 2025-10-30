@@ -18,7 +18,7 @@ new Phaser.Game(config);
 // Game state
 let player, cursors, enemies, projectiles, xpOrbs, obstacles, weaponChests, upgradeChests, magnets, graphics;
 let areaDamageCircle = null;
-let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true;
+let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, showStats = false;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
 let nextWaveTime = 60000, nextBossTime = 120000;
@@ -141,6 +141,8 @@ let difficulty = {
 
 // UI elements
 let ui = {};
+let statsPanel = null;
+let wasPausedBeforeStats = false;
 
 // Helper to get weapon by id
 function getWeapon(id) {
@@ -504,6 +506,12 @@ function create() {
     if (gameOver) restartGame();
   });
 
+  // Keyboard for stats panel
+  const sKey = this.input.keyboard.addKey('S');
+  sKey.on('down', () => {
+    if (!gameOver && !startScreen) toggleStatsPanel();
+  });
+
   // Pause physics until weapon is selected
   this.physics.pause();
 
@@ -515,7 +523,7 @@ function create() {
 }
 
 function update(_time, delta) {
-  if (gameOver || levelingUp || selectingWeapon || startScreen) return;
+  if (gameOver || levelingUp || selectingWeapon || startScreen || showStats) return;
 
   gameTime += delta;
   shootTimer += delta;
@@ -1648,6 +1656,13 @@ function createUI() {
     fontFamily: 'Arial',
     color: '#00ffff'
   }).setScrollFactor(0);
+
+  // Stats indicator
+  ui.statsHint = scene.add.text(700, 580, '[S] Stats', {
+    fontSize: '14px',
+    fontFamily: 'Arial',
+    color: '#888888'
+  }).setScrollFactor(0).setDepth(10);
 }
 
 function updateUI() {
@@ -2249,6 +2264,138 @@ function applyDamageFeedback(enemy, sourceX, sourceY, isCrit = false) {
     Math.cos(angle) * knockbackForce,
     Math.sin(angle) * knockbackForce
   );
+}
+
+function toggleStatsPanel() {
+  showStats = !showStats;
+
+  if (showStats) {
+    // Opening stats panel
+    // Save if game was already paused (levelingUp or selectingWeapon)
+    wasPausedBeforeStats = levelingUp || selectingWeapon;
+
+    // Pause the game
+    scene.physics.pause();
+
+    // Create the panel
+    createStatsPanel();
+  } else if (statsPanel) {
+    // Closing stats panel
+    statsPanel.forEach(el => el.destroy());
+    statsPanel = null;
+
+    // Resume game only if it wasn't paused before (no active menus)
+    if (!wasPausedBeforeStats && !levelingUp && !selectingWeapon) {
+      scene.physics.resume();
+    }
+  }
+}
+
+function createStatsPanel() {
+  if (statsPanel) {
+    statsPanel.forEach(el => el.destroy());
+  }
+
+  statsPanel = [];
+
+  // Background overlay
+  const bg = scene.add.graphics();
+  bg.fillStyle(0x000000, 0.85);
+  bg.fillRoundedRect(50, 50, 700, 500, 10);
+  bg.lineStyle(3, 0xffaa00, 1);
+  bg.strokeRoundedRect(50, 50, 700, 500, 10);
+  bg.setScrollFactor(0);
+  bg.setDepth(150);
+  statsPanel.push(bg);
+
+  // Title
+  const title = scene.add.text(400, 75, 'STATS [S to close]', {
+    fontSize: '28px',
+    fontFamily: 'Arial',
+    color: '#ffaa00',
+    fontStyle: 'bold'
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+  statsPanel.push(title);
+
+  // Player Stats
+  let y = 120;
+  const addStat = (label, value, color = '#ffffff') => {
+    const t = scene.add.text(80, y, `${label}: ${value}`, {
+      fontSize: '16px',
+      fontFamily: 'Arial',
+      color: color
+    }).setScrollFactor(0).setDepth(151);
+    statsPanel.push(t);
+    y += 25;
+  };
+
+  // Character info
+  if (selectedCharacter) {
+    addStat(`Character: ${selectedCharacter.name}`, '', '#ffff00');
+  }
+
+  addStat('HP', `${Math.floor(stats.hp)}/${stats.maxHp}`, '#ff6666');
+  addStat('Speed', Math.floor(stats.speed), '#66ff66');
+  addStat('Knockback', Math.floor(stats.knockback), '#66ccff');
+  addStat('HP Regen', `${stats.hpRegen}/min`, '#88ff88');
+  addStat('XP Multiplier', `${stats.xpMultiplier.toFixed(1)}x`, '#ffff66');
+  addStat('Luck', `${stats.lootChance.toFixed(1)}x`, '#66ffcc');
+  addStat('Crit Chance', `${(stats.critChance * 100).toFixed(0)}%`, '#ff88ff');
+  addStat('Crit Damage', `${stats.critDamage.toFixed(2)}x`, '#ff66ff');
+  addStat('Level', stats.level, '#aaaaff');
+  addStat('Enemies Killed', stats.enemiesKilled, '#ffaa66');
+
+  // Weapons Section
+  y += 10;
+  const weaponsTitle = scene.add.text(80, y, 'WEAPONS:', {
+    fontSize: '20px',
+    fontFamily: 'Arial',
+    color: '#ffaa00',
+    fontStyle: 'bold'
+  }).setScrollFactor(0).setDepth(151);
+  statsPanel.push(weaponsTitle);
+  y += 30;
+
+  // Show each unlocked weapon
+  weaponTypes.forEach(weapon => {
+    if (weapon.unlocked) {
+      const wTitle = scene.add.text(100, y, weapon.name, {
+        fontSize: '18px',
+        fontFamily: 'Arial',
+        color: '#ffdd00',
+        fontStyle: 'bold'
+      }).setScrollFactor(0).setDepth(151);
+      statsPanel.push(wTitle);
+      y += 22;
+
+      if (weapon.id === 'projectile') {
+        const w = scene.add.text(120, y, `Count: ${weapon.count} | Fire Rate: ${weapon.fireRate}ms | Damage: ${weapon.damage} | Penetration: ${weapon.penetration}`, {
+          fontSize: '14px',
+          fontFamily: 'Arial',
+          color: '#cccccc'
+        }).setScrollFactor(0).setDepth(151);
+        statsPanel.push(w);
+        y += 20;
+      } else if (weapon.id === 'orbitingBall') {
+        const w = scene.add.text(120, y, `Count: ${weapon.count} | Rot Speed: ${weapon.rotSpeed} | Radius: ${weapon.radius} | Ball Size: ${weapon.ballRadius} | Damage: ${weapon.damage}`, {
+          fontSize: '14px',
+          fontFamily: 'Arial',
+          color: '#cccccc'
+        }).setScrollFactor(0).setDepth(151);
+        statsPanel.push(w);
+        y += 20;
+      } else if (weapon.id === 'areaDamage') {
+        const w = scene.add.text(120, y, `Radius: ${weapon.radius} | DPS: ${weapon.dps} | Tick Rate: ${weapon.tickRate}ms`, {
+          fontSize: '14px',
+          fontFamily: 'Arial',
+          color: '#cccccc'
+        }).setScrollFactor(0).setDepth(151);
+        statsPanel.push(w);
+        y += 20;
+      }
+      y += 5;
+    }
+  });
 }
 
 function playTone(sceneRef, frequency, duration) {
