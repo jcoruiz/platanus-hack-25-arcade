@@ -367,10 +367,8 @@ function preload() {
   });
 
   // Generic orb texture with glow (white for tinting)
-  g.fillStyle(C.W, 0.2);
+  g.fillStyle(C.W, 0.3);
   g.fillCircle(6, 6, 7);
-  g.fillStyle(C.W, 0.4);
-  g.fillCircle(6, 6, 6);
   g.fillStyle(C.W, 1);
   g.fillCircle(6, 6, 4);
   g.generateTexture('orb', 12, 12);
@@ -889,13 +887,11 @@ function hitPlayer(_pObj, enemy) {
 }
 
 function dropXP(x, y, xpValue) {
-  // Create using the group
   const orb = xo.create(x, y, 'orb');
   orb.setTint(C.Cy);
   orb.body.setCircle(5);
   orb.setData('xpValue', xpValue);
-  addGlowPulse(orb);
-  // XP orbs stay forever until collected
+  scene.tweens.add({targets: orb, scale: 1.15, duration: 800, yoyo: true, repeat: -1});
 }
 
 function collectXP(_pObj, orb) {
@@ -915,18 +911,7 @@ function dropCoin(x, y, coinValue) {
   coin.setTint(0xFFD700);
   coin.body.setCircle(6);
   coin.setData('coinValue', coinValue);
-  addGlowPulse(coin);
-}
-
-function addGlowPulse(sprite) {
-  scene.tweens.add({
-    targets: sprite,
-    scale: 1.15,
-    duration: 800,
-    yoyo: true,
-    repeat: -1,
-    ease: 'Sine.easeInOut'
-  });
+  scene.tweens.add({targets: coin, scale: 1.15, duration: 800, yoyo: true, repeat: -1});
 }
 
 function dropHealthHeal(x, y) {
