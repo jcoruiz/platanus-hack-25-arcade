@@ -1503,40 +1503,43 @@ function showRareUpg() {
 }
 
 function showMainMenu() {
-  const ov = scene.add.graphics();
-  ov.fillStyle(C.B, 0.95).fillRect(0, 0, 800, 600).setScrollFactor(0).setDepth(100);
+  scene.add.graphics().fillStyle(C.B, 0.95).fillRect(0, 0, 800, 600).setScrollFactor(0).setDepth(100);
   mkTxt(400, 120, 'BULLET HEAVEN', {[F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8}, 101);
   mkTxt(400, 200, 'Survive the endless waves', {[F]: '20px', [FF]: A, [CO]: CS.LG}, 101);
 
-  // Helper: draw button rect
-  const dr = (g, x, y, c) => {
-    g.clear().fillStyle(c, 1).fillRoundedRect(x, y, 300, 60, 10).lineStyle(4, c === C.DD ? C.G : C.Y, 1).strokeRoundedRect(x, y, 300, 60, 10);
+  selectedIndex = 0;
+  const opts = [
+    {y: 300, txt: 'START', fn: () => { mainMenu = false; showStartScreen(); }},
+    {y: 400, txt: 'LEADERBOARD', fn: showFullLeaderboard}
+  ];
+
+  const dr = (i) => {
+    const g = opts[i].g;
+    const s = i === selectedIndex;
+    g.clear().fillStyle(s ? C.DB : C.DD, 1).fillRoundedRect(250, opts[i].y, 300, 60, 10).lineStyle(4, s ? C.Y : C.DG, 1).strokeRoundedRect(250, opts[i].y, 300, 60, 10);
   };
 
-  // Start button
-  const b1 = scene.add.graphics().setScrollFactor(0).setDepth(101).setInteractive(new Phaser.Geom.Rectangle(250, 300, 300, 60), Phaser.Geom.Rectangle.Contains);
-  dr(b1, 250, 300, C.DD);
-  mkTxt(400, 330, 'START', {[F]: '32px', [FF]: A, [CO]: CS.W, [FST]: 'bold'}, 102);
-  b1.on('pointerdown', () => {
-    playTone(scene, 1200, 0.15);
-    scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
-    mainMenu = false;
-    showStartScreen();
+  opts.forEach((o, i) => {
+    o.g = scene.add.graphics().setScrollFactor(0).setDepth(101);
+    dr(i);
+    mkTxt(400, o.y + 30, o.txt, {[F]: '32px', [FF]: A, [CO]: CS.W, [FST]: 'bold'}, 102);
   });
-  b1.on('pointerover', () => { dr(b1, 250, 300, C.DB); playTone(scene, 600, 0.05); });
-  b1.on('pointerout', () => dr(b1, 250, 300, C.DD));
 
-  // Leaderboard button
-  const b2 = scene.add.graphics().setScrollFactor(0).setDepth(101).setInteractive(new Phaser.Geom.Rectangle(250, 400, 300, 60), Phaser.Geom.Rectangle.Contains);
-  dr(b2, 250, 400, C.DD);
-  mkTxt(400, 430, 'LEADERBOARD', {[F]: '32px', [FF]: A, [CO]: CS.W, [FST]: 'bold'}, 102);
-  b2.on('pointerdown', () => {
+  const uk = scene.input.keyboard.addKey('UP');
+  const dk = scene.input.keyboard.addKey('DOWN');
+  const ek = scene.input.keyboard.addKey('ENTER');
+
+  uk.on('down', () => { selectedIndex = (selectedIndex - 1 + opts.length) % opts.length; opts.forEach((o, i) => dr(i)); playTone(scene, 800, 0.05); });
+  dk.on('down', () => { selectedIndex = (selectedIndex + 1) % opts.length; opts.forEach((o, i) => dr(i)); playTone(scene, 800, 0.05); });
+  ek.on('down', () => {
     playTone(scene, 1200, 0.15);
     scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
-    showFullLeaderboard();
+    menuKeys.forEach(k => k.removeAllListeners());
+    menuKeys = [];
+    opts[selectedIndex].fn();
   });
-  b2.on('pointerover', () => { dr(b2, 250, 400, C.DB); playTone(scene, 600, 0.05); });
-  b2.on('pointerout', () => dr(b2, 250, 400, C.DD));
+
+  menuKeys.push(uk, dk, ek);
 }
 
 function showFullLeaderboard() {
@@ -1561,194 +1564,82 @@ function showFullLeaderboard() {
     });
   }
 
-  // Back button helper
-  const db = (g, c) => g.clear().fillStyle(c, 1).fillRoundedRect(300, 520, 200, 50, 10).lineStyle(3, C.Y, 1).strokeRoundedRect(300, 520, 200, 50, 10);
+  mkTxt(400, 540, 'Press ENTER to go back', {[F]: '16px', [FF]: A, [CO]: CS.LG}, 151);
 
-  const bb = scene.add.graphics().setScrollFactor(0).setDepth(151).setInteractive(new Phaser.Geom.Rectangle(300, 520, 200, 50), Phaser.Geom.Rectangle.Contains);
-  db(bb, C.DD);
-  mkTxt(400, 545, 'BACK', {[F]: '24px', [FF]: A, [CO]: CS.W, [FST]: 'bold'}, 152);
-  bb.on('pointerdown', () => {
+  const ek = scene.input.keyboard.addKey('ENTER');
+  ek.on('down', () => {
     playTone(scene, 1000, 0.15);
     scene.children.list.filter(c => c.depth >= 150).forEach(c => c.destroy());
+    ek.removeAllListeners();
     showMainMenu();
   });
-  bb.on('pointerover', () => { db(bb, C.DB); playTone(scene, 600, 0.05); });
-  bb.on('pointerout', () => db(bb, C.DD));
 }
 
 function showStartScreen() {
-  // Semi-transparent overlay
-  const overlay = scene.add.graphics();
-  overlay.fillStyle(C.B, 0.9);
-  overlay.fillRect(0, 0, 800, 600);
-  overlay.setScrollFactor(0);
-  overlay.setDepth(100);
+  scene.add.graphics().fillStyle(C.B, 0.9).fillRect(0, 0, 800, 600).setScrollFactor(0).setDepth(100);
+  mkTxt(400, 60, 'Choose your character', {[F]: '28px', [FF]: A, [CO]: CS.W, [FST]: 'bold'}, 101);
 
-  // Title
-  const title = mkTxt(400, 80, 'BULLET HEAVEN', {[F]: '48px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 6});
-
-  // Subtitle
-  mkTxt(400, 140, 'Choose your character', {[F]: '24px', [FF]: A, [CO]: CS.W});
-
-  // Top 5 Leaderboard on right side
-  const leaderboardX = 650;
-  const leaderboardY = 200;
-
-  mkTxt(leaderboardX, leaderboardY, 'TOP SCORES', {[F]: '20px', [FF]: A, [CO]: CS.Go, [FST]: 'bold', [STR]: CS.B, [STT]: 3});
-
-  const entries = loadLeaderboard();
-  const top5 = entries.slice(0, 5);
-
-  if (top5.length === 0) {
-    mkTxt(leaderboardX, leaderboardY + 40, 'No scores yet!', {[F]: '14px', [FF]: A, [CO]: CS.Gy, align: 'center'});
-  } else {
-    top5.forEach((entry, i) => {
-      let color = CS.W;
-      if (i === 0) color = CS.Go; // Gold
-      else if (i === 1) color = CS.Si; // Silver
-      else if (i === 2) color = CS.Br; // Bronze
-
-      const yPos = leaderboardY + 40 + (i * 28);
-
-      // Rank and name
-      scene.add.text(leaderboardX - 60, yPos, `${i + 1}. ${entry.name}`, {
-        [F]: '16px',
-        [FF]: A,
-        [CO]: color,
-        [FST]: 'bold'
-      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(101);
-
-      // Kills count
-      scene.add.text(leaderboardX + 70, yPos, entry.kills.toString(), {
-        [F]: '16px',
-        [FF]: A,
-        [CO]: color,
-        [FST]: 'bold'
-      }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(101);
-    });
-  }
-
-  // Reset menu state
   selectedIndex = 0;
   menuOptions = [];
 
-  const selectCharacter = (character) => {
+  // Helper: draw character card
+  const dc = (g, x, y, s) => {
+    g.clear().fillStyle(s ? C.DB : C.DD, 1).fillRoundedRect(x - 70, y - 80, 140, 160, 8).lineStyle(3, s ? C.Y : C.DG, 1).strokeRoundedRect(x - 70, y - 80, 140, 160, 8);
+  };
+
+  const sel = (ch) => {
     playTone(scene, 1500, 0.2);
-
-    // Set selected character
-    selCh = character;
-
-    // Change p texture
-    p.setTexture(character.texture);
-
-    // Get and unlock character's weapon
-    const weapon = weaponTypes.find(w => w.i === character.weapon);
-    if (weapon) {
-      weapon.u = true;
-
-      // Initialize weapon if needed
-      if (weapon.i === 'o') {
-        initOrbBalls();
-      } else if (weapon.i === 'a') {
-        initAreaDamage();
-      } else if (weapon.i === 'b') {
-        initBoom();
-      }
+    selCh = ch;
+    p.setTexture(ch.texture);
+    const w = weaponTypes.find(w => w.i === ch.weapon);
+    if (w) {
+      w.u = true;
+      if (w.i === 'o') initOrbBalls();
+      else if (w.i === 'a') initAreaDamage();
+      else if (w.i === 'b') initBoom();
     }
-
-    // Clean up menu
-    overlay.destroy();
-    title.destroy();
     scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
-
-    // Remove keyboard listeners
     menuKeys.forEach(k => k.removeAllListeners());
     menuKeys = [];
-
-    // Resume physics and start game
     scene.physics.resume();
     startScreen = false;
   };
 
-  const updateSelection = () => {
-    menuOptions.forEach((option, i) => {
-      const isSelected = i === selectedIndex;
-      option.btn.clear();
-      option.btn.fillStyle(isSelected ? C.DB : C.DD, 1);
-      option.btn.fillRoundedRect(option.x - 90, option.y - 100, 180, 200, 10);
-      option.btn.lineStyle(4, isSelected ? C.Y : C.DG, 1);
-      option.btn.strokeRoundedRect(option.x - 90, option.y - 100, 180, 200, 10);
-    });
-  };
+  const upd = () => menuOptions.forEach((o, i) => dc(o.btn, o.x, o.y, i === selectedIndex));
 
-  // Show characters
-  characters.forEach((character, i) => {
-    const x = 100 + i * 200;
-    const y = 350;
-
-    // Button background
-    const btn = scene.add.graphics();
-    btn.fillStyle(C.DD, 1);
-    btn.fillRoundedRect(x - 90, y - 100, 180, 200, 10);
-    btn.lineStyle(4, C.DG, 1);
-    btn.strokeRoundedRect(x - 90, y - 100, 180, 200, 10);
-    btn.setScrollFactor(0);
-    btn.setDepth(101);
-    btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 100, 180, 200), Phaser.Geom.Rectangle.Contains);
-
-    // Character sprite
-    const sprite = scene.add.sprite(x, y - 40, character.texture);
-    sprite.setScale(2);
-    sprite.setScrollFactor(0);
-    sprite.setDepth(102);
-
-    // Character name
-    mkTxt(x, y + 20, character.name, {[F]: '22px', [FF]: A, [CO]: CS.W, [FST]: 'bold', align: 'center'}, 102);
-
-    // Description
-    mkTxt(x, y + 50, character.desc, {[F]: '14px', [FF]: A, [CO]: CS.LG, wordWrap: { width: 160, useAdvancedWrap: true }, align: 'center'}, 102);
-
-    // Passive ability
-    mkTxt(x, y + 75, character.passiveDesc, {[F]: '12px', [FF]: A, [CO]: '#00ff88', wordWrap: { width: 160, useAdvancedWrap: true }, align: 'center'}, 102);
-
-    // Store option reference
-    menuOptions.push({ btn, character, x, y });
-
-    // Click handler
-    btn.on('pointerdown', () => selectCharacter(character));
-
-    // Hover effect
-    btn.on('pointerover', () => {
-      selectedIndex = i;
-      updateSelection();
-    });
+  characters.forEach((ch, i) => {
+    const x = 120 + i * 160;
+    const y = 280;
+    const btn = scene.add.graphics().setScrollFactor(0).setDepth(101);
+    dc(btn, x, y, 0);
+    scene.add.sprite(x, y - 30, ch.texture).setScale(1.5).setScrollFactor(0).setDepth(102);
+    mkTxt(x, y + 15, ch.name, {[F]: '18px', [FF]: A, [CO]: CS.W, [FST]: 'bold'}, 102);
+    mkTxt(x, y + 38, ch.desc, {[F]: '12px', [FF]: A, [CO]: CS.LG}, 102);
+    mkTxt(x, y + 58, ch.passiveDesc, {[F]: '10px', [FF]: A, [CO]: '#0f8'}, 102);
+    menuOptions.push({ btn, character: ch, x, y });
   });
 
-  // Initial selection highlight
-  updateSelection();
+  upd();
 
-  // Keyboard controls
-  const leftKey = scene.input.keyboard.addKey('LEFT');
-  const rightKey = scene.input.keyboard.addKey('RIGHT');
-  const enterKey = scene.input.keyboard.addKey('ENTER');
+  mkTxt(400, 510, 'LEFT/RIGHT: Navigate  ENTER: Select  ESC: Back', {[F]: '14px', [FF]: A, [CO]: CS.LG}, 101);
 
-  leftKey.on('down', () => {
-    selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
-    updateSelection();
-    playTone(scene, 800, 0.05);
+  const lk = scene.input.keyboard.addKey('LEFT');
+  const rk = scene.input.keyboard.addKey('RIGHT');
+  const ek = scene.input.keyboard.addKey('ENTER');
+  const bk = scene.input.keyboard.addKey('ESC');
+
+  lk.on('down', () => { selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length; upd(); playTone(scene, 800, 0.05); });
+  rk.on('down', () => { selectedIndex = (selectedIndex + 1) % menuOptions.length; upd(); playTone(scene, 800, 0.05); });
+  ek.on('down', () => sel(menuOptions[selectedIndex].character));
+  bk.on('down', () => {
+    playTone(scene, 1000, 0.15);
+    scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
+    menuKeys.forEach(k => k.removeAllListeners());
+    menuKeys = [];
+    showMainMenu();
   });
 
-  rightKey.on('down', () => {
-    selectedIndex = (selectedIndex + 1) % menuOptions.length;
-    updateSelection();
-    playTone(scene, 800, 0.05);
-  });
-
-  enterKey.on('down', () => {
-    selectCharacter(menuOptions[selectedIndex].character);
-  });
-
-  menuKeys.push(leftKey, rightKey, enterKey);
+  menuKeys.push(lk, rk, ek, bk);
 }
 
 function createUI() {
