@@ -16,7 +16,7 @@ new Phaser.Game(config);
 let p, cr, en, pr, xo, co, ob, wc, uc, mg, hd, gr;
 // adc=areaDamageCircle
 let adc = null;
-let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, showStats = false, paused = false;
+let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, showStats = false, paused = false, mainMenu = true;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
 let nextWaveTime = 60000, nextBossTime = 120000;
@@ -551,15 +551,15 @@ function create() {
   // Pause physics until weapon is selected
   this.physics.pause();
 
-  // Show start screen
-  showStartScreen();
+  // Show main menu
+  showMainMenu();
 
   // Start sound
   playTone(this, 440, 0.1);
 }
 
 function update(_time, delta) {
-  if (gameOver || levelingUp || selectingWeapon || startScreen || showStats || paused) return;
+  if (gameOver || levelingUp || selectingWeapon || startScreen || showStats || paused || mainMenu) return;
 
   gameTime += delta;
   shootTimer += delta;
@@ -1502,6 +1502,80 @@ function showRareUpg() {
   menuKeys.push(leftKey, rightKey, enterKey);
 }
 
+function showMainMenu() {
+  const ov = scene.add.graphics();
+  ov.fillStyle(C.B, 0.95).fillRect(0, 0, 800, 600).setScrollFactor(0).setDepth(100);
+  mkTxt(400, 120, 'BULLET HEAVEN', {[F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8}, 101);
+  mkTxt(400, 200, 'Survive the endless waves', {[F]: '20px', [FF]: A, [CO]: CS.LG}, 101);
+
+  // Helper: draw button rect
+  const dr = (g, x, y, c) => {
+    g.clear().fillStyle(c, 1).fillRoundedRect(x, y, 300, 60, 10).lineStyle(4, c === C.DD ? C.G : C.Y, 1).strokeRoundedRect(x, y, 300, 60, 10);
+  };
+
+  // Start button
+  const b1 = scene.add.graphics().setScrollFactor(0).setDepth(101).setInteractive(new Phaser.Geom.Rectangle(250, 300, 300, 60), Phaser.Geom.Rectangle.Contains);
+  dr(b1, 250, 300, C.DD);
+  mkTxt(400, 330, 'START', {[F]: '32px', [FF]: A, [CO]: CS.W, [FST]: 'bold'}, 102);
+  b1.on('pointerdown', () => {
+    playTone(scene, 1200, 0.15);
+    scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
+    mainMenu = false;
+    showStartScreen();
+  });
+  b1.on('pointerover', () => { dr(b1, 250, 300, C.DB); playTone(scene, 600, 0.05); });
+  b1.on('pointerout', () => dr(b1, 250, 300, C.DD));
+
+  // Leaderboard button
+  const b2 = scene.add.graphics().setScrollFactor(0).setDepth(101).setInteractive(new Phaser.Geom.Rectangle(250, 400, 300, 60), Phaser.Geom.Rectangle.Contains);
+  dr(b2, 250, 400, C.DD);
+  mkTxt(400, 430, 'LEADERBOARD', {[F]: '32px', [FF]: A, [CO]: CS.W, [FST]: 'bold'}, 102);
+  b2.on('pointerdown', () => {
+    playTone(scene, 1200, 0.15);
+    scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
+    showFullLeaderboard();
+  });
+  b2.on('pointerover', () => { dr(b2, 250, 400, C.DB); playTone(scene, 600, 0.05); });
+  b2.on('pointerout', () => dr(b2, 250, 400, C.DD));
+}
+
+function showFullLeaderboard() {
+  scene.add.graphics().fillStyle(C.B, 0.95).fillRect(0, 0, 800, 600).setScrollFactor(0).setDepth(150);
+  mkTxt(400, 60, 'TOP 10 LEADERBOARD', {[F]: '40px', [FF]: A, [CO]: CS.Go, [STR]: CS.B, [STT]: 6}, 151);
+  mkTxt(200, 130, '#', {[F]: '20px', [FF]: A, [CO]: '#aaa'}, 151);
+  mkTxt(350, 130, 'NAME', {[F]: '20px', [FF]: A, [CO]: '#aaa'}, 151);
+  mkTxt(550, 130, 'KILLS', {[F]: '20px', [FF]: A, [CO]: '#aaa'}, 151);
+  scene.add.graphics().lineStyle(2, 0x444444, 1).lineBetween(150, 150, 650, 150).setScrollFactor(0).setDepth(151);
+
+  const t10 = loadLeaderboard().slice(0, 10);
+  if (!t10.length) {
+    mkTxt(400, 300, 'No scores yet!', {[F]: '24px', [FF]: A, [CO]: CS.Gy}, 151);
+  } else {
+    t10.forEach((e, i) => {
+      const y = 180 + i * 35;
+      const c = [CS.Go, CS.Si, CS.Br][i] || CS.W;
+      const s = {[F]: '18px', [FF]: A, [CO]: c, [FST]: 'bold'};
+      scene.add.text(200, y, i + 1, s).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+      scene.add.text(350, y, e.name, s).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+      scene.add.text(550, y, e.kills, s).setOrigin(0.5).setScrollFactor(0).setDepth(151);
+    });
+  }
+
+  // Back button helper
+  const db = (g, c) => g.clear().fillStyle(c, 1).fillRoundedRect(300, 520, 200, 50, 10).lineStyle(3, C.Y, 1).strokeRoundedRect(300, 520, 200, 50, 10);
+
+  const bb = scene.add.graphics().setScrollFactor(0).setDepth(151).setInteractive(new Phaser.Geom.Rectangle(300, 520, 200, 50), Phaser.Geom.Rectangle.Contains);
+  db(bb, C.DD);
+  mkTxt(400, 545, 'BACK', {[F]: '24px', [FF]: A, [CO]: CS.W, [FST]: 'bold'}, 152);
+  bb.on('pointerdown', () => {
+    playTone(scene, 1000, 0.15);
+    scene.children.list.filter(c => c.depth >= 150).forEach(c => c.destroy());
+    showMainMenu();
+  });
+  bb.on('pointerover', () => { db(bb, C.DB); playTone(scene, 600, 0.05); });
+  bb.on('pointerout', () => db(bb, C.DD));
+}
+
 function showStartScreen() {
   // Semi-transparent overlay
   const overlay = scene.add.graphics();
@@ -1884,6 +1958,7 @@ function restartGame() {
   levelingUp = false;
   selectingWeapon = false;
   startScreen = true;
+  mainMenu = true;
   paused = false;
   gameTime = 0;
   shootTimer = 0;
