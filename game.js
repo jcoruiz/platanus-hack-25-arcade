@@ -19,13 +19,15 @@ let adc = null, idleTween = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, showStats = false, paused = false, mainMenu = true;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
-let nextWaveTime = 60000, nextBossTime = 120000;
+let nextWaveTime = 60000, nextBossTime = 10000;
 let warnAct = false;
 let scene;
 
 let selectedIndex = 0;
 let menuOptions = [];
 let menuKeys = [];
+let pulseTween = null;
+let pulseOverlay = null;
 // ul=upgradedLevels
 let ul = {};
 
@@ -219,6 +221,8 @@ function cleanupMenu(minDepth = 100) {
   scene.children.list.filter(c => c.depth >= minDepth).forEach(c => c[DS]());
   menuKeys.forEach(k => k.removeAllListeners());
   menuKeys = [];
+  if (pulseTween) { pulseTween.stop(); pulseTween = null; }
+  if (pulseOverlay) { pulseOverlay = null; }
 }
 
 // Helper: process damage with crit and feedback
@@ -240,14 +244,14 @@ function procDmg(enemy, srcX, srcY, baseDmg) {
 // Helper: spawn death particle explosion
 function spawnDeathParticles(x, y, color) {
   const emitter = scene.add.particles(x, y, 'orb', {
-    speed: { min: 50, max: 150 },
+    speed: { min: 30, max: 80 },
     angle: { min: 0, max: 360 },
-    scale: { start: 0.6, end: 0 },
-    lifespan: 600,
-    quantity: 8,
+    scale: { start: 1.0, end: 0 },
+    lifespan: 300,
+    quantity: 1,
     tint: color
   });
-  scene.time.delayedCall(700, () => emitter.destroy());
+  scene.time.delayedCall(400, () => emitter.destroy());
 }
 
 // Helper: handle enemy death and drops
@@ -1176,10 +1180,30 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   };
 
   const updateSelection = () => {
+    // Limpiar tween y overlay anteriores
+    if (pulseTween) { pulseTween.stop(); pulseTween = null; }
+    if (pulseOverlay) { pulseOverlay.destroy(); pulseOverlay = null; }
+
     menuOptions.forEach((opt, i) => {
       const sel = i === selectedIndex;
       opt.btn.clear().fillStyle(sel ? C.DB : C.VG, 1).fillRoundedRect(opt.x - 80, upgradeY - 10, 160, 110, 8);
       opt.btn.lineStyle(3, sel ? C.Y : C.G, 1).strokeRoundedRect(opt.x - 80, upgradeY - 10, 160, 110, 8);
+
+      // Efecto de pulso para opción seleccionada
+      if (sel) {
+        pulseOverlay = scene.add.graphics()[SSF](0)[SD](103);
+        pulseOverlay.fillStyle(C.P, 0.3);
+        pulseOverlay.fillRoundedRect(opt.x - 80, upgradeY - 10, 160, 110, 8);
+
+        pulseTween = scene.tweens.add({
+          targets: pulseOverlay,
+          alpha: { from: 0.3, to: 0.7 },
+          duration: 600,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+      }
     });
     const canRr = stats.coins >= rerollCost;
     const rrSel = selectedIndex === 3;
