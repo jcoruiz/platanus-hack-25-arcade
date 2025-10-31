@@ -935,6 +935,7 @@ function hitEnemy(proj, enemy) {
 }
 
 function hitPlayer(_pObj, enemy) {
+  if (gameOver) return;
   if (!enemy.active) return;
 
   // Check cooldown (prevent damage every frame)
@@ -1957,7 +1958,7 @@ function showNameEntry() {
   // Hints
   const hint1 = mkTxt(400, 380, '↑↓ Letter  ←→ Move  ⏎ OK', {[F]: '18px', [FF]: A, [CO]: '#aaaaaa'}, 151);
 
-  const hint2 = mkTxt(400, 410, 'Hold ENTER to Submit Name', {[F]: '18px', [FF]: A, [CO]: '#ffaa00'}, 151);
+  const hint2 = mkTxt(400, 410, 'Press ENTER to Submit Name', {[F]: '18px', [FF]: A, [CO]: '#ffaa00'}, 151);
 
   updateBoxes();
 
@@ -1967,8 +1968,6 @@ function showNameEntry() {
   const leftKey = scene.input.keyboard.addKey('LEFT');
   const rightKey = scene.input.keyboard.addKey('RIGHT');
   const enterKey = scene.input.keyboard.addKey('ENTER');
-
-  let enterHoldTime = 0;
 
   upKey.on('down', () => {
     charIndex = (charIndex + 1) % CHARS.length;
@@ -2018,19 +2017,12 @@ function showNameEntry() {
   };
 
   enterKey.on('down', () => {
-    enterHoldTime = Date.now();
-  });
-
-  enterKey.on('up', () => {
-    const holdDuration = Date.now() - enterHoldTime;
-    if (holdDuration >= 500) {
-      const finalName = name.join('').trim();
-      if (finalName.length > 0) {
-        cleanup();
-        playTone(scene, 1200, 0.2);
-        const position = addToLeaderboard(name.join(''), stats.enKilled);
-        showLeaderboard(position);
-      }
+    const finalName = name.join('').trim();
+    if (finalName.length > 0) {
+      cleanup();
+      playTone(scene, 1200, 0.2);
+      const position = addToLeaderboard(name.join(''), stats.enKilled);
+      showLeaderboard(position);
     }
   });
 }
