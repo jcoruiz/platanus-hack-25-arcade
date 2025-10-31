@@ -1139,41 +1139,40 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
 
   // Header: Hero sprite + Title + Coins
   const hero = scene.add.sprite(70, 70, selCh.texture).setScale(3).setScrollFactor(0).setDepth(102);
-  mkTxt(350, 40, `CHARACTER SHEET - LEVEL ${stats.level}`, {[F]: '24px', [FF]: A, [CO]: CS.Y}, 102);
-  mkTxt(700, 40, `Coins: ${stats.coins}`, {[F]: '18px', [FF]: A, [CO]: CS.Go}, 102);
+  mkTxt(400, 40, `CHARACTER SHEET - LEVEL ${stats.level}`, {[F]: '24px', [FF]: A, [CO]: CS.Y}, 102);
+  mkTxt(680, 40, `Coins: ${stats.coins}`, {[F]: '18px', [FF]: A, [CO]: CS.Go}, 102);
 
-  // Player upgrades section
+  // Player upgrades section (simplified: only icon + level)
   const pUpgs = getPlayerUpgrades();
   if (pUpgs.length > 0) {
-    mkTxt(200, 100, '▸ Player Upgrades:', {[F]: '16px', [FF]: A, [CO]: CS.Cy}, 102);
-    pUpgs.slice(0, 6).forEach((pu, i) => {
-      const x = 200 + (i % 3) * 120;
-      const y = 130 + Math.floor(i / 3) * 70;
+    mkTxt(180, 105, '▸ Player Upgrades:', {[F]: '16px', [FF]: A, [CO]: CS.Cy}, 102);
+    pUpgs.slice(0, 8).forEach((pu, i) => {
+      const x = 180 + (i % 4) * 100;
+      const y = 135 + Math.floor(i / 4) * 65;
       const g = scene.add.graphics().setScrollFactor(0).setDepth(101);
-      g.fillStyle(C.VG, 1).fillRoundedRect(x - 50, y - 25, 100, 50, 5);
-      g.lineStyle(2, C.Cy, 1).strokeRoundedRect(x - 50, y - 25, 100, 50, 5);
-      mkTxt(x - 30, y - 5, pu.u.icon, {[F]: '20px'}, 102);
-      mkTxt(x + 10, y - 10, pu.u.name, {[F]: '12px', [FF]: A, [CO]: CS.W}, 102);
-      mkTxt(x + 10, y + 8, `[${pu.lv}/${pu.u.maxLevel}]`, {[F]: '10px', [FF]: A, [CO]: CS.LG}, 102);
+      g.fillStyle(C.VG, 1).fillRoundedRect(x - 35, y - 27, 70, 55, 5);
+      g.lineStyle(2, C.Cy, 1).strokeRoundedRect(x - 35, y - 27, 70, 55, 5);
+      mkTxt(x, y - 8, pu.u.icon, {[F]: '24px'}, 102);
+      mkTxt(x, y + 15, `[${pu.lv}/${pu.u.maxLevel}]`, {[F]: '11px', [FF]: A, [CO]: CS.LG}, 102);
     });
   }
 
-  // Weapons section
-  const weapons = [{i: 'p', n: 'Projectiles', ic: '🔫'}, {i: 'o', n: 'Orbit Ball', ic: '⚪'}, {i: 'a', n: 'Area DMG', ic: '🔴'}, {i: 'b', n: 'Boomerang', ic: '🪃'}].filter(w => getWeapon(w.i).u);
+  // Weapons section (simplified: only icon + upgrades)
+  const weapons = [{i: 'p', ic: '🔫'}, {i: 'o', ic: '⚪'}, {i: 'a', ic: '🔴'}, {i: 'b', ic: '🪃'}].filter(w => getWeapon(w.i).u);
   if (weapons.length > 0) {
-    mkTxt(120, 230, '▸ Weapons:', {[F]: '16px', [FF]: A, [CO]: CS.Cy}, 102);
+    mkTxt(180, 220, '▸ Weapons:', {[F]: '16px', [FF]: A, [CO]: CS.Cy}, 102);
     weapons.forEach((w, i) => {
-      const x = 50 + (i % 2) * 380;
-      const y = 260 + Math.floor(i / 2) * 90;
+      const x = 180 + (i % 2) * 280;
+      const y = 245 + Math.floor(i / 2) * 85;
       const g = scene.add.graphics().setScrollFactor(0).setDepth(101);
-      g.fillStyle(C.DD, 1).fillRoundedRect(x, y, 340, 80, 8);
-      g.lineStyle(2, C.O, 1).strokeRoundedRect(x, y, 340, 80, 8);
-      mkTxt(x + 20, y + 15, w.ic + ' ' + w.n, {[F]: '14px', [FF]: A, [CO]: CS.Y}, 102);
+      g.fillStyle(C.DD, 1).fillRoundedRect(x - 80, y, 160, 75, 6);
+      g.lineStyle(2, C.O, 1).strokeRoundedRect(x - 80, y, 160, 75, 6);
+      mkTxt(x - 60, y + 15, w.ic, {[F]: '28px'}, 102);
       const wUpgs = getWeaponUpgrades(w.i);
       wUpgs.slice(0, 4).forEach((wu, j) => {
-        const tx = x + 20 + (j % 2) * 160;
-        const ty = y + 35 + Math.floor(j / 2) * 20;
-        mkTxt(tx, ty, `${wu.u.icon} [${wu.lv}/${wu.u.maxLevel}]`, {[F]: '11px', [FF]: A, [CO]: CS.LG}, 102);
+        const tx = x - 55 + (j % 2) * 75;
+        const ty = y + 40 + Math.floor(j / 2) * 18;
+        mkTxt(tx, ty, `${wu.u.icon}[${wu.lv}/${wu.u.maxLevel}]`, {[F]: '10px', [FF]: A, [CO]: CS.LG}, 102);
       });
     });
   }
@@ -1183,13 +1182,13 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   selectedIndex = 0;
   menuOptions = [];
 
-  // Choose upgrade section
-  const upgradeY = weapons.length > 2 ? 440 : 380;
-  mkTxt(400, upgradeY - 30, '▸ Choose Upgrade:', {[F]: '16px', [FF]: A, [CO]: CS.Cy}, 102);
+  // Choose upgrade section (fixed position)
+  const upgradeY = 410;
+  mkTxt(400, 380, '▸ Choose Upgrade:', {[F]: '16px', [FF]: A, [CO]: CS.Cy}, 102);
 
-  // Reroll vars
+  // Reroll vars (fixed position)
   const rerollCost = 10;
-  const rerollY = upgradeY + 115;
+  const rerollY = 545;
   const rerollBtn = scene.add.graphics().setScrollFactor(0).setDepth(101);
 
   const doReroll = () => {
@@ -1197,12 +1196,12 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     stats.coins -= rerollCost;
     playTone(scene, 1400, 0.1);
     menuOptions.forEach(opt => opt.btn.destroy());
-    scene.children.list.filter(c => c.depth === 102 && c.text && c.y >= upgradeY).forEach(c => c.destroy());
+    scene.children.list.filter(c => c.depth === 102 && c.text && c.y >= 400).forEach(c => c.destroy());
     const newShuffled = [...availableUpgrades].sort(() => Math.random() - 0.5).slice(0, 3);
     menuOptions = [];
     selectedIndex = 0;
     newShuffled.forEach((u, i) => {
-      const x = 150 + i * 230;
+      const x = 150 + i * 250;
       const btn = scene.add.graphics().setScrollFactor(0).setDepth(101);
       btn.fillStyle(C.VG, 1).fillRoundedRect(x - 80, upgradeY - 10, 160, 110, 8).lineStyle(3, C.G, 1).strokeRoundedRect(x - 80, upgradeY - 10, 160, 110, 8);
       mkTxt(x, upgradeY + 10, u.icon, {[F]: '40px'}, 102);
@@ -1235,12 +1234,12 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     });
     const canRr = stats.coins >= rerollCost;
     const rrSel = selectedIndex === 3;
-    rerollBtn.clear().fillStyle(rrSel ? (canRr ? 0x776600 : 0x444444) : (canRr ? 0x554400 : C.VG), 1).fillRoundedRect(250, rerollY - 25, 300, 50, 8);
-    rerollBtn.lineStyle(3, rrSel ? C.Y : (canRr ? CS.Go : C.DB), 1).strokeRoundedRect(250, rerollY - 25, 300, 50, 8);
+    rerollBtn.clear().fillStyle(rrSel ? (canRr ? 0x776600 : 0x444444) : (canRr ? 0x554400 : C.VG), 1).fillRoundedRect(260, rerollY - 22, 280, 45, 8);
+    rerollBtn.lineStyle(3, rrSel ? C.Y : (canRr ? CS.Go : C.DB), 1).strokeRoundedRect(260, rerollY - 22, 280, 45, 8);
   };
 
   shuffled.forEach((u, i) => {
-    const x = 150 + i * 230;
+    const x = 150 + i * 250;
     const btn = scene.add.graphics().setScrollFactor(0).setDepth(101);
     btn.fillStyle(C.VG, 1).fillRoundedRect(x - 80, upgradeY - 10, 160, 110, 8).lineStyle(3, C.G, 1).strokeRoundedRect(x - 80, upgradeY - 10, 160, 110, 8);
     mkTxt(x, upgradeY + 10, u.icon, {[F]: '40px'}, 102);
@@ -1249,7 +1248,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     menuOptions.push({ btn, u, x, y: upgradeY + 40 });
   });
 
-  mkTxt(400, rerollY, `REROLL (${rerollCost} Coins)`, {[F]: '20px', [FF]: A, [CO]: stats.coins >= rerollCost ? CS.Go : '#666'}, 102);
+  mkTxt(400, rerollY, `REROLL (${rerollCost} Coins)`, {[F]: '18px', [FF]: A, [CO]: stats.coins >= rerollCost ? CS.Go : '#666'}, 102);
   updateSelection();
 
   // Keyboard
