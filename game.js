@@ -1109,154 +1109,157 @@ function levelUp() {
   showUpgradeMenu('levelingUp');
 }
 
+// Helper: get player upgrades that have been leveled up
+function getPlayerUpgrades() {
+  return pUpgrades.filter(u => ul[u.id] > 0).map(u => ({u, lv: ul[u.id]}));
+}
+
+// Helper: get weapon upgrades that have been leveled up
+function getWeaponUpgrades(wId) {
+  let upgs = [];
+  if (wId === 'p') upgs = projectileUpgrades;
+  else if (wId === 'o') upgs = orbitingBallUpgrades;
+  else if (wId === 'a') upgs = areaDamageUpgrades;
+  else if (wId === 'b') upgs = boomerangUpgrades;
+  return upgs.filter(u => ul[u.id] > 0).map(u => ({u, lv: ul[u.id]}));
+}
+
 function showUpgradeMenu(stateVar = 'levelingUp') {
   // Build available upgrades pool
   let availableUpgrades = [...pUpgrades];
+  if (getWeapon('p').u) availableUpgrades.push(...projectileUpgrades);
+  if (getWeapon('o').u) availableUpgrades.push(...orbitingBallUpgrades);
+  if (getWeapon('a').u) availableUpgrades.push(...areaDamageUpgrades);
+  if (getWeapon('b').u) availableUpgrades.push(...boomerangUpgrades);
+  availableUpgrades = availableUpgrades.filter(u => (ul[u.id] || 0) < u.maxLevel);
 
-  // Add projectile upgrades if unlocked
-  if (getWeapon('p').u) {
-    availableUpgrades.push(...projectileUpgrades);
+  // Overlay
+  const ov = scene.add.graphics();
+  ov.fillStyle(C.B, 0.9).fillRect(0, 0, 800, 600).setScrollFactor(0).setDepth(100);
+
+  // Header: Hero sprite + Title + Coins
+  const hero = scene.add.sprite(70, 70, selCh.texture).setScale(3).setScrollFactor(0).setDepth(102);
+  mkTxt(350, 40, `CHARACTER SHEET - LEVEL ${stats.level}`, {[F]: '24px', [FF]: A, [CO]: CS.Y}, 102);
+  mkTxt(700, 40, `Coins: ${stats.coins}`, {[F]: '18px', [FF]: A, [CO]: CS.Go}, 102);
+
+  // Player upgrades section
+  const pUpgs = getPlayerUpgrades();
+  if (pUpgs.length > 0) {
+    mkTxt(200, 100, '▸ Player Upgrades:', {[F]: '16px', [FF]: A, [CO]: CS.Cy}, 102);
+    pUpgs.slice(0, 6).forEach((pu, i) => {
+      const x = 200 + (i % 3) * 120;
+      const y = 130 + Math.floor(i / 3) * 70;
+      const g = scene.add.graphics().setScrollFactor(0).setDepth(101);
+      g.fillStyle(C.VG, 1).fillRoundedRect(x - 50, y - 25, 100, 50, 5);
+      g.lineStyle(2, C.Cy, 1).strokeRoundedRect(x - 50, y - 25, 100, 50, 5);
+      mkTxt(x - 30, y - 5, pu.u.icon, {[F]: '20px'}, 102);
+      mkTxt(x + 10, y - 10, pu.u.name, {[F]: '12px', [FF]: A, [CO]: CS.W}, 102);
+      mkTxt(x + 10, y + 8, `[${pu.lv}/${pu.u.maxLevel}]`, {[F]: '10px', [FF]: A, [CO]: CS.LG}, 102);
+    });
   }
 
-  // Add orbiting ball upgrades if unlocked
-  if (getWeapon('o').u) {
-    availableUpgrades.push(...orbitingBallUpgrades);
+  // Weapons section
+  const weapons = [{i: 'p', n: 'Projectiles', ic: '🔫'}, {i: 'o', n: 'Orbit Ball', ic: '⚪'}, {i: 'a', n: 'Area DMG', ic: '🔴'}, {i: 'b', n: 'Boomerang', ic: '🪃'}].filter(w => getWeapon(w.i).u);
+  if (weapons.length > 0) {
+    mkTxt(120, 230, '▸ Weapons:', {[F]: '16px', [FF]: A, [CO]: CS.Cy}, 102);
+    weapons.forEach((w, i) => {
+      const x = 50 + (i % 2) * 380;
+      const y = 260 + Math.floor(i / 2) * 90;
+      const g = scene.add.graphics().setScrollFactor(0).setDepth(101);
+      g.fillStyle(C.DD, 1).fillRoundedRect(x, y, 340, 80, 8);
+      g.lineStyle(2, C.O, 1).strokeRoundedRect(x, y, 340, 80, 8);
+      mkTxt(x + 20, y + 15, w.ic + ' ' + w.n, {[F]: '14px', [FF]: A, [CO]: CS.Y}, 102);
+      const wUpgs = getWeaponUpgrades(w.i);
+      wUpgs.slice(0, 4).forEach((wu, j) => {
+        const tx = x + 20 + (j % 2) * 160;
+        const ty = y + 35 + Math.floor(j / 2) * 20;
+        mkTxt(tx, ty, `${wu.u.icon} [${wu.lv}/${wu.u.maxLevel}]`, {[F]: '11px', [FF]: A, [CO]: CS.LG}, 102);
+      });
+    });
   }
 
-  // Add area damage upgrades if unlocked
-  if (getWeapon('a').u) {
-    availableUpgrades.push(...areaDamageUpgrades);
-  }
-
-  // Add boomerang upgrades if unlocked
-  if (getWeapon('b').u) {
-    availableUpgrades.push(...boomerangUpgrades);
-  }
-
-  // Filter out upgrades that have reached max level
-  availableUpgrades = availableUpgrades.filter(u =>
-    (ul[u.id] || 0) < u.maxLevel
-  );
-
-  // Semi-transparent overlay
-  const overlay = scene.add.graphics();
-  overlay.fillStyle(C.B, 0.85);
-  overlay.fillRect(0, 0, 800, 600);
-  overlay.setScrollFactor(0);
-  overlay.setDepth(100);
-
-  // Title
-  const title = mkTxt(400, 100, 'UPGRADE MENU', {[F]: '48px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 6});
-
-  // Shuffle and pick 3 upgrades
+  // Shuffle upgrades
   const shuffled = [...availableUpgrades].sort(() => Math.random() - 0.5).slice(0, 3);
-
-  // Reset menu state
   selectedIndex = 0;
   menuOptions = [];
 
-  // Reroll button variables (declare early so they're available in updateSelection)
-  const rerollX = 400;
-  const rerollY = 490;
-  const rerollCost = 10;
-  const canReroll = stats.coins >= rerollCost;
+  // Choose upgrade section
+  const upgradeY = weapons.length > 2 ? 440 : 380;
+  mkTxt(400, upgradeY - 30, '▸ Choose Upgrade:', {[F]: '16px', [FF]: A, [CO]: CS.Cy}, 102);
 
+  // Reroll vars
+  const rerollCost = 10;
+  const rerollY = upgradeY + 115;
   const rerollBtn = scene.add.graphics().setScrollFactor(0).setDepth(101);
-  const rerollText = mkTxt(rerollX, rerollY - 10, `REROLL (${rerollCost} Coins)`, {[F]: '24px', [FF]: A, [CO]: canReroll ? CS.Go : '#666'}, 102);
-  const coinsInfo = mkTxt(rerollX, rerollY + 15, `Tienes: ${stats.coins} monedas`, {[F]: '14px', [FF]: A, [CO]: CS.LG}, 102);
 
   const doReroll = () => {
     if (stats.coins < rerollCost) return;
     stats.coins -= rerollCost;
     playTone(scene, 1400, 0.1);
-
     menuOptions.forEach(opt => opt.btn.destroy());
-    scene.children.list.filter(c => c.depth === 102 && c !== title && c !== rerollBtn && c !== rerollText && c !== coinsInfo).forEach(c => c.destroy());
-
+    scene.children.list.filter(c => c.depth === 102 && c.text && c.y >= upgradeY).forEach(c => c.destroy());
     const newShuffled = [...availableUpgrades].sort(() => Math.random() - 0.5).slice(0, 3);
     menuOptions = [];
     selectedIndex = 0;
-
-    newShuffled.forEach((upgrade, i) => {
-      const x = 150 + i * 250;
-      const y = 300;
+    newShuffled.forEach((u, i) => {
+      const x = 150 + i * 230;
       const btn = scene.add.graphics().setScrollFactor(0).setDepth(101);
-      btn.fillStyle(C.VG, 1).fillRoundedRect(x - 90, y - 80, 180, 160, 10).lineStyle(3, C.G, 1).strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
-      mkTxt(x, y - 30, upgrade.icon, {[F]: '48px'}, 102);
-      mkTxt(x, y + 20, upgrade.name, {[F]: '20px', [FF]: A, [CO]: CS.W}, 102);
-      mkTxt(x, y + 50, upgrade.desc, {[F]: '14px', [FF]: A, [CO]: CS.LG}, 102);
-      menuOptions.push({ btn, upgrade, x, y });
+      btn.fillStyle(C.VG, 1).fillRoundedRect(x - 80, upgradeY - 10, 160, 110, 8).lineStyle(3, C.G, 1).strokeRoundedRect(x - 80, upgradeY - 10, 160, 110, 8);
+      mkTxt(x, upgradeY + 10, u.icon, {[F]: '40px'}, 102);
+      mkTxt(x, upgradeY + 45, u.name, {[F]: '16px', [FF]: A, [CO]: CS.W}, 102);
+      mkTxt(x, upgradeY + 65, u.desc, {[F]: '12px', [FF]: A, [CO]: CS.LG}, 102);
+      menuOptions.push({ btn, u, x, y: upgradeY + 40 });
     });
-
     updateSelection();
-    rerollText.setColor(stats.coins >= rerollCost ? CS.Go : '#666');
-    coinsInfo.setText(`Tienes: ${stats.coins} monedas`);
+    scene.children.list.filter(c => c.depth === 102 && c.text && c.y === 40 && c.text.includes('Coins')).forEach(c => c.setText(`Coins: ${stats.coins}`));
   };
 
-  const selectUpgrade = (upgrade) => {
-    upgrade.apply();
+  const selectUpgrade = (u) => {
+    u.apply();
     playTone(scene, 1000, 0.1);
-
-    // Clean up menu
-    overlay.destroy();
-    title.destroy();
+    ov.destroy();
+    hero.destroy();
     scene.children.list.filter(c => c.depth >= 100).forEach(c => c.destroy());
-
-    // Remove keyboard listeners
     menuKeys.forEach(k => k.removeAllListeners());
     menuKeys = [];
-
-    // Resume physics
     scene.physics.resume();
-    if (stateVar === 'levelingUp') {
-      levelingUp = false;
-    } else if (stateVar === 'selectingWeapon') {
-      selectingWeapon = false;
-    }
+    if (stateVar === 'levelingUp') levelingUp = false;
+    else if (stateVar === 'selectingWeapon') selectingWeapon = false;
   };
 
   const updateSelection = () => {
-    menuOptions.forEach((option, i) => {
-      const isSelected = i === selectedIndex;
-      option.btn.clear();
-      option.btn.fillStyle(isSelected ? C.DB : C.VG, 1);
-      option.btn.fillRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
-      option.btn.lineStyle(3, isSelected ? C.Y : C.G, 1);
-      option.btn.strokeRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
+    menuOptions.forEach((opt, i) => {
+      const sel = i === selectedIndex;
+      opt.btn.clear().fillStyle(sel ? C.DB : C.VG, 1).fillRoundedRect(opt.x - 80, upgradeY - 10, 160, 110, 8);
+      opt.btn.lineStyle(3, sel ? C.Y : C.G, 1).strokeRoundedRect(opt.x - 80, upgradeY - 10, 160, 110, 8);
     });
-
-    // Update reroll button highlight (recalculate canReroll dynamically)
-    const currentCanReroll = stats.coins >= rerollCost;
-    const rerollSelected = selectedIndex === 3;
-    rerollBtn.clear();
-    rerollBtn.fillStyle(rerollSelected ? (currentCanReroll ? 0x776600 : 0x444444) : (currentCanReroll ? 0x554400 : C.VG), 1);
-    rerollBtn.fillRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
-    rerollBtn.lineStyle(3, rerollSelected ? C.Y : (currentCanReroll ? 0xFFD700 : C.DB), 1);
-    rerollBtn.strokeRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
+    const canRr = stats.coins >= rerollCost;
+    const rrSel = selectedIndex === 3;
+    rerollBtn.clear().fillStyle(rrSel ? (canRr ? 0x776600 : 0x444444) : (canRr ? 0x554400 : C.VG), 1).fillRoundedRect(250, rerollY - 25, 300, 50, 8);
+    rerollBtn.lineStyle(3, rrSel ? C.Y : (canRr ? CS.Go : C.DB), 1).strokeRoundedRect(250, rerollY - 25, 300, 50, 8);
   };
 
-  shuffled.forEach((upgrade, i) => {
-    const x = 150 + i * 250;
-    const y = 300;
+  shuffled.forEach((u, i) => {
+    const x = 150 + i * 230;
     const btn = scene.add.graphics().setScrollFactor(0).setDepth(101);
-    btn.fillStyle(C.VG, 1).fillRoundedRect(x - 90, y - 80, 180, 160, 10).lineStyle(3, C.G, 1).strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
-    mkTxt(x, y - 30, upgrade.icon, {[F]: '48px'}, 102);
-    mkTxt(x, y + 20, upgrade.name, {[F]: '20px', [FF]: A, [CO]: CS.W}, 102);
-    mkTxt(x, y + 50, upgrade.desc, {[F]: '14px', [FF]: A, [CO]: CS.LG}, 102);
-    menuOptions.push({ btn, upgrade, x, y });
+    btn.fillStyle(C.VG, 1).fillRoundedRect(x - 80, upgradeY - 10, 160, 110, 8).lineStyle(3, C.G, 1).strokeRoundedRect(x - 80, upgradeY - 10, 160, 110, 8);
+    mkTxt(x, upgradeY + 10, u.icon, {[F]: '40px'}, 102);
+    mkTxt(x, upgradeY + 45, u.name, {[F]: '16px', [FF]: A, [CO]: CS.W}, 102);
+    mkTxt(x, upgradeY + 65, u.desc, {[F]: '12px', [FF]: A, [CO]: CS.LG}, 102);
+    menuOptions.push({ btn, u, x, y: upgradeY + 40 });
   });
 
-  // Initial selection highlight
+  mkTxt(400, rerollY, `REROLL (${rerollCost} Coins)`, {[F]: '20px', [FF]: A, [CO]: stats.coins >= rerollCost ? CS.Go : '#666'}, 102);
   updateSelection();
 
-  // Keyboard controls
-  const leftKey = scene.input.keyboard.addKey('LEFT');
-  const rightKey = scene.input.keyboard.addKey('RIGHT');
-  const upKey = scene.input.keyboard.addKey('UP');
-  const downKey = scene.input.keyboard.addKey('DOWN');
-  const enterKey = scene.input.keyboard.addKey('ENTER');
+  // Keyboard
+  const lKey = scene.input.keyboard.addKey('LEFT');
+  const rKey = scene.input.keyboard.addKey('RIGHT');
+  const uKey = scene.input.keyboard.addKey('UP');
+  const dKey = scene.input.keyboard.addKey('DOWN');
+  const eKey = scene.input.keyboard.addKey('ENTER');
 
-  leftKey.on('down', () => {
+  lKey.on('down', () => {
     if (selectedIndex < 3) {
       selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
       updateSelection();
@@ -1264,7 +1267,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     }
   });
 
-  rightKey.on('down', () => {
+  rKey.on('down', () => {
     if (selectedIndex < 3) {
       selectedIndex = (selectedIndex + 1) % menuOptions.length;
       updateSelection();
@@ -1272,7 +1275,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     }
   });
 
-  upKey.on('down', () => {
+  uKey.on('down', () => {
     if (selectedIndex === 3) {
       selectedIndex = menuOptions.length - 1;
       updateSelection();
@@ -1280,7 +1283,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     }
   });
 
-  downKey.on('down', () => {
+  dKey.on('down', () => {
     if (selectedIndex < 3) {
       selectedIndex = 3;
       updateSelection();
@@ -1288,15 +1291,12 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     }
   });
 
-  enterKey.on('down', () => {
-    if (selectedIndex === 3) {
-      doReroll();
-    } else if (selectedIndex < 3) {
-      selectUpgrade(menuOptions[selectedIndex].upgrade);
-    }
+  eKey.on('down', () => {
+    if (selectedIndex === 3) doReroll();
+    else if (selectedIndex < 3) selectUpgrade(menuOptions[selectedIndex].u);
   });
 
-  menuKeys.push(leftKey, rightKey, upKey, downKey, enterKey);
+  menuKeys.push(lKey, rKey, uKey, dKey, eKey);
 }
 
 function showWeaponSelector(weapons) {
