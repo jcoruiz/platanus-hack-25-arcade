@@ -366,10 +366,14 @@ function preload() {
     g.clear();
   });
 
-  // Generic orb texture (white for tinting)
+  // Generic orb texture with glow (white for tinting)
+  g.fillStyle(C.W, 0.2);
+  g.fillCircle(6, 6, 7);
+  g.fillStyle(C.W, 0.4);
+  g.fillCircle(6, 6, 6);
   g.fillStyle(C.W, 1);
-  g.fillCircle(5, 5, 5);
-  g.generateTexture('orb', 10, 10);
+  g.fillCircle(6, 6, 4);
+  g.generateTexture('orb', 12, 12);
   g.clear();
 
   // Health drop texture (red medical cross)
@@ -428,25 +432,61 @@ function create() {
   scene = this;
   gr = this.add.graphics();
 
-  // Create starfield background with parallax
-  const starLayers = [
-    // c: count, s: size, a: alpha, f: scrollFactor
-    { c: 50, s: 1, a: 0.4, f: 0.2 },
-    { c: 40, s: 1.5, a: 0.6, f: 0.5 },
-    { c: 30, s: 2, a: 0.8, f: 0.8 }
+  // Cyberpunk neon grid background with parallax
+  const gridLayers = [
+    {sp: 200, c: 0x00ffff, a: 0.3, sf: 0.2}, // Cyan - far
+    {sp: 120, c: 0xff00ff, a: 0.5, sf: 0.5}, // Magenta - mid
+    {sp: 80, c: 0xffff00, a: 0.4, sf: 0.8}   // Yellow - near
   ];
 
-  starLayers.forEach((layer, i) => {
-    const stars = this.add.graphics();
-    stars.fillStyle(C.W, layer.a);
-    for (let j = 0; j < layer.c; j++) {
-      const x = Math.random() * 2400;
-      const y = Math.random() * 1800;
-      stars.fillCircle(x, y, layer.s);
+  gridLayers.forEach((layer, i) => {
+    const grid = this.add.graphics();
+    grid.lineStyle(1, layer.c, layer.a);
+
+    // Vertical lines
+    for (let x = 0; x <= 2400; x += layer.sp) {
+      grid.lineBetween(x, 0, x, 1800);
     }
-    stars.setScrollFactor(layer.f);
-    stars.setDepth(-10 + i);
+
+    // Horizontal lines
+    for (let y = 0; y <= 1800; y += layer.sp) {
+      grid.lineBetween(0, y, 2400, y);
+    }
+
+    // Intersection glow points
+    grid.fillStyle(C.W, layer.a * 1.5);
+    for (let x = 0; x <= 2400; x += layer.sp) {
+      for (let y = 0; y <= 1800; y += layer.sp) {
+        grid.fillCircle(x, y, 2 - i * 0.5);
+      }
+    }
+
+    grid.setScrollFactor(layer.sf);
+    grid.setDepth(-10 + i);
   });
+
+  // Scanlines effect
+  const scanlines = this.add.graphics();
+  scanlines.lineStyle(1, C.W, 0.05);
+  for (let y = 0; y < 600; y += 4) {
+    scanlines.lineBetween(0, y, 800, y);
+  }
+  scanlines.setScrollFactor(0);
+  scanlines.setDepth(-5);
+
+  // Floating neon dots
+  const dots = this.add.graphics();
+  const neonColors = [0x00ffff, 0xff00ff, 0xffff00];
+  for (let j = 0; j < 25; j++) {
+    const x = Math.random() * 2400;
+    const y = Math.random() * 1800;
+    const col = neonColors[Math.floor(Math.random() * 3)];
+    const size = 1 + Math.random() * 2;
+    dots.fillStyle(col, 0.6 + Math.random() * 0.4);
+    dots.fillCircle(x, y, size);
+  }
+  dots.setScrollFactor(0.6);
+  dots.setDepth(-7);
 
   // Expand world bounds (3x larger than screen)
   this.physics.world.setBounds(0, 0, 2400, 1800);
@@ -854,6 +894,7 @@ function dropXP(x, y, xpValue) {
   orb.setTint(C.Cy);
   orb.body.setCircle(5);
   orb.setData('xpValue', xpValue);
+  addGlowPulse(orb);
   // XP orbs stay forever until collected
 }
 
@@ -874,6 +915,18 @@ function dropCoin(x, y, coinValue) {
   coin.setTint(0xFFD700);
   coin.body.setCircle(6);
   coin.setData('coinValue', coinValue);
+  addGlowPulse(coin);
+}
+
+function addGlowPulse(sprite) {
+  scene.tweens.add({
+    targets: sprite,
+    scale: 1.15,
+    duration: 800,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut'
+  });
 }
 
 function dropHealthHeal(x, y) {
