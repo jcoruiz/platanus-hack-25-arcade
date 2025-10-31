@@ -436,14 +436,28 @@ function create() {
     const neb = this.add.graphics();
     const x = 100 + Math.random() * 600;
     const y = 100 + Math.random() * 400;
-    const col = nebColors[Math.floor(Math.random() * 6)];
+    const col1 = nebColors[Math.floor(Math.random() * 6)];
+    const col2 = nebColors[Math.floor(Math.random() * 6)];
     const size = 80 + Math.random() * 120;
-    neb.fillStyle(col, 0.08);
-    neb.fillCircle(x, y, size);
-    neb.fillStyle(col, 0.12);
-    neb.fillCircle(x, y, size * 0.7);
-    neb.fillStyle(col, 0.15);
-    neb.fillCircle(x, y, size * 0.4);
+
+    // Irregular shape with offset circles
+    neb.fillStyle(col1, 0.06);
+    neb.fillCircle(x + Math.random() * 20 - 10, y + Math.random() * 20 - 10, size);
+    neb.fillStyle(col2, 0.08);
+    neb.fillCircle(x + Math.random() * 15 - 7.5, y + Math.random() * 15 - 7.5, size * 0.75);
+    neb.fillStyle(col1, 0.12);
+    neb.fillCircle(x + Math.random() * 10 - 5, y + Math.random() * 10 - 5, size * 0.55);
+    neb.fillStyle(col2, 0.15);
+    neb.fillCircle(x, y, size * 0.35);
+
+    // Satellite spots for detail
+    for (let j = 0; j < 5; j++) {
+      const angle = (Math.PI * 2 / 5) * j + Math.random() * 0.5;
+      const dist = size * (0.6 + Math.random() * 0.3);
+      neb.fillStyle(j % 2 ? col1 : col2, 0.08 + Math.random() * 0.04);
+      neb.fillCircle(x + Math.cos(angle) * dist, y + Math.sin(angle) * dist, size * (0.15 + Math.random() * 0.15));
+    }
+
     neb.setScrollFactor(0.05 + Math.random() * 0.05);
     neb.setDepth(-15 + i * 0.4);
   }
