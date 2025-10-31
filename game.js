@@ -14,8 +14,8 @@ new Phaser.Game(config);
 
 // Global vars: p=player, cr=cursors, en=enemies, pr=projectiles, xo=xpOrbs, co=coins, ob=obstacles, wc=weaponChests, uc=upgradeChests, mg=magnets, hd=healthDrops, gr=graphics
 let p, cr, en, pr, xo, co, ob, wc, uc, mg, hd, gr;
-// adc=areaDamageCircle
-let adc = null;
+// adc=areaDamageCircle, idleTween=player idle animation
+let adc = null, idleTween = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, showStats = false, paused = false, mainMenu = true;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
@@ -548,6 +548,18 @@ function create() {
   p.setCollideWorldBounds(true);
   p.body.setCircle(16);
 
+  // Idle animation for player
+  idleTween = this.tweens.add({
+    targets: p,
+    scaleX: 1.2,
+    scaleY: 1.2,
+    duration: 800,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut',
+    paused: true
+  });
+
   // Camera follows p
   this.cameras.main.startFollow(p);
   this.cameras.main.setBounds(0, 0, 2400, 1800);
@@ -667,6 +679,27 @@ function update(_time, delta) {
   // Normalize diagonal movement
   if (moving && p.body.velocity.x !== 0 && p.body.velocity.y !== 0) {
     p.body.velocity.normalize().scale(stats.speed);
+  }
+
+  // Handle idle/movement animations
+  if (!moving && idleTween && idleTween.paused) {
+    idleTween.resume();
+  } else if (moving && idleTween && !idleTween.paused) {
+    idleTween.pause();
+  }
+
+  // Bounce animation when moving
+  if (moving) {
+    const bouncePhase = (gameTime % 400) / 400;
+    p.setScale(1 + Math.sin(bouncePhase * Math.PI * 2) * 0.08);
+  }
+
+  // Rotate player based on movement direction
+  if (p.body.velocity.x !== 0 || p.body.velocity.y !== 0) {
+    const targetAngle = Math.atan2(p.body.velocity.y, p.body.velocity.x);
+    const angleDiff = targetAngle - p.rotation;
+    const shortestAngle = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+    p.rotation += shortestAngle * 0.15;
   }
 
   // Auto shoot (projectile weapon)
@@ -1564,7 +1597,16 @@ function showStartScreen() {
     const y = 280;
     const btn = scene.add.graphics().setScrollFactor(0).setDepth(101);
     dc(btn, x, y, 0);
-    scene.add.sprite(x, y - 30, ch.texture).setScale(1.5).setScrollFactor(0).setDepth(102);
+    const heroSprite = scene.add.sprite(x, y - 30, ch.texture).setScale(1.5).setScrollFactor(0).setDepth(102);
+    scene.tweens.add({
+      targets: heroSprite,
+      scaleX: 1.8,
+      scaleY: 1.8,
+      duration: 1000 + i * 100,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
     mkTxt(x, y + 15, ch.name, {[F]: '18px', [FF]: A, [CO]: CS.W, [FST]: 'bold'}, 102);
     mkTxt(x, y + 38, ch.desc, {[F]: '12px', [FF]: A, [CO]: CS.LG}, 102);
     mkTxt(x, y + 58, ch.passiveDesc, {[F]: '10px', [FF]: A, [CO]: '#0f8'}, 102);
