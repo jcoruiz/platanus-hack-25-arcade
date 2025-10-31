@@ -1632,13 +1632,13 @@ function endGame() {
   overlay[SD](100);
 
   // Game Over text
-  mkTxt(400, 200, 'GAME OVER', { [F]: '64px', [FF]: A, [CO]: CS.R, [STR]: CS.B, [STT]: 8 });
+  const gameOverText = mkTxt(400, 200, 'GAME OVER', { [F]: '64px', [FF]: A, [CO]: CS.R, [STR]: CS.B, [STT]: 8 });
 
   // Stats
   const mins = ~~(gameTime / 60000), secs = ~~((gameTime % 60000) / 1000);
-  mkTxt(400, 300, `Time: ${mins}:${secs.toString().padStart(2, '0')}`, { [F]: '28px', [FF]: A, [CO]: CS.Cy });
-  mkTxt(400, 350, `Level: ${stats.level}`, { [F]: '28px', [FF]: A, [CO]: CS.Y });
-  mkTxt(400, 400, `Kills: ${stats.enKilled}`, { [F]: '28px', [FF]: A, [CO]: CS.G });
+  const timeText = mkTxt(400, 300, `Time: ${mins}:${secs.toString().padStart(2, '0')}`, { [F]: '28px', [FF]: A, [CO]: CS.Cy });
+  const levelText = mkTxt(400, 350, `Level: ${stats.level}`, { [F]: '28px', [FF]: A, [CO]: CS.Y });
+  const killsText = mkTxt(400, 400, `Kills: ${stats.enKilled}`, { [F]: '28px', [FF]: A, [CO]: CS.G });
 
   // After 2 seconds, transition to leaderboard flow
   scene.time.delayedCall(2000, () => {
