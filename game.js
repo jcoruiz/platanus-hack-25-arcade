@@ -1057,81 +1057,37 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   const rerollCost = 10;
   const canReroll = stats.coins >= rerollCost;
 
-  const rerollBtn = scene.add.graphics();
-  rerollBtn.fillStyle(canReroll ? 0x554400 : C.VG, 1);
-  rerollBtn.fillRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
-  rerollBtn.lineStyle(3, canReroll ? 0xFFD700 : C.DB, 1);
-  rerollBtn.strokeRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
-  rerollBtn.setScrollFactor(0);
-  rerollBtn.setDepth(101);
-
-  if (canReroll) {
-    rerollBtn.setInteractive(new Phaser.Geom.Rectangle(rerollX - 150, rerollY - 40, 300, 80), Phaser.Geom.Rectangle.Contains);
-  }
-
-  const rerollText = mkTxt(rerollX, rerollY - 10, `REROLL (${rerollCost} Coins)`, {[F]: '24px', [FF]: A, [CO]: canReroll ? CS.Go : '#666666'}, 102);
-
+  const rerollBtn = scene.add.graphics().setScrollFactor(0).setDepth(101);
+  const rerollText = mkTxt(rerollX, rerollY - 10, `REROLL (${rerollCost} Coins)`, {[F]: '24px', [FF]: A, [CO]: canReroll ? CS.Go : '#666'}, 102);
   const coinsInfo = mkTxt(rerollX, rerollY + 15, `Tienes: ${stats.coins} monedas`, {[F]: '14px', [FF]: A, [CO]: CS.LG}, 102);
 
-  // Reroll button click handler
-  if (canReroll) {
-    rerollBtn.on('pointerdown', () => {
-      stats.coins -= rerollCost;
-      playTone(scene, 1400, 0.1);
+  const doReroll = () => {
+    if (stats.coins < rerollCost) return;
+    stats.coins -= rerollCost;
+    playTone(scene, 1400, 0.1);
 
-      // Clear old options
-      menuOptions.forEach(opt => opt.btn.destroy());
-      scene.children.list.filter(c => c.depth === 102 && c !== title && c !== rerollBtn && c !== rerollText && c !== coinsInfo).forEach(c => c.destroy());
+    menuOptions.forEach(opt => opt.btn.destroy());
+    scene.children.list.filter(c => c.depth === 102 && c !== title && c !== rerollBtn && c !== rerollText && c !== coinsInfo).forEach(c => c.destroy());
 
-      // Regenerate options
-      const newShuffled = [...availableUpgrades].sort(() => Math.random() - 0.5).slice(0, 3);
-      menuOptions = [];
-      selectedIndex = 0;
+    const newShuffled = [...availableUpgrades].sort(() => Math.random() - 0.5).slice(0, 3);
+    menuOptions = [];
+    selectedIndex = 0;
 
-      newShuffled.forEach((upgrade, i) => {
-        const x = 150 + i * 250;
-        const y = 300;
-
-        const btn = scene.add.graphics();
-        btn.fillStyle(C.VG, 1);
-        btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
-        btn.lineStyle(3, C.G, 1);
-        btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
-        btn.setScrollFactor(0);
-        btn.setDepth(101);
-        btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 80, 180, 160), Phaser.Geom.Rectangle.Contains);
-
-        mkTxt(x, y - 30, upgrade.icon, {[F]: '48px'}, 102);
-
-        mkTxt(x, y + 20, upgrade.name, {[F]: '20px', [FF]: A, [CO]: CS.W}, 102);
-
-        mkTxt(x, y + 50, upgrade.desc, {[F]: '14px', [FF]: A, [CO]: CS.LG}, 102);
-
-        menuOptions.push({ btn, upgrade, x, y });
-        btn.on('pointerdown', () => selectUpgrade(upgrade));
-        btn.on('pointerover', () => {
-          selectedIndex = i;
-          updateSelection();
-        });
-      });
-
-      updateSelection();
-
-      // Update reroll button state
-      const newCanReroll = stats.coins >= rerollCost;
-      rerollBtn.clear();
-      rerollBtn.fillStyle(newCanReroll ? 0x554400 : C.VG, 1);
-      rerollBtn.fillRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
-      rerollBtn.lineStyle(3, newCanReroll ? 0xFFD700 : C.DB, 1);
-      rerollBtn.strokeRoundedRect(rerollX - 150, rerollY - 40, 300, 80, 10);
-      rerollBtn.removeInteractive();
-      if (newCanReroll) {
-        rerollBtn.setInteractive(new Phaser.Geom.Rectangle(rerollX - 150, rerollY - 40, 300, 80), Phaser.Geom.Rectangle.Contains);
-      }
-      rerollText.setColor(newCanReroll ? CS.Go : '#666666');
-      coinsInfo.setText(`Tienes: ${stats.coins} monedas`);
+    newShuffled.forEach((upgrade, i) => {
+      const x = 150 + i * 250;
+      const y = 300;
+      const btn = scene.add.graphics().setScrollFactor(0).setDepth(101);
+      btn.fillStyle(C.VG, 1).fillRoundedRect(x - 90, y - 80, 180, 160, 10).lineStyle(3, C.G, 1).strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
+      mkTxt(x, y - 30, upgrade.icon, {[F]: '48px'}, 102);
+      mkTxt(x, y + 20, upgrade.name, {[F]: '20px', [FF]: A, [CO]: CS.W}, 102);
+      mkTxt(x, y + 50, upgrade.desc, {[F]: '14px', [FF]: A, [CO]: CS.LG}, 102);
+      menuOptions.push({ btn, upgrade, x, y });
     });
-  }
+
+    updateSelection();
+    rerollText.setColor(stats.coins >= rerollCost ? CS.Go : '#666');
+    coinsInfo.setText(`Tienes: ${stats.coins} monedas`);
+  };
 
   const selectUpgrade = (upgrade) => {
     upgrade.apply();
@@ -1178,37 +1134,12 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   shuffled.forEach((upgrade, i) => {
     const x = 150 + i * 250;
     const y = 300;
-
-    // Button background
-    const btn = scene.add.graphics();
-    btn.fillStyle(C.VG, 1);
-    btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
-    btn.lineStyle(3, C.G, 1);
-    btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
-    btn.setScrollFactor(0);
-    btn.setDepth(101);
-    btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 80, 180, 160), Phaser.Geom.Rectangle.Contains);
-
-    // Icon
+    const btn = scene.add.graphics().setScrollFactor(0).setDepth(101);
+    btn.fillStyle(C.VG, 1).fillRoundedRect(x - 90, y - 80, 180, 160, 10).lineStyle(3, C.G, 1).strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
     mkTxt(x, y - 30, upgrade.icon, {[F]: '48px'}, 102);
-
-    // Name
     mkTxt(x, y + 20, upgrade.name, {[F]: '20px', [FF]: A, [CO]: CS.W}, 102);
-
-    // Description
     mkTxt(x, y + 50, upgrade.desc, {[F]: '14px', [FF]: A, [CO]: CS.LG}, 102);
-
-    // Store option reference
     menuOptions.push({ btn, upgrade, x, y });
-
-    // Click handler
-    btn.on('pointerdown', () => selectUpgrade(upgrade));
-
-    // Hover effect
-    btn.on('pointerover', () => {
-      selectedIndex = i;
-      updateSelection();
-    });
   });
 
   // Initial selection highlight
@@ -1254,8 +1185,8 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   });
 
   enterKey.on('down', () => {
-    if (selectedIndex === 3 && stats.coins >= rerollCost) {
-      rerollBtn.emit('pointerdown');
+    if (selectedIndex === 3) {
+      doReroll();
     } else if (selectedIndex < 3) {
       selectUpgrade(menuOptions[selectedIndex].upgrade);
     }
@@ -1320,38 +1251,14 @@ function showWeaponSelector(weapons) {
     });
   };
 
-  // Show available weapons
   weapons.forEach((weapon, i) => {
     const x = 200 + i * 200;
     const y = 300;
-
-    // Button background
-    const btn = scene.add.graphics();
-    btn.fillStyle(C.VG, 1);
-    btn.fillRoundedRect(x - 90, y - 100, 180, 200, 10);
-    btn.lineStyle(3, 0xffaa00, 1);
-    btn.strokeRoundedRect(x - 90, y - 100, 180, 200, 10);
-    btn.setScrollFactor(0);
-    btn.setDepth(101);
-    btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 100, 180, 200), Phaser.Geom.Rectangle.Contains);
-
-    // Weapon name
-    mkTxt(x, y - 40, weapon.n, {[F]: '20px', [FF]: A, [CO]: CS.W, [FST]: 'bold', wordWrap: { width: 160, useAdvancedWrap: true }}, 102);
-
-    // Description
-    mkTxt(x, y + 20, weapon.d, {[F]: '14px', [FF]: A, [CO]: CS.LG, wordWrap: { width: 160, useAdvancedWrap: true }, align: 'center'}, 102);
-
-    // Store option reference
+    const btn = scene.add.graphics().setScrollFactor(0).setDepth(101);
+    btn.fillStyle(C.VG, 1).fillRoundedRect(x - 90, y - 100, 180, 200, 10).lineStyle(3, 0xffaa00, 1).strokeRoundedRect(x - 90, y - 100, 180, 200, 10);
+    mkTxt(x, y - 40, weapon.n, {[F]: '20px', [FF]: A, [CO]: CS.W, [FST]: 'bold'}, 102);
+    mkTxt(x, y + 20, weapon.d, {[F]: '14px', [FF]: A, [CO]: CS.LG}, 102);
     menuOptions.push({ btn, weapon, x, y });
-
-    // Click handler
-    btn.on('pointerdown', () => selectWeapon(weapon));
-
-    // Hover effect
-    btn.on('pointerover', () => {
-      selectedIndex = i;
-      updateSelection();
-    });
   });
 
   // Initial selection highlight
@@ -1442,37 +1349,12 @@ function showRareUpg() {
   shuffled.forEach((upgrade, i) => {
     const x = 150 + i * 250;
     const y = 300;
-
-    // Button background (purple tint)
-    const btn = scene.add.graphics();
-    btn.fillStyle(0x330033, 1);
-    btn.fillRoundedRect(x - 90, y - 80, 180, 160, 10);
-    btn.lineStyle(3, C.P, 1);
-    btn.strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
-    btn.setScrollFactor(0);
-    btn.setDepth(101);
-    btn.setInteractive(new Phaser.Geom.Rectangle(x - 90, y - 80, 180, 160), Phaser.Geom.Rectangle.Contains);
-
-    // Icon
+    const btn = scene.add.graphics().setScrollFactor(0).setDepth(101);
+    btn.fillStyle(0x330033, 1).fillRoundedRect(x - 90, y - 80, 180, 160, 10).lineStyle(3, C.P, 1).strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
     mkTxt(x, y - 30, upgrade.icon, {[F]: '48px'}, 102);
-
-    // Name
-    mkTxt(x, y + 20, upgrade.name, {[F]: '18px', [FF]: A, [CO]: '#ff00ff', [FST]: 'bold'}, 102);
-
-    // Description
-    mkTxt(x, y + 50, upgrade.desc, {[F]: '14px', [FF]: A, [CO]: '#ffaaff'}, 102);
-
-    // Store option reference
+    mkTxt(x, y + 20, upgrade.name, {[F]: '18px', [FF]: A, [CO]: '#f0f', [FST]: 'bold'}, 102);
+    mkTxt(x, y + 50, upgrade.desc, {[F]: '14px', [FF]: A, [CO]: '#faf'}, 102);
     menuOptions.push({ btn, upgrade, x, y });
-
-    // Click handler
-    btn.on('pointerdown', () => selectUpgrade(upgrade));
-
-    // Hover effect
-    btn.on('pointerover', () => {
-      selectedIndex = i;
-      updateSelection();
-    });
   });
 
   // Initial selection highlight
