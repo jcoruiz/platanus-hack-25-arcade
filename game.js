@@ -838,7 +838,7 @@ function createEn(type, x, y, hpMult = 1, scale = 1) {
 
   const enemy = en.create(x, y, `enemy_${type.n}`);
   enemy.setScale(scale);
-  enemy.body.setCircle(10 * scale);
+  enemy.body.setCircle(4 * scale);
   enemy.setData('hp', difficulty.enemyHp * type.h * hpMult);
   enemy.setData('speed', difficulty.enemySpeed * type.s);
   enemy.setData('damage', difficulty.enemyDamage * type.d);
