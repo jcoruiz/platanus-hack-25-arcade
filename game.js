@@ -430,6 +430,24 @@ function create() {
   scene = this;
   gr = this.add.graphics();
 
+  // Distant nebulae (far background)
+  const nebColors = [0x00ffff, 0xff00ff, 0xffff00, 0x9966ff, 0x6666ff, 0xff66cc];
+  for (let i = 0; i < 3; i++) {
+    const neb = this.add.graphics();
+    const x = 100 + Math.random() * 600;
+    const y = 100 + Math.random() * 400;
+    const col = nebColors[Math.floor(Math.random() * 6)];
+    const size = 80 + Math.random() * 120;
+    neb.fillStyle(col, 0.08);
+    neb.fillCircle(x, y, size);
+    neb.fillStyle(col, 0.12);
+    neb.fillCircle(x, y, size * 0.7);
+    neb.fillStyle(col, 0.15);
+    neb.fillCircle(x, y, size * 0.4);
+    neb.setScrollFactor(0.05 + Math.random() * 0.05);
+    neb.setDepth(-15 + i * 0.4);
+  }
+
   // Cyberpunk neon grid background with parallax
   const gridLayers = [
     {sp: 200, c: 0x00ffff, a: 0.3, sf: 0.2}, // Cyan - far
