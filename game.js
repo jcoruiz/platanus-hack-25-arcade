@@ -164,51 +164,51 @@ const u = (id, n, d, ic, ml, t, prop, val, min, w) => ({
 });
 
 const pUpgrades = [
-  u('s','Speed','+15% Move','👟',8,1,'speed',1.15),
-  {id:'hp',name:'Max HP',desc:'+20 Max HP',icon:'❤️',maxLevel:10,apply:()=>{stats.maxHp+=20;stats.hp+=20;ul.hp=(ul.hp||0)+1}},
-  u('kb','Knockback','+30% Enemy','💨',6,1,'knockback',1.3),
-  u('hr','HP Regen','+10 HP/min','💚',10,0,'hpRegen',10),
-  u('xp','XP Boost','+50% XP','⭐',8,0,'xpMultiplier',0.5),
-  u('l','Luck','+50% Chest','🍀',10,0,'lootChance',0.5),
-  u('cc','Crit Chance','+5% Crit','🎯',10,0,'critChance',0.05),
-  u('cd','Crit Damage','+25% Crit','💢',10,0,'critDamage',0.25)
+  u('s', 'Speed', '+15% Move', '👟', 8, 1, 'speed', 1.15),
+  { id: 'hp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: 10, apply: () => { stats.maxHp += 20; stats.hp += 20; ul.hp = (ul.hp || 0) + 1 } },
+  u('kb', 'Knockback', '+30% Enemy', '💨', 6, 1, 'knockback', 1.3),
+  u('hr', 'HP Regen', '+10 HP/min', '💚', 10, 0, 'hpRegen', 10),
+  u('xp', 'XP Boost', '+50% XP', '⭐', 8, 0, 'xpMultiplier', 0.5),
+  u('l', 'Luck', '+50% Chest', '🍀', 10, 0, 'lootChance', 0.5),
+  u('cc', 'Crit Chance', '+5% Crit', '🎯', 10, 0, 'critChance', 0.05),
+  u('cd', 'Crit Damage', '+25% Crit', '💢', 10, 0, 'critDamage', 0.25)
 ];
 
 const projectileUpgrades = [
-  u('ms','Multi Shot','+1 Projectile','🔫',10,0,'c',1,0,'p'),
-  u('fr','Fire Rate','-15% Fire','⚡',8,2,'f',0.85,150,'p'),
-  u('pd','Projectile Damage','+5 Damage','🗡️',10,0,'m',5,0,'p'),
-  u('pn','Penetration','+1 Enemy','⚔️',5,0,'e',1,0,'p')
+  u('ms', 'Multi Shot', '+1 Projectile', '🔫', 10, 0, 'c', 1, 0, 'p'),
+  u('fr', 'Fire Rate', '-15% Fire', '⚡', 8, 2, 'f', 0.85, 150, 'p'),
+  u('pd', 'Projectile Damage', '+5 Damage', '🗡️', 10, 0, 'm', 5, 0, 'p'),
+  u('pn', 'Penetration', '+1 Enemy', '⚔️', 5, 0, 'e', 1, 0, 'p')
 ];
 
 const orbitingBallUpgrades = [
-  u('mb','More Balls','+1 Orb','⚪',10,0,'c',1,0,'o'),
-  u('rs','Rotation Speed','+0.5 Rot','🌀',10,0,'r',0.5,0,'o'),
-  u('bs','Ball Size','+2 Radius','⭕',8,0,'b',2,0,'o'),
-  u('bd','Ball Damage','+8 Damage','💥',10,0,'m',8,0,'o')
+  u('mb', 'More Balls', '+1 Orb', '⚪', 10, 0, 'c', 1, 0, 'o'),
+  u('rs', 'Rotation Speed', '+0.5 Rot', '🌀', 10, 0, 'r', 0.5, 0, 'o'),
+  u('bs', 'Ball Size', '+2 Radius', '⭕', 8, 0, 'b', 2, 0, 'o'),
+  u('bd', 'Ball Damage', '+8 Damage', '💥', 10, 0, 'm', 8, 0, 'o')
 ];
 
 const areaDamageUpgrades = [
-  u('ar','Area Radius','+15 Range','🔴',5,0,'a',15,0,'a'),
-  u('ad','Area DPS','+3 DPS','🔥',10,0,'p',3,0,'a'),
-  u('at','Tick Speed','-15% Delay','⚡',8,2,'t',0.85,150,'a')
+  u('ar', 'Area Radius', '+15 Range', '🔴', 5, 0, 'a', 15, 0, 'a'),
+  u('ad', 'Area DPS', '+3 DPS', '🔥', 10, 0, 'p', 3, 0, 'a'),
+  u('at', 'Tick Speed', '-15% Delay', '⚡', 8, 2, 't', 0.85, 150, 'a')
 ];
 
 const boomerangUpgrades = [
-  u('bg','Boom Damage','+8 Damage','💥',10,0,'m',8,0,'b'),
-  u('bz','Boom Size','+30% Size','📏',8,0,'z',0.3,0,'b'),
-  {id:'bv',name:'Boom Speed',desc:'+15% Speed',icon:'💨',weaponId:'b',maxLevel:8,apply:()=>{const w=getWeapon('b');w.s*=1.15;w.w*=1.15;ul.bv=(ul.bv||0)+1}},
-  {id:'bc',name:'More Booms',desc:'+1 Boom',icon:'🪃',weaponId:'b',maxLevel:5,apply:()=>{getWeapon('b').c++;avB++;ul.bc=(ul.bc||0)+1}}
+  u('bg', 'Boom Damage', '+8 Damage', '💥', 10, 0, 'm', 8, 0, 'b'),
+  u('bz', 'Boom Size', '+30% Size', '📏', 8, 0, 'z', 0.3, 0, 'b'),
+  { id: 'bv', name: 'Boom Speed', desc: '+15% Speed', icon: '💨', weaponId: 'b', maxLevel: 8, apply: () => { const w = getWeapon('b'); w.s *= 1.15; w.w *= 1.15; ul.bv = (ul.bv || 0) + 1 } },
+  { id: 'bc', name: 'More Booms', desc: '+1 Boom', icon: '🪃', weaponId: 'b', maxLevel: 5, apply: () => { getWeapon('b').c++; avB++; ul.bc = (ul.bc || 0) + 1 } }
 ];
 
 const rareUpgrades = [
-  u('r1','Triple Shot','+3 Proj','🔫',2,0,'c',3,0,'p'),
-  u('r2','Rapid Fire','-40% Fire','⚡',3,2,'f',0.6,100,'p'),
-  u('r3','Massive Dmg','+30 Dmg','🗡️',3,0,'m',30,0,'p'),
-  u('r4','Double Balls','+2 Orbs','⚪',2,0,'c',2,0,'o'),
-  u('r5','Mega Ball Dmg','+25 Dmg','💥',3,0,'m',25,0,'o'),
-  u('r6','Huge Area','+100 Range','🔴',2,0,'a',100,0,'a'),
-  u('r7','Devastating DPS','+15 DPS','🔥',3,0,'p',15,0,'a')
+  u('r1', 'Triple Shot', '+3 Proj', '🔫', 2, 0, 'c', 3, 0, 'p'),
+  u('r2', 'Rapid Fire', '-40% Fire', '⚡', 3, 2, 'f', 0.6, 100, 'p'),
+  u('r3', 'Massive Dmg', '+30 Dmg', '🗡️', 3, 0, 'm', 30, 0, 'p'),
+  u('r4', 'Double Balls', '+2 Orbs', '⚪', 2, 0, 'c', 2, 0, 'o'),
+  u('r5', 'Mega Ball Dmg', '+25 Dmg', '💥', 3, 0, 'm', 25, 0, 'o'),
+  u('r6', 'Huge Area', '+100 Range', '🔴', 2, 0, 'a', 100, 0, 'a'),
+  u('r7', 'Devastating DPS', '+15 DPS', '🔥', 3, 0, 'p', 15, 0, 'a')
 ];
 
 // Helper: create text with common properties
@@ -237,12 +237,29 @@ function procDmg(enemy, srcX, srcY, baseDmg) {
   return false;
 }
 
+// Helper: spawn death particle explosion
+function spawnDeathParticles(x, y, color) {
+  const emitter = scene.add.particles(x, y, 'orb', {
+    speed: { min: 50, max: 150 },
+    angle: { min: 0, max: 360 },
+    scale: { start: 0.6, end: 0 },
+    lifespan: 600,
+    quantity: 8,
+    tint: color
+  });
+  scene.time.delayedCall(700, () => emitter.destroy());
+}
+
 // Helper: handle enemy death and drops
 function handleEnemyDeath(e) {
   const xp = e.getData('xpValue') || 5;
   const cn = e.getData('coinValue') || 1;
   const iB = e.getData('isBoss');
   const dc = e.getData('dropChance') || 0;
+  const color = e.getData('enemyColor') || C.W;
+
+  spawnDeathParticles(e.x, e.y, color);
+
   dropXP(e.x, e.y, xp);
   if (Math.random() < 0.25) dropCoin(e.x, e.y, cn);
   if (iB) { dropChest(e.x, e.y); dropMagnet(e.x + 40, e.y); }
@@ -342,20 +359,20 @@ function preload() {
   g.clear();
 
   // Enemy textures (one for each type) - different shapes
-  const ey = (x1, y1, x2, y2) => { g.fillStyle(C.W,1).fillCircle(x1,y1,2).fillCircle(x2,y2,2); };
+  const ey = (x1, y1, x2, y2) => { g.fillStyle(C.W, 1).fillCircle(x1, y1, 2).fillCircle(x2, y2, 2); };
   const tri = (...a) => g.fillTriangle(...a);
-  const circ = (x, y, rad) => g.fillCircle(x,y,rad);
-  const rect = (x, y, w, h) => g.fillRect(x,y,w,h);
+  const circ = (x, y, rad) => g.fillCircle(x, y, rad);
+  const rect = (x, y, w, h) => g.fillRect(x, y, w, h);
   const dm = {
-    g: () => { tri(10,2,2,18,18,18); ey(7,10,13,10); },
-    b: () => { tri(10,2,2,10,10,18); tri(10,2,18,10,10,18); ey(8,8,12,8); },
-    c: (col) => { circ(10,10,9); ey(7,9,13,9); g.fillStyle(col,0.7); circ(10,6,3); },
-    y: () => { rect(3,3,14,14); g.fillStyle(C.B,1); ey(7,8,13,8); rect(6,13,8,2); },
-    o: () => { circ(10,10,9); tri(10,1,7,8,13,8); tri(10,19,7,12,13,12); tri(1,10,8,7,8,13); tri(19,10,12,7,12,13); ey(7,8,13,8); },
-    r: () => { circ(10,10,9); tri(3,5,5,2,7,5); tri(17,5,15,2,13,5); g.fillStyle(C.R,1); ey(7,9,13,9); rect(7,14,6,2); },
-    p: () => { rect(4,6,12,10); circ(6,6,3); circ(14,6,3); g.fillStyle(C.G,1); circ(7,10,3); circ(13,10,3); g.fillStyle(C.B,1); ey(7,10,13,10); }
+    g: () => { tri(10, 2, 2, 18, 18, 18); ey(7, 10, 13, 10); },
+    b: () => { tri(10, 2, 2, 10, 10, 18); tri(10, 2, 18, 10, 10, 18); ey(8, 8, 12, 8); },
+    c: (col) => { circ(10, 10, 9); ey(7, 9, 13, 9); g.fillStyle(col, 0.7); circ(10, 6, 3); },
+    y: () => { rect(3, 3, 14, 14); g.fillStyle(C.B, 1); ey(7, 8, 13, 8); rect(6, 13, 8, 2); },
+    o: () => { circ(10, 10, 9); tri(10, 1, 7, 8, 13, 8); tri(10, 19, 7, 12, 13, 12); tri(1, 10, 8, 7, 8, 13); tri(19, 10, 12, 7, 12, 13); ey(7, 8, 13, 8); },
+    r: () => { circ(10, 10, 9); tri(3, 5, 5, 2, 7, 5); tri(17, 5, 15, 2, 13, 5); g.fillStyle(C.R, 1); ey(7, 9, 13, 9); rect(7, 14, 6, 2); },
+    p: () => { rect(4, 6, 12, 10); circ(6, 6, 3); circ(14, 6, 3); g.fillStyle(C.G, 1); circ(7, 10, 3); circ(13, 10, 3); g.fillStyle(C.B, 1); ey(7, 10, 13, 10); }
   };
-  enemyTypes.forEach(t => { g.fillStyle(t.c,1); dm[t.n](t.c); g.generateTexture(`enemy_${t.n}`,20,20).clear(); });
+  enemyTypes.forEach(t => { g.fillStyle(t.c, 1); dm[t.n](t.c); g.generateTexture(`enemy_${t.n}`, 20, 20).clear(); });
 
   // Generic orb texture with glow (white for tinting)
   g.fillStyle(C.W, 0.3);
@@ -824,6 +841,7 @@ function createEn(type, x, y, hpMult = 1, scale = 1) {
   enemy.setData('xpValue', type.x);
   enemy.setData('coinValue', type.cn);
   enemy.setData('dropChance', type.r);
+  enemy.setData('enemyColor', type.c);
   enemy.setData('knockbackUntil', 0);
   return enemy;
 }
@@ -1127,9 +1145,9 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
       const x = 150 + i * 250;
       const btn = scene.add.graphics()[SSF](0)[SD](101);
       btn.fillStyle(C.VG, 1).fillRoundedRect(x - 80, upgradeY - 10, 160, 110, 8).lineStyle(3, C.G, 1).strokeRoundedRect(x - 80, upgradeY - 10, 160, 110, 8);
-      mkTxt(x, upgradeY + 30, u.icon, {[F]: '40px'}, 102);
-      mkTxt(x, upgradeY + 70, u.name, {[F]: '16px', [FF]: A, [CO]: CS.W}, 102);
-      mkTxt(x, upgradeY + 90, u.desc, {[F]: '12px', [FF]: A, [CO]: CS.LG}, 102);
+      mkTxt(x, upgradeY + 30, u.icon, { [F]: '40px' }, 102);
+      mkTxt(x, upgradeY + 70, u.name, { [F]: '16px', [FF]: A, [CO]: CS.W }, 102);
+      mkTxt(x, upgradeY + 90, u.desc, { [F]: '12px', [FF]: A, [CO]: CS.LG }, 102);
       menuOptions.push({ btn, u, x, y: upgradeY + 40 });
     });
   };
@@ -1540,7 +1558,7 @@ function showStartScreen() {
 
 function createUI() {
   const txt = (x, y, t, c, sz = '16px', d = 0) => {
-    const el = scene.add.text(x, y, t, {[F]: sz, [FF]: A, [CO]: c})[SSF](0);
+    const el = scene.add.text(x, y, t, { [F]: sz, [FF]: A, [CO]: c })[SSF](0);
     return d ? el[SD](d) : el;
   };
   ui.hpText = txt(10, 10, 'HP:', CS.W);
@@ -1588,13 +1606,13 @@ function updateUI() {
 function drawUIBars() {
   gr.clear()[SSF](0);
   // Helper: draw bar (x, y, w, h, val, max, bgCol, fgCol, borderCol, borderW)
-  const bar = (x,y,w,h,v,m,bg,fg,br,bw) => {
-    gr.fillStyle(bg,1).fillRect(x,y,w,h);
-    gr.fillStyle(fg,1).fillRect(x,y,w*(v/m),h);
-    gr.lineStyle(bw,br,1).strokeRect(x,y,w,h);
+  const bar = (x, y, w, h, v, m, bg, fg, br, bw) => {
+    gr.fillStyle(bg, 1).fillRect(x, y, w, h);
+    gr.fillStyle(fg, 1).fillRect(x, y, w * (v / m), h);
+    gr.lineStyle(bw, br, 1).strokeRect(x, y, w, h);
   };
-  bar(50,10,200,20,stats.hp,stats.maxHp,C.DR,C.R,C.W,2);
-  bar(330,10,180,20,stats.xp,stats.xpToNext,0x004444,C.Cy,C.W,2);
+  bar(50, 10, 200, 20, stats.hp, stats.maxHp, C.DR, C.R, C.W, 2);
+  bar(330, 10, 180, 20, stats.xp, stats.xpToNext, 0x004444, C.Cy, C.W, 2);
 
   // Find active boss
   let boss = null;
@@ -1610,7 +1628,7 @@ function drawUIBars() {
     if (ui.bossLabelText) ui.bossLabelText[DS]();
     if (ui.bossHpText) ui.bossHpText[DS]();
     ui.bossLabelText = mkTxt(400, 40, '⚔️ BOSS ⚔️', { [F]: '20px', [FF]: A, [CO]: CS.R, [STR]: CS.B, [STT]: 4 }, 200);
-    bar(100,50,600,25,hp,maxHp,C.DR,C.R,C.Y,3);
+    bar(100, 50, 600, 25, hp, maxHp, C.DR, C.R, C.Y, 3);
     ui.bossHpText = mkTxt(400, 62, `${~~hp} / ${~~maxHp}`, { [F]: '14px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 3 }, 200);
   } else if (ui.bossLabelText) {
     ui.bossLabelText[DS]();
