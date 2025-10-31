@@ -1490,7 +1490,7 @@ function showStartScreen() {
   const upd = () => menuOptions.forEach((o, i) => dc(o.btn, o.x, o.y, i === selectedIndex));
 
   characters.forEach((ch, i) => {
-    const x = 120 + i * 160;
+    const x = 160 + i * 160;
     const y = 280;
     const btn = scene.add.graphics().setScrollFactor(0).setDepth(101);
     dc(btn, x, y, 0);
