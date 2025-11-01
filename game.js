@@ -2511,7 +2511,7 @@ function initAreaDamage() {
   if (adc) adc[DS]();
 
   adc = scene.add.graphics();
-  adc[SD](-1);
+  adc[SD](-50); // Far depth to avoid alpha blending interference with background layers
 }
 
 function updAreaDmg(delta) {
@@ -2523,8 +2523,8 @@ function updAreaDmg(delta) {
     adc.clear();
     if (weapon.a !== lastAreaRadius) {
       lastAreaRadius = weapon.a;
-      adc.lineStyle(2, 0xffaa00, 0.5);
-      adc.fillStyle(0xffaa00, 0.15);
+      adc.lineStyle(2, 0xffaa00, 0.8);
+      adc.fillStyle(0xffaa00, 0.35);
     }
     adc.fillCircle(p.x, p.y, weapon.a);
     adc.strokeCircle(p.x, p.y, weapon.a);
