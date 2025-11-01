@@ -795,6 +795,14 @@ function update(_time, delta) {
     p.rotation += shortestAngle * 0.15;
   }
 
+  // Limit player velocity to prevent flying bug (max 500 units/sec)
+  const maxVel = 500;
+  const velMag = Math.sqrt(p.body.velocity.x ** 2 + p.body.velocity.y ** 2);
+  if (velMag > maxVel) {
+    const scale = maxVel / velMag;
+    p.body.setVelocity(p.body.velocity.x * scale, p.body.velocity.y * scale);
+  }
+
   // Auto shoot (projectile weapon)
   const projectileWeapon = getWeapon('p');
   if (projectileWeapon.u && shootTimer >= projectileWeapon.f) {
@@ -1040,11 +1048,27 @@ function hitPlayer(_pObj, enemy) {
   if (gameTime - lastHit < 500) return; // 500ms cooldown per enemy
 
   const damage = enemy.getData('damage') || difficulty.enemyDamage;
-  stats.hp -= damage;
+  stats.hp = Math.max(0, stats.hp - damage); // Ensure HP never goes negative
   playTone(scene, 220, 0.15);
   enemy.setData('lastHitTime', gameTime);
 
+  // Apply knockback to player (helps escape when surrounded)
+  const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, p.x, p.y);
+  const knockbackForce = 200; // Moderate knockback
+  p.body.setVelocity(
+    Math.cos(angle) * knockbackForce,
+    Math.sin(angle) * knockbackForce
+  );
+
+  // Flash player red
+  p.setTintFill(C.R);
+  scene.time.delayedCall(100, () => {
+    if (p && p[AC]) p.clearTint();
+  });
+
   if (stats.hp <= 0) {
+    // Update UI one last time to show HP at 0
+    drawUIBars();
     endGame();
   }
 }
