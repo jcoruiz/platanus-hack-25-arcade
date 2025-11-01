@@ -1800,8 +1800,26 @@ function showFullLeaderboard() {
 }
 
 function showStartScreen() {
-  // Dark background
-  scene.add.graphics().fillStyle(C.B, 0.95).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
+  // Animated neon grid background
+  const grid = scene.add.graphics()[SSF](0)[SD](99);
+  const drawGrid = (time) => {
+    grid.clear();
+    const offset = (time * 0.02) % 50;
+    grid.lineStyle(1, C.Cy, 0.15);
+    for (let x = 0; x <= 800; x += 50) grid.lineBetween(x, 0, x, 600);
+    for (let y = -offset; y <= 600; y += 50) grid.lineBetween(0, y, 800, y);
+    grid.lineStyle(1, C.P, 0.1);
+    for (let x = 25; x <= 800; x += 50) grid.lineBetween(x, 0, x, 600);
+  };
+  scene.events.on('update', (time) => drawGrid(time));
+
+  // Dark overlay
+  scene.add.graphics().fillStyle(C.B, 0.9).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
+
+  // Scanlines VHS effect
+  const scan = scene.add.graphics()[SSF](0)[SD](104);
+  scan.lineStyle(1, C.W, 0.03);
+  for (let y = 0; y < 600; y += 3) scan.lineBetween(0, y, 800, y);
 
   // Title with glitch effect
   mkTxt(403, 43, 'CHOOSE CHARACTER', { [F]: '32px', [FF]: A, [CO]: '#ff00ff', [STR]: '#ff00ff', [STT]: 2 }, 101);
@@ -1810,24 +1828,31 @@ function showStartScreen() {
   selectedIndex = 0;
   menuOptions = [];
 
-  // L4D2-style large card rendering with glitch effect
-  const dc = (g, x, y, s) => {
+  // Character gradient colors
+  const gradients = [0xffff00, 0xff00ff, 0x00ffff, 0x00ff00]; // Banana, Medusa, Orb, Train
+
+  // L4D2-style large card rendering with glitch + glow + gradient
+  const dc = (g, x, y, s, i, glowAlpha) => {
     g.clear();
     if (s) {
-      // Selected: Glitch effect with triple layer
-      // Magenta shadow layer
-      g.fillStyle(C.P, 0.3).fillRoundedRect(x - 87, y - 137, 180, 280, 10);
-      g.lineStyle(4, C.P, 1).strokeRoundedRect(x - 87, y - 137, 180, 280, 10);
-      // Cyan shadow layer
-      g.fillStyle(C.Cy, 0.3).fillRoundedRect(x - 93, y - 143, 180, 280, 10);
-      g.lineStyle(4, C.Cy, 1).strokeRoundedRect(x - 93, y - 143, 180, 280, 10);
-      // Main white layer
-      g.fillStyle(C.DD, 0.9).fillRoundedRect(x - 90, y - 140, 180, 280, 10);
-      g.lineStyle(4, C.W, 1).strokeRoundedRect(x - 90, y - 140, 180, 280, 10);
+      // Animated glow layers (pulsing)
+      const ga = glowAlpha || 0.4;
+      g.fillStyle(C.P, ga * 0.3).fillRoundedRect(x - 100, y - 150, 200, 300, 10);
+      g.fillStyle(C.Cy, ga * 0.3).fillRoundedRect(x - 105, y - 155, 210, 310, 10);
+      // Glitch triple layer
+      g.fillStyle(C.P, 0.4).fillRoundedRect(x - 87, y - 137, 180, 280, 10);
+      g.lineStyle(5, C.P, 0.8).strokeRoundedRect(x - 87, y - 137, 180, 280, 10);
+      g.fillStyle(C.Cy, 0.4).fillRoundedRect(x - 93, y - 143, 180, 280, 10);
+      g.lineStyle(5, C.Cy, 0.8).strokeRoundedRect(x - 93, y - 143, 180, 280, 10);
+      // Main card with gradient
+      g.fillGradientStyle(gradients[i], gradients[i], C.B, C.B, 0.3);
+      g.fillRoundedRect(x - 90, y - 140, 180, 280, 10);
+      g.lineStyle(5, C.W, 1).strokeRoundedRect(x - 90, y - 140, 180, 280, 10);
     } else {
-      // Unselected: Simple dark card with cyan border
-      g.fillStyle(C.DD, 0.7).fillRoundedRect(x - 90, y - 140, 180, 280, 10);
-      g.lineStyle(3, 0x00aaaa, 1).strokeRoundedRect(x - 90, y - 140, 180, 280, 10);
+      // Unselected: gradient background
+      g.fillGradientStyle(gradients[i], gradients[i], C.B, C.B, 0.15);
+      g.fillRoundedRect(x - 90, y - 140, 180, 280, 10);
+      g.lineStyle(3, gradients[i], 0.5).strokeRoundedRect(x - 90, y - 140, 180, 280, 10);
     }
   };
 
@@ -1847,58 +1872,81 @@ function showStartScreen() {
     startScreen = false;
   };
 
-  const upd = () => {
+  let glowPulse = 0.4;
+  const upd = (shake) => {
     menuOptions.forEach((o, i) => {
       const s = i === selectedIndex;
-      dc(o.btn, o.x, o.y, s);
+      const shakeX = shake ? (Math.random() - 0.5) * 4 : 0;
+      const shakeY = shake ? (Math.random() - 0.5) * 4 : 0;
 
-      // Update sprite scale based on selection
+      dc(o.btn, o.x + shakeX, o.y + shakeY, s, i, glowPulse);
+
+      // Update sprite with shake and 3D effect
       o.sprite.setScale(s ? 3.5 : 2.5);
+      o.sprite.setPosition(o.x + shakeX, o.y - 50 + shakeY);
+      o.sprite.setAngle(s ? Math.sin(Date.now() * 0.002) * 8 : 0); // Pronounced rotation
 
       // Remove old text
       if (o.texts) o.texts.forEach(t => t[DS]());
       o.texts = [];
 
+      // Destroy old particles
+      if (o.particles) { o.particles[DS](); o.particles = null; }
+
       if (s) {
+        // Add particle sparks for selected card
+        o.particles = scene.add.particles(o.x, o.y, 'orb', {
+          speed: { min: 20, max: 40 },
+          angle: { min: 0, max: 360 },
+          scale: { start: 0.3, end: 0 },
+          lifespan: 800,
+          frequency: 100,
+          tint: [C.Cy, C.P, C.W],
+          blendMode: 'ADD'
+        })[SSF](0)[SD](103);
+
         // Selected: Glitch text effect (triple layer)
-        const t1 = scene.add.text(o.x - 2, o.y + 82, o.character.name, { [F]: '22px', [FF]: A, [CO]: '#ff00ff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102);
-        const t2 = scene.add.text(o.x + 2, o.y + 84, o.character.name, { [F]: '22px', [FF]: A, [CO]: '#00ffff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102);
-        const t3 = scene.add.text(o.x, o.y + 83, o.character.name, { [F]: '22px', [FF]: A, [CO]: CS.W, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](103);
+        const t1 = scene.add.text(o.x - 2 + shakeX, o.y + 82 + shakeY, o.character.name, { [F]: '22px', [FF]: A, [CO]: '#ff00ff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102);
+        const t2 = scene.add.text(o.x + 2 + shakeX, o.y + 84 + shakeY, o.character.name, { [F]: '22px', [FF]: A, [CO]: '#00ffff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102);
+        const t3 = scene.add.text(o.x + shakeX, o.y + 83 + shakeY, o.character.name, { [F]: '22px', [FF]: A, [CO]: CS.W, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](103);
         o.texts.push(t1, t2, t3);
 
         // Weapon and passive (bright)
-        o.texts.push(scene.add.text(o.x, o.y + 108, o.character.desc, { [F]: '14px', [FF]: A, [CO]: '#00ffff' }).setOrigin(0.5)[SSF](0)[SD](102));
-        o.texts.push(scene.add.text(o.x, o.y + 128, o.character.passiveDesc, { [F]: '12px', [FF]: A, [CO]: '#ff00ff' }).setOrigin(0.5)[SSF](0)[SD](102));
+        o.texts.push(scene.add.text(o.x + shakeX, o.y + 108 + shakeY, o.character.desc, { [F]: '14px', [FF]: A, [CO]: '#00ffff' }).setOrigin(0.5)[SSF](0)[SD](102));
+        o.texts.push(scene.add.text(o.x + shakeX, o.y + 128 + shakeY, o.character.passiveDesc, { [F]: '12px', [FF]: A, [CO]: '#ff00ff' }).setOrigin(0.5)[SSF](0)[SD](102));
       } else {
-        // Unselected: Simple cyan text
-        o.texts.push(scene.add.text(o.x, o.y + 83, o.character.name, { [F]: '18px', [FF]: A, [CO]: '#00aaaa', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102));
-        o.texts.push(scene.add.text(o.x, o.y + 108, o.character.desc, { [F]: '12px', [FF]: A, [CO]: '#008888' }).setOrigin(0.5)[SSF](0)[SD](102));
-        o.texts.push(scene.add.text(o.x, o.y + 128, o.character.passiveDesc, { [F]: '10px', [FF]: A, [CO]: '#006666' }).setOrigin(0.5)[SSF](0)[SD](102));
+        // Unselected: Simple colored text
+        const col = ['#ffff00', '#ff00ff', '#00ffff', '#00ff00'][i];
+        o.texts.push(scene.add.text(o.x, o.y + 83, o.character.name, { [F]: '18px', [FF]: A, [CO]: col, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102));
+        o.texts.push(scene.add.text(o.x, o.y + 108, o.character.desc, { [F]: '12px', [FF]: A, [CO]: col }).setOrigin(0.5)[SSF](0)[SD](102));
+        o.texts.push(scene.add.text(o.x, o.y + 128, o.character.passiveDesc, { [F]: '10px', [FF]: A, [CO]: col }).setOrigin(0.5)[SSF](0)[SD](102));
       }
     });
   };
 
+  // Glow pulse animation
+  scene.tweens.add({
+    targets: { val: 0.4 },
+    val: 0.8,
+    duration: 600,
+    yoyo: true,
+    repeat: -1,
+    onUpdate: (tw) => { glowPulse = tw.getValue(); if (!startScreen) upd(false); }
+  });
+
   characters.forEach((ch, i) => {
-    const x = 100 + i * 200; // New spacing for larger cards
+    const x = 100 + i * 200;
     const y = 260;
     const btn = scene.add.graphics()[SSF](0)[SD](101);
 
-    // Create large sprite
+    // Create large sprite directly (no entrance animation)
     const heroSprite = scene.add.sprite(x, y - 50, ch.texture).setScale(2.5)[SSF](0)[SD](102);
-    scene.tweens.add({
-      targets: heroSprite,
-      scaleX: 3.0,
-      scaleY: 3.0,
-      duration: 1000 + i * 100,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
 
-    menuOptions.push({ btn, character: ch, x, y, sprite: heroSprite, texts: [] });
+    menuOptions.push({ btn, character: ch, x, y, sprite: heroSprite, texts: [], particles: null });
   });
 
-  upd();
+  // Initial draw
+  upd(false);
 
   mkTxt(400, 540, '←→ or AD: Move  ENTER: Select  ESC: Back', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
 
@@ -1909,8 +1957,18 @@ function showStartScreen() {
   const ek = scene.input.keyboard.addKey('ENTER');
   const bk = scene.input.keyboard.addKey('ESC');
 
-  const goLeft = () => { selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length; upd(); playTone(scene, 800, 0.05); };
-  const goRight = () => { selectedIndex = (selectedIndex + 1) % menuOptions.length; upd(); playTone(scene, 800, 0.05); };
+  const goLeft = () => {
+    selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
+    upd(true); // Shake on change
+    scene.time.delayedCall(50, () => upd(false)); // Reset shake
+    playTone(scene, 800, 0.05);
+  };
+  const goRight = () => {
+    selectedIndex = (selectedIndex + 1) % menuOptions.length;
+    upd(true); // Shake on change
+    scene.time.delayedCall(50, () => upd(false)); // Reset shake
+    playTone(scene, 800, 0.05);
+  };
 
   lk.on('down', goLeft);
   ak.on('down', goLeft);
