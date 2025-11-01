@@ -1033,15 +1033,8 @@ function getAllWeaponUpgrades(wId) {
   return [];
 }
 
-function showUpgradeMenu(stateVar = 'levelingUp') {
-  // Build available upgrades pool
-  let availableUpgrades = [...pUpgrades];
-  if (getWeapon('p').u) availableUpgrades.push(...projectileUpgrades);
-  if (getWeapon('o').u) availableUpgrades.push(...orbitingBallUpgrades);
-  if (getWeapon('a').u) availableUpgrades.push(...areaDamageUpgrades);
-  if (getWeapon('b').u) availableUpgrades.push(...boomerangUpgrades);
-  availableUpgrades = availableUpgrades.filter(u => (ul[u.id] || 0) < u.maxLevel);
-
+// Helper: render stats panel (used in upgrade and weapon selection menus)
+function renderStatsPanel() {
   // Overlay
   const ov = scene.add.graphics();
   ov.fillStyle(C.B, 0.9).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
@@ -1056,7 +1049,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   mkTxt(720, 30, `Coins: ${stats.coins}`, { [F]: '18px', [FF]: A, [CO]: CS.Go }, 102);
 
   // Hero sprite with purple border
-  const hero = scene.add.sprite(70, 110, selCh.texture).setScale(3)[SSF](0)[SD](102);
+  scene.add.sprite(70, 110, selCh.texture).setScale(3)[SSF](0)[SD](102);
   const heroBorder = scene.add.graphics()[SSF](0)[SD](102);
   heroBorder.lineStyle(2, C.P, 1).strokeRect(34, 74, 72, 72);
 
@@ -1097,6 +1090,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
 
       // Weapon image
       const wpSprite = scene.add.sprite(x + 37, y + 50, w.tex).setScale(2)[SSF](0)[SD](102);
+      if (w.i === 'p') wpSprite.setTint(C.O);
       if (w.i === 'a') wpSprite.setTint(C.R);
 
       // Weapon upgrades grid (2x2, max 4)
@@ -1128,6 +1122,22 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
       mkTxt(x + 85, y + 50, '?', { [F]: '48px', [FF]: A, [CO]: '#888' }, 102);
     }
   });
+}
+
+function showUpgradeMenu(stateVar = 'levelingUp') {
+  // Clean any previous menu first
+  cleanupMenu();
+
+  // Build available upgrades pool
+  let availableUpgrades = [...pUpgrades];
+  if (getWeapon('p').u) availableUpgrades.push(...projectileUpgrades);
+  if (getWeapon('o').u) availableUpgrades.push(...orbitingBallUpgrades);
+  if (getWeapon('a').u) availableUpgrades.push(...areaDamageUpgrades);
+  if (getWeapon('b').u) availableUpgrades.push(...boomerangUpgrades);
+  availableUpgrades = availableUpgrades.filter(u => (ul[u.id] || 0) < u.maxLevel);
+
+  // Render stats panel
+  renderStatsPanel();
 
   // Shuffle upgrades
   const shuffled = [...availableUpgrades].sort(() => Math.random() - 0.5).slice(0, 3);
@@ -1265,19 +1275,19 @@ function showWeaponSelector(weapons) {
   selectingWeapon = true;
   scene.physics.pause();
 
-  // Semi-transparent overlay
-  const overlay = scene.add.graphics();
-  overlay.fillStyle(C.B, 0.85);
-  overlay.fillRect(0, 0, 800, 600);
-  overlay[SSF](0);
-  overlay[SD](100);
+  // Clean any previous menu first
+  cleanupMenu();
 
-  // Title
-  const title = mkTxt(400, 80, '⚔️ CHOOSE A WEAPON ⚔️', { [F]: '40px', [FF]: A, [CO]: '#ffaa00', [STR]: CS.B, [STT]: 6 });
+  // Render stats panel
+  renderStatsPanel();
 
   // Reset menu state
   selectedIndex = 0;
   menuOptions = [];
+
+  // Choose weapon section
+  const weaponY = 360;
+  mkTxt(400, 320, '▸ Choose Weapon:', { [F]: '16px', [FF]: A, [CO]: CS.Cy }, 102);
 
   const selectWeapon = (weapon) => {
     weapon.u = true;
@@ -1301,24 +1311,43 @@ function showWeaponSelector(weapons) {
   };
 
   const updateSelection = () => {
+    // Limpiar tween y overlay anteriores
+    if (pulseTween) { pulseTween.stop(); pulseTween = null; }
+    if (pulseOverlay) { pulseOverlay.destroy(); pulseOverlay = null; }
+
     menuOptions.forEach((option, i) => {
       const isSelected = i === selectedIndex;
       option.btn.clear();
       option.btn.fillStyle(isSelected ? C.DB : C.VG, 1);
-      option.btn.fillRoundedRect(option.x - 90, option.y - 100, 180, 200, 10);
-      option.btn.lineStyle(3, isSelected ? C.Y : 0xffaa00, 1);
-      option.btn.strokeRoundedRect(option.x - 90, option.y - 100, 180, 200, 10);
+      option.btn.fillRoundedRect(option.x - 90, weaponY - 10, 180, 200, 10);
+      option.btn.lineStyle(3, isSelected ? C.Y : C.G, 1);
+      option.btn.strokeRoundedRect(option.x - 90, weaponY - 10, 180, 200, 10);
+
+      // Efecto de pulso para arma seleccionada
+      if (isSelected) {
+        pulseOverlay = scene.add.graphics()[SSF](0)[SD](103);
+        pulseOverlay.fillStyle(C.P, 0.3);
+        pulseOverlay.fillRoundedRect(option.x - 90, weaponY - 10, 180, 200, 10);
+
+        pulseTween = scene.tweens.add({
+          targets: pulseOverlay,
+          alpha: { from: 0.3, to: 0.7 },
+          duration: 600,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+      }
     });
   };
 
   weapons.forEach((weapon, i) => {
     const x = 200 + i * 200;
-    const y = 300;
     const btn = scene.add.graphics()[SSF](0)[SD](101);
-    btn.fillStyle(C.VG, 1).fillRoundedRect(x - 90, y - 100, 180, 200, 10).lineStyle(3, 0xffaa00, 1).strokeRoundedRect(x - 90, y - 100, 180, 200, 10);
-    mkTxt(x, y - 40, weapon.n, { [F]: '20px', [FF]: A, [CO]: CS.W, [FST]: 'bold' }, 102);
-    mkTxt(x, y + 20, weapon.d, { [F]: '14px', [FF]: A, [CO]: CS.LG }, 102);
-    menuOptions.push({ btn, weapon, x, y });
+    btn.fillStyle(C.VG, 1).fillRoundedRect(x - 90, weaponY - 10, 180, 200, 10).lineStyle(3, C.G, 1).strokeRoundedRect(x - 90, weaponY - 10, 180, 200, 10);
+    mkTxt(x, weaponY + 50, weapon.n, { [F]: '20px', [FF]: A, [CO]: CS.W, [FST]: 'bold' }, 102);
+    mkTxt(x, weaponY + 110, weapon.d, { [F]: '14px', [FF]: A, [CO]: CS.LG }, 102);
+    menuOptions.push({ btn, weapon, x });
   });
 
   // Initial selection highlight
@@ -1351,6 +1380,9 @@ function showWeaponSelector(weapons) {
 function showRareUpg() {
   selectingWeapon = true;
   scene.physics.pause();
+
+  // Clean any previous menu first
+  cleanupMenu();
 
   // Filter rare upgrades to only unlocked weapons and not maxed
   const available = rareUpgrades.filter(u => {
