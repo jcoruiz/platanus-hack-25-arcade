@@ -14,6 +14,8 @@ new Phaser.Game(config);
 
 // Global vars: p=player, cr=cursors, wasd=WASD keys, en=enemies, pr=projectiles, xo=xpOrbs, co=coins, ob=obstacles, wc=weaponChests, uc=upgradeChests, mg=magnets, hd=healthDrops, gr=graphics
 let p, cr, wasd, en, pr, xo, co, ob, wc, uc, mg, hd, gr;
+// keys=central keyboard registry (mv=movement, mn=menu, ac=actions)
+let keys;
 // adc=areaDamageCircle, idleTween=player idle animation
 let adc = null, idleTween = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, paused = false, mainMenu = true;
@@ -226,7 +228,7 @@ const mkGr = (d) => scene.add.graphics()[SSF](0)[SD](d);
 // Helper: cleanup menu elements
 function cleanupMenu(minDepth = 100) {
   scene.children.list.filter(c => c.depth >= minDepth).forEach(c => c[DS]());
-  menuKeys.forEach(k => { k.removeAllListeners(); scene.input.keyboard.removeKey(k); });
+  menuKeys.forEach(k => k.removeAllListeners());
   menuKeys = [];
   if (pulseTween) { pulseTween.stop(); pulseTween = null; }
   if (pulseOverlay) { pulseOverlay = null; }
@@ -594,6 +596,29 @@ function create() {
   scene = this;
   gr = this.add.graphics();
 
+  // Input: Central key registry (initialized early for menus)
+  keys = {
+    mv: { // Movement (polling)
+      cr: this.input.keyboard.createCursorKeys(),
+      w: this.input.keyboard.addKey('W'),
+      a: this.input.keyboard.addKey('A'),
+      s: this.input.keyboard.addKey('S'),
+      d: this.input.keyboard.addKey('D')
+    },
+    mn: { // Menu navigation (events)
+      l: this.input.keyboard.addKey('LEFT'),
+      r: this.input.keyboard.addKey('RIGHT'),
+      u: this.input.keyboard.addKey('UP'),
+      d: this.input.keyboard.addKey('DOWN'),
+      e: this.input.keyboard.addKey('ENTER'),
+      x: this.input.keyboard.addKey('ESC')
+    },
+    ac: { // Actions (events)
+      p: this.input.keyboard.addKey('P'),
+      r: this.input.keyboard.addKey('R')
+    }
+  };
+
   // Create background only once (preserved across restarts)
   if (!backgroundCreated) {
     const rnd = (min, max) => min + Math.random() * (max - min);
@@ -668,9 +693,9 @@ function initGameplay() {
   scene.cameras.main.startFollow(p);
   scene.cameras.main.setBounds(0, 0, 2400, 1800);
 
-  // Input
-  cr = scene.input.keyboard.createCursorKeys();
-  wasd = scene.input.keyboard.addKeys({ w: 'W', a: 'A', s: 'S', d: 'D' });
+  // Backward compat for update() movement logic (keys already initialized in create())
+  cr = keys.mv.cr;
+  wasd = { w: keys.mv.w, a: keys.mv.a, s: keys.mv.s, d: keys.mv.d };
 
   // Collisions
   const ph = scene.physics;
@@ -690,13 +715,12 @@ function initGameplay() {
   // Create UI
   createUI(scene);
 
-  // Keyboard for restart
-  scene.input.keyboard.addKey('R').on('down', () => { if (!startScreen) restartGame(); });
+  // Keyboard for restart (using central keys)
+  keys.ac.r.on('down', () => { if (!startScreen) restartGame(); });
 
-  // Keyboard for pause
-  const pKey = scene.input.keyboard.addKey('P');
+  // Keyboard for pause (using central keys)
   let pauseOverlay = null, pauseText = null, pauseHint = null;
-  pKey.on('down', () => {
+  keys.ac.p.on('down', () => {
     if (!gameOver && !startScreen && !levelingUp && !selectingWeapon) {
       paused = !paused;
       if (paused) {
@@ -1009,7 +1033,13 @@ function spawnEnemy() {
   else if (side === 2) { x = px - 450; y = py + r() * 600; }
   else { x = px + 450; y = py + r() * 600; }
 
+  // Ensure spawn position is within world bounds to prevent clustering at edges
+  x = Math.max(50, Math.min(2350, x));
+  y = Math.max(50, Math.min(1750, y));
+
   const type = unlockedTypes[~~(Math.random() * unlockedTypes.length)];
+  // Normal enemies use difficulty.enemyHp which scales with HYPER MODE and time
+  // hpMult defaults to 1.0 (waves use 1.5x for extra difficulty)
   createEn(type, x, y);
 }
 
@@ -1020,9 +1050,11 @@ function hitEnemy(proj, enemy) {
   const projHits = proj.getData('hits') || 0;
 
   procDmg(enemy, proj.x, proj.y, projDamage);
-  proj.setData('hits', projHits + 1);
+  const newHits = projHits + 1;
+  proj.setData('hits', newHits);
 
-  if (projHits >= projPenetration) proj[DS]();
+  // Destroy if hits exceed penetration (penetration=0 means 1 hit, penetration=1 means 2 hits, etc)
+  if (newHits > projPenetration) proj[DS]();
 }
 
 function hitPlayer(_pObj, enemy) {
@@ -1117,6 +1149,9 @@ function dropUpgCh(x, y) { drop(uc, x, y, 'chest', 10, 0x00ff66, 0, 0, 1); }
 
 function colUpgCh(_pObj, chest) {
   if (!chest[AC]) return;
+  // Prevent multiple simultaneous menu states
+  if (gameOver || levelingUp || selectingWeapon || startScreen || paused) return;
+
   chest[DS]();
   playTone(scene, 1200, 0.2);
 
@@ -1402,17 +1437,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   renderUpgradeOptions(shuffled);
   updateSelection();
 
-  // Keyboard
-  const lKey = scene.input.keyboard.addKey('LEFT');
-  const rKey = scene.input.keyboard.addKey('RIGHT');
-  const uKey = scene.input.keyboard.addKey('UP');
-  const dKey = scene.input.keyboard.addKey('DOWN');
-  const aKey = scene.input.keyboard.addKey('A');
-  const dKey2 = scene.input.keyboard.addKey('D');
-  const wKey = scene.input.keyboard.addKey('W');
-  const sKey = scene.input.keyboard.addKey('S');
-  const eKey = scene.input.keyboard.addKey('ENTER');
-
+  // Keyboard navigation handlers
   const goLeft = () => {
     if (selectedIndex < 3) {
       selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
@@ -1445,24 +1470,29 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     }
   };
 
-  lKey.on('down', goLeft);
-  aKey.on('down', goLeft);
-  rKey.on('down', goRight);
-  dKey2.on('down', goRight);
-  uKey.on('down', goUp);
-  wKey.on('down', goUp);
-  dKey.on('down', goDown);
-  sKey.on('down', goDown);
+  // Attach listeners to central keys
+  keys.mn.l.on('down', goLeft);
+  keys.mv.a.on('down', goLeft);
+  keys.mn.r.on('down', goRight);
+  keys.mv.d.on('down', goRight);
+  keys.mn.u.on('down', goUp);
+  keys.mv.w.on('down', goUp);
+  keys.mn.d.on('down', goDown);
+  keys.mv.s.on('down', goDown);
 
-  eKey.on('down', () => {
+  keys.mn.e.on('down', () => {
     if (selectedIndex === 3) doReroll();
     else if (selectedIndex < 3) selectUpgrade(menuOptions[selectedIndex].u);
   });
 
-  menuKeys.push(lKey, rKey, uKey, dKey, aKey, dKey2, wKey, sKey, eKey);
+  // Track keys for cleanup (references only)
+  menuKeys.push(keys.mn.l, keys.mv.a, keys.mn.r, keys.mv.d, keys.mn.u, keys.mv.w, keys.mn.d, keys.mv.s, keys.mn.e);
 }
 
 function showWeaponSelector(weapons) {
+  // Prevent multiple simultaneous menu states
+  if (gameOver || levelingUp || selectingWeapon || startScreen || paused) return;
+
   selectingWeapon = true;
   scene.physics.pause();
 
@@ -1544,13 +1574,7 @@ function showWeaponSelector(weapons) {
   // Initial selection highlight
   updateSelection();
 
-  // Keyboard controls
-  const leftKey = scene.input.keyboard.addKey('LEFT');
-  const rightKey = scene.input.keyboard.addKey('RIGHT');
-  const aKey = scene.input.keyboard.addKey('A');
-  const dKey = scene.input.keyboard.addKey('D');
-  const enterKey = scene.input.keyboard.addKey('ENTER');
-
+  // Keyboard navigation handlers
   const goLeft = () => {
     selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
     updateSelection();
@@ -1563,19 +1587,24 @@ function showWeaponSelector(weapons) {
     playTone(scene, 800, 0.05);
   };
 
-  leftKey.on('down', goLeft);
-  aKey.on('down', goLeft);
-  rightKey.on('down', goRight);
-  dKey.on('down', goRight);
+  // Attach listeners to central keys
+  keys.mn.l.on('down', goLeft);
+  keys.mv.a.on('down', goLeft);
+  keys.mn.r.on('down', goRight);
+  keys.mv.d.on('down', goRight);
 
-  enterKey.on('down', () => {
+  keys.mn.e.on('down', () => {
     selectWeapon(menuOptions[selectedIndex].weapon);
   });
 
-  menuKeys.push(leftKey, rightKey, aKey, dKey, enterKey);
+  // Track keys for cleanup (references only)
+  menuKeys.push(keys.mn.l, keys.mv.a, keys.mn.r, keys.mv.d, keys.mn.e);
 }
 
 function showRareUpg() {
+  // Prevent multiple simultaneous menu states
+  if (gameOver || levelingUp || selectingWeapon || startScreen || paused) return;
+
   selectingWeapon = true;
   scene.physics.pause();
 
@@ -1644,13 +1673,7 @@ function showRareUpg() {
   // Initial selection highlight
   updateSelection();
 
-  // Keyboard controls
-  const leftKey = scene.input.keyboard.addKey('LEFT');
-  const rightKey = scene.input.keyboard.addKey('RIGHT');
-  const aKey = scene.input.keyboard.addKey('A');
-  const dKey = scene.input.keyboard.addKey('D');
-  const enterKey = scene.input.keyboard.addKey('ENTER');
-
+  // Keyboard navigation handlers
   const goLeft = () => {
     selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
     updateSelection();
@@ -1663,16 +1686,18 @@ function showRareUpg() {
     playTone(scene, 800, 0.05);
   };
 
-  leftKey.on('down', goLeft);
-  aKey.on('down', goLeft);
-  rightKey.on('down', goRight);
-  dKey.on('down', goRight);
+  // Attach listeners to central keys
+  keys.mn.l.on('down', goLeft);
+  keys.mv.a.on('down', goLeft);
+  keys.mn.r.on('down', goRight);
+  keys.mv.d.on('down', goRight);
 
-  enterKey.on('down', () => {
+  keys.mn.e.on('down', () => {
     selectUpgrade(menuOptions[selectedIndex].upgrade);
   });
 
-  menuKeys.push(leftKey, rightKey, aKey, dKey, enterKey);
+  // Track keys for cleanup (references only)
+  menuKeys.push(keys.mn.l, keys.mv.a, keys.mn.r, keys.mv.d, keys.mn.e);
 }
 
 // Helper: glitch text triple-layer effect (reusable)
@@ -1683,6 +1708,9 @@ const gt3 = (x, y, txt, sz, d) => [
 ];
 
 function showMainMenu() {
+  // Clean any previous menu first
+  cleanupMenu();
+
   // Dark background with transparency to show background
   scene.add.graphics().fillStyle(C.B, 0.4).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
 
@@ -1718,14 +1746,20 @@ function showMainMenu() {
 
   opts.forEach((_, i) => dr(i));
 
-  const k = scene.input.keyboard;
+  // Keyboard navigation handlers
   const gu = () => { selectedIndex = (selectedIndex - 1 + opts.length) % opts.length; opts.forEach((_, i) => dr(i)); playTone(scene, 800, 0.05); };
   const gd = () => { selectedIndex = (selectedIndex + 1) % opts.length; opts.forEach((_, i) => dr(i)); playTone(scene, 800, 0.05); };
   const ge = () => { playTone(scene, 1200, 0.15); cleanupMenu(); opts[selectedIndex].fn(); };
 
-  const uk = k.addKey('UP'), dk = k.addKey('DOWN'), wk = k.addKey('W'), sk = k.addKey('S'), ek = k.addKey('ENTER');
-  uk.on('down', gu); wk.on('down', gu); dk.on('down', gd); sk.on('down', gd); ek.on('down', ge);
-  menuKeys.push(uk, dk, wk, sk, ek);
+  // Attach listeners to central keys
+  keys.mn.u.on('down', gu);
+  keys.mv.w.on('down', gu);
+  keys.mn.d.on('down', gd);
+  keys.mv.s.on('down', gd);
+  keys.mn.e.on('down', ge);
+
+  // Track keys for cleanup (references only)
+  menuKeys.push(keys.mn.u, keys.mv.w, keys.mn.d, keys.mv.s, keys.mn.e);
 }
 
 function showFullLeaderboard() {
@@ -1794,6 +1828,9 @@ function generateHeroTexture(t, sel) {
 }
 
 function showStartScreen() {
+  // Clean any previous menu first
+  cleanupMenu();
+
   // Dark overlay with transparency to show background
   scene.add.graphics().fillStyle(C.B, 0.3).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
 
@@ -1922,13 +1959,7 @@ function showStartScreen() {
 
   mkTxt(400, 540, '←→ or AD: Move  ENTER: Select  ESC: Back', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
 
-  const lk = scene.input.keyboard.addKey('LEFT');
-  const rk = scene.input.keyboard.addKey('RIGHT');
-  const ak = scene.input.keyboard.addKey('A');
-  const dk = scene.input.keyboard.addKey('D');
-  const ek = scene.input.keyboard.addKey('ENTER');
-  const bk = scene.input.keyboard.addKey('ESC');
-
+  // Keyboard navigation handlers
   const goLeft = () => {
     selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
     upd(true); // Shake on change
@@ -1942,19 +1973,21 @@ function showStartScreen() {
     playTone(scene, 800, 0.05);
   };
 
-  lk.on('down', goLeft);
-  ak.on('down', goLeft);
-  rk.on('down', goRight);
-  dk.on('down', goRight);
-  ek.on('down', () => sel(menuOptions[selectedIndex].character));
-  bk.on('down', () => {
+  // Attach listeners to central keys
+  keys.mn.l.on('down', goLeft);
+  keys.mv.a.on('down', goLeft);
+  keys.mn.r.on('down', goRight);
+  keys.mv.d.on('down', goRight);
+  keys.mn.e.on('down', () => sel(menuOptions[selectedIndex].character));
+  keys.mn.x.on('down', () => {
     playTone(scene, 1000, 0.15);
     startScreen = !(mainMenu = true);
     cleanupMenu();
     showMainMenu();
   });
 
-  menuKeys.push(lk, rk, ak, dk, ek, bk);
+  // Track keys for cleanup (references only)
+  menuKeys.push(keys.mn.l, keys.mv.a, keys.mn.r, keys.mv.d, keys.mn.e, keys.mn.x);
 }
 
 function createUI() {
@@ -2001,16 +2034,25 @@ function drawUIBars() {
   // Draw boss HP bar at top center
   if (boss) {
     const hp = boss.getData('hp'), maxHp = boss.getData('maxHp');
-    if (ui.bossLabelText) ui.bossLabelText[DS]();
-    if (ui.bossHpText) ui.bossHpText[DS]();
-    ui.bossLabelText = mkTxt(400, 40, '⚔️ BOSS ⚔️', { [F]: '20px', [FF]: A, [CO]: CS.R, [STR]: CS.B, [STT]: 4 }, 200);
+
+    // Only recreate text if boss HP changed or text doesn't exist
+    if (!ui.bossLabelText) {
+      ui.bossLabelText = mkTxt(400, 40, '⚔️ BOSS ⚔️', { [F]: '20px', [FF]: A, [CO]: CS.R, [STR]: CS.B, [STT]: 4 }, 200);
+    }
+
+    if (!ui.bossHpText || ui.lastBossHp !== hp) {
+      if (ui.bossHpText) ui.bossHpText[DS]();
+      ui.bossHpText = mkTxt(400, 62, `${~~hp} / ${~~maxHp}`, { [F]: '14px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 3 }, 200);
+      ui.lastBossHp = hp;
+    }
+
     bar(100, 50, 600, 25, hp, maxHp, C.DR, C.R, C.Y, 3);
-    ui.bossHpText = mkTxt(400, 62, `${~~hp} / ${~~maxHp}`, { [F]: '14px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 3 }, 200);
   } else if (ui.bossLabelText) {
     ui.bossLabelText[DS]();
     ui.bossLabelText = null;
     ui.bossHpText[DS]();
     ui.bossHpText = null;
+    ui.lastBossHp = null;
   }
 }
 
@@ -2060,6 +2102,10 @@ function restartGame() {
   scene.time.removeAllEvents();
   scene.tweens.killAll();
 
+  // Cleanup action key listeners (P and R)
+  keys.ac.p.removeAllListeners();
+  keys.ac.r.removeAllListeners();
+
   // Cleanup: destroy all game objects with depth >= 0 (preserve background at depth < 0)
   scene.children.list.filter(c => c.depth >= 0).forEach(c => c[DS]());
 
@@ -2075,6 +2121,9 @@ function restartGame() {
   orbitingBalls = boomerangs = [];
   adc?.[DS]();
   adc = null;
+  // Destroy and recreate graphics object to prevent memory leak
+  if (gr) { gr.destroy(); gr = null; }
+  gr = scene.add.graphics();
   unlockedTypes = [enemyTypes[0]];
   stats = JSON.parse(JSON.stringify(inS));
   difficulty = { ...inD };
@@ -2168,28 +2217,13 @@ function showNameEntry() {
 
   updateBoxes();
 
-  // Input
-  const upKey = scene.input.keyboard.addKey('UP');
-  const downKey = scene.input.keyboard.addKey('DOWN');
-  const leftKey = scene.input.keyboard.addKey('LEFT');
-  const rightKey = scene.input.keyboard.addKey('RIGHT');
-  const wKey = scene.input.keyboard.addKey('W');
-  const sKey = scene.input.keyboard.addKey('S');
-  const aKey = scene.input.keyboard.addKey('A');
-  const dKey = scene.input.keyboard.addKey('D');
-  const enterKey = scene.input.keyboard.addKey('ENTER');
-
+  // Input navigation handlers
   const changeLetter = (dir) => {
     charIndex = (charIndex + dir + CHARS.length) % CHARS.length;
     name[cursorPos] = CHARS[charIndex];
     updateBoxes();
     playTone(scene, 800, 0.05);
   };
-
-  upKey.on('down', () => changeLetter(1));
-  wKey.on('down', () => changeLetter(1));
-  downKey.on('down', () => changeLetter(-1));
-  sKey.on('down', () => changeLetter(-1));
 
   const moveRight = () => {
     if (cursorPos < 5) {
@@ -2209,25 +2243,31 @@ function showNameEntry() {
     }
   };
 
-  rightKey.on('down', moveRight);
-  dKey.on('down', moveRight);
-  leftKey.on('down', moveLeft);
-  aKey.on('down', moveLeft);
+  // Attach listeners to central keys
+  keys.mn.u.on('down', () => changeLetter(1));
+  keys.mv.w.on('down', () => changeLetter(1));
+  keys.mn.d.on('down', () => changeLetter(-1));
+  keys.mv.s.on('down', () => changeLetter(-1));
+  keys.mn.r.on('down', moveRight);
+  keys.mv.d.on('down', moveRight);
+  keys.mn.l.on('down', moveLeft);
+  keys.mv.a.on('down', moveLeft);
 
   const cleanup = () => {
     cleanupMenu(151);
-    upKey.removeAllListeners();
-    downKey.removeAllListeners();
-    leftKey.removeAllListeners();
-    rightKey.removeAllListeners();
-    wKey.removeAllListeners();
-    sKey.removeAllListeners();
-    aKey.removeAllListeners();
-    dKey.removeAllListeners();
-    enterKey.removeAllListeners();
+    // Remove listeners from central keys
+    keys.mn.u.removeAllListeners();
+    keys.mn.d.removeAllListeners();
+    keys.mn.l.removeAllListeners();
+    keys.mn.r.removeAllListeners();
+    keys.mv.w.removeAllListeners();
+    keys.mv.s.removeAllListeners();
+    keys.mv.a.removeAllListeners();
+    keys.mv.d.removeAllListeners();
+    keys.mn.e.removeAllListeners();
   };
 
-  enterKey.on('down', () => {
+  keys.mn.e.on('down', () => {
     const finalName = name.join('').trim();
     if (finalName.length) {
       cleanup();
