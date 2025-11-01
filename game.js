@@ -2051,11 +2051,14 @@ function endGame() {
 }
 
 function restartGame() {
+  // Stop tweens
+  idleTween?.stop();
+
   // Cleanup: destroy all game objects with depth >= 0 (preserve background at depth < 0)
   scene.children.list.filter(c => c.depth >= 0).forEach(c => c[DS]());
 
   // Clear physics groups
-  [en, pr, xo, co, wc, uc, mg, hd, ob].forEach(g => g.clear(true, true));
+  if (en) [en, pr, xo, co, wc, uc, mg, hd, ob].forEach(g => g.clear(true, true));
 
   // Reset state variables
   gameOver = levelingUp = selectingWeapon = paused = warnAct = hyperModeActive = false;
@@ -2064,11 +2067,13 @@ function restartGame() {
   ul = {};
   weaponTypes = JSON.parse(JSON.stringify(iwt));
   orbitingBalls = boomerangs = [];
+  adc?.[DS]();
   adc = null;
   unlockedTypes = [enemyTypes[0]];
   stats = JSON.parse(JSON.stringify(inS));
   difficulty = { ...inD };
-  initGameplay();
+
+  // Don't call initGameplay() here - it will be called when user selects character
   scene.physics.pause();
   showMainMenu();
 }
