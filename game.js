@@ -30,6 +30,7 @@ let pulseTween = null;
 let pulseOverlay = null;
 // ul=upgradedLevels
 let ul = {};
+let lbData = [];
 
 // Color constants (numeric for Phaser Graphics)
 const C = { W: 0xffffff, B: 0x000000, Y: 0xffff00, R: 0xff0000, G: 0x00ff00, Cy: 0x00ffff, O: 0xff8800, P: 0xff00ff, Gr: 0xaaaaaa, Gy: 0x888888, DG: 0x666666, VG: 0x333333, DD: 0x222222, DB: 0x555555, DR: 0x440000 };
@@ -1887,12 +1888,11 @@ function restartGame() {
 
 // Leaderboard functions
 function loadLeaderboard() {
-  const stored = localStorage.getItem('bhl');
-  return stored ? JSON.parse(stored) : [];
+  return lbData;
 }
 
 function saveLeaderboard(entries) {
-  localStorage.setItem('bhl', JSON.stringify(entries));
+  lbData = entries;
 }
 
 function addToLeaderboard(name, kills) {
