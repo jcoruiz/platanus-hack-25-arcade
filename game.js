@@ -21,6 +21,7 @@ let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
 let nextWaveTime = 30000, nextBossTime = 60000;
 let warnAct = false;
+let hyperModeActive = false;
 let scene;
 
 let selectedIndex = 0;
@@ -170,7 +171,7 @@ const pUpgrades = [
   u('kb', 'Knockback', '+30% Enemy', '💨', 6, 1, 'knockback', 1.3),
   u('hr', 'HP Regen', '+10 HP/min', '💚', 10, 0, 'hpRegen', 10),
   u('xp', 'XP Boost', '+50% XP', '⭐', 8, 0, 'xpMultiplier', 0.5),
-  u('l', 'Luck', '+50% Chest', '🍀', 10, 0, 'lootChance', 0.5),
+  u('l', 'Luck', '+3% Chest', '🍀', 10, 0, 'lootChance', 0.03),
   u('cc', 'Crit Chance', '+5% Crit', '🎯', 10, 0, 'critChance', 0.05),
   u('cd', 'Crit Damage', '+25% Crit', '💢', 10, 0, 'critDamage', 0.25)
 ];
@@ -825,12 +826,27 @@ function update(_time, delta) {
   // Unlock new enemy types based on time
   updUnlockTypes();
 
+  // Activate HYPER MODE at 10 minutes
+  if (gameTime >= 600000 && !hyperModeActive) {
+    hyperModeActive = true;
+    showWarning('🔥💀 HYPER MODE ACTIVATED 💀🔥', C.R);
+    playTone(scene, 50, 1.0);
+  }
+
   // Scale difficulty every 30 seconds
   if (~~(gameTime / 30000) > ~~((gameTime - delta) / 30000)) {
     difficulty.spawnRate = Math.max(500, difficulty.spawnRate * 0.9);
     difficulty.enemyHp *= 1.15;
     difficulty.enemyDamage *= 1.1;
-    difficulty.enemySpeed = Math.min(120, difficulty.enemySpeed * 1.05);
+    difficulty.enemySpeed = hyperModeActive ? difficulty.enemySpeed * 1.05 : Math.min(120, difficulty.enemySpeed * 1.05);
+  }
+
+  // HYPER scaling every 20 seconds (only after 10 minutes)
+  if (hyperModeActive && ~~(gameTime / 20000) > ~~((gameTime - delta) / 20000)) {
+    difficulty.spawnRate = Math.max(50, difficulty.spawnRate * 0.3);
+    difficulty.enemyHp *= 5;
+    difficulty.enemyDamage *= 5;
+    difficulty.enemySpeed *= 3;
   }
 
   // Wave system (every 60 seconds)
@@ -1915,6 +1931,7 @@ function restartGame() {
   waveTimer = 0;
   bossTimer = 0;
   warnAct = false;
+  hyperModeActive = false;
   musicStarted = false;
 
   // Reset upgrade levels
