@@ -1690,27 +1690,59 @@ function showRareUpg() {
 }
 
 function showMainMenu() {
-  scene.add.graphics().fillStyle(C.B, 0.95).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
-  mkTxt(400, 120, 'SURVIVE', { [F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8 }, 101);
-  mkTxt(400, 200, 'The Game', { [F]: '20px', [FF]: A, [CO]: CS.LG }, 101);
+  // Dark background with slight transparency
+  scene.add.graphics().fillStyle(C.B, 0.98).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
+
+  // Hotline Miami style title with glitch effect (multiple layers)
+  // Pink/magenta shadow layer
+  mkTxt(403, 83, 'SURVIVE', { [F]: '72px', [FF]: A, [CO]: '#ff00ff', [STR]: '#ff00ff', [STT]: 3 }, 101);
+  // Cyan main layer
+  mkTxt(400, 80, 'SURVIVE', { [F]: '72px', [FF]: A, [CO]: '#00ffff', [STR]: '#00ffff', [STT]: 3 }, 102);
+  // Subtitle in pink
+  mkTxt(400, 150, 'THE GAME', { [F]: '24px', [FF]: A, [CO]: '#ff00ff', [STR]: CS.B, [STT]: 2 }, 102);
 
   selectedIndex = 0;
   const opts = [
-    { y: 300, txt: 'START', fn: () => { mainMenu = false; showStartScreen(); } },
-    { y: 400, txt: 'LEADERBOARD', fn: showFullLeaderboard }
+    { y: 320, txt: 'START GAME', fn: () => { mainMenu = false; showStartScreen(); } },
+    { y: 400, txt: 'LEADERBOARDS', fn: showFullLeaderboard }
   ];
 
+  // Store text objects for glitch effect
+  opts.forEach((o, i) => {
+    o.texts = [];
+  });
+
   const dr = (i) => {
-    const g = opts[i].g;
     const s = i === selectedIndex;
-    g.clear().fillStyle(s ? C.DB : C.DD, 1).fillRoundedRect(250, opts[i].y, 300, 60, 10).lineStyle(4, s ? C.Y : C.DG, 1).strokeRoundedRect(250, opts[i].y, 300, 60, 10);
+
+    // Remove old text objects
+    opts[i].texts.forEach(t => t[DS]());
+    opts[i].texts = [];
+
+    if (s) {
+      // Selected: Hotline Miami glitch effect (offset layers in pink and cyan)
+      const t1 = scene.add.text(398, opts[i].y - 2, opts[i].txt, { [F]: '40px', [FF]: A, [CO]: '#ff00ff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](101);
+      const t2 = scene.add.text(402, opts[i].y + 2, opts[i].txt, { [F]: '40px', [FF]: A, [CO]: '#00ffff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](101);
+      const t3 = scene.add.text(400, opts[i].y, opts[i].txt, { [F]: '40px', [FF]: A, [CO]: CS.W, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102);
+      opts[i].texts.push(t1, t2, t3);
+
+      // Add pulsing tween to selected option
+      if (pulseTween) pulseTween.stop();
+      pulseTween = scene.tweens.add({
+        targets: t3,
+        alpha: 0.7,
+        duration: 400,
+        yoyo: true,
+        repeat: -1
+      });
+    } else {
+      // Not selected: simple cyan text
+      const t = scene.add.text(400, opts[i].y, opts[i].txt, { [F]: '32px', [FF]: A, [CO]: '#00aaaa' }).setOrigin(0.5)[SSF](0)[SD](101);
+      opts[i].texts.push(t);
+    }
   };
 
-  opts.forEach((o, i) => {
-    o.g = scene.add.graphics()[SSF](0)[SD](101);
-    dr(i);
-    mkTxt(400, o.y + 30, o.txt, { [F]: '32px', [FF]: A, [CO]: CS.W, [FST]: 'bold' }, 102);
-  });
+  opts.forEach((_, i) => dr(i));
 
   const uk = scene.input.keyboard.addKey('UP');
   const dk = scene.input.keyboard.addKey('DOWN');
