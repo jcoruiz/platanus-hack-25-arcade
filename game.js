@@ -12,8 +12,8 @@ const config = {
 
 new Phaser.Game(config);
 
-// Global vars: p=player, cr=cursors, en=enemies, pr=projectiles, xo=xpOrbs, co=coins, ob=obstacles, wc=weaponChests, uc=upgradeChests, mg=magnets, hd=healthDrops, gr=graphics
-let p, cr, en, pr, xo, co, ob, wc, uc, mg, hd, gr;
+// Global vars: p=player, cr=cursors, wasd=WASD keys, en=enemies, pr=projectiles, xo=xpOrbs, co=coins, ob=obstacles, wc=weaponChests, uc=upgradeChests, mg=magnets, hd=healthDrops, gr=graphics
+let p, cr, wasd, en, pr, xo, co, ob, wc, uc, mg, hd, gr;
 // adc=areaDamageCircle, idleTween=player idle animation
 let adc = null, idleTween = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, paused = false, mainMenu = true;
@@ -663,6 +663,7 @@ function create() {
 
   // Input
   cr = this.input.keyboard.createCursorKeys();
+  wasd = this.input.keyboard.addKeys({ w: 'W', a: 'A', s: 'S', d: 'D' });
 
   // Collisions
   this.physics.add.overlap(pr, en, hitEnemy, null, this);
@@ -755,19 +756,19 @@ function update(_time, delta) {
   p.body.setVelocity(0, 0);
   let moving = false;
 
-  if (cr.left.isDown) {
+  if (cr.left.isDown || wasd.a.isDown) {
     p.body.setVelocityX(-stats.speed);
     moving = true;
   }
-  if (cr.right.isDown) {
+  if (cr.right.isDown || wasd.d.isDown) {
     p.body.setVelocityX(stats.speed);
     moving = true;
   }
-  if (cr.up.isDown) {
+  if (cr.up.isDown || wasd.w.isDown) {
     p.body.setVelocityY(-stats.speed);
     moving = true;
   }
-  if (cr.down.isDown) {
+  if (cr.down.isDown || wasd.s.isDown) {
     p.body.setVelocityY(stats.speed);
     moving = true;
   }
@@ -1374,46 +1375,59 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   const rKey = scene.input.keyboard.addKey('RIGHT');
   const uKey = scene.input.keyboard.addKey('UP');
   const dKey = scene.input.keyboard.addKey('DOWN');
+  const aKey = scene.input.keyboard.addKey('A');
+  const dKey2 = scene.input.keyboard.addKey('D');
+  const wKey = scene.input.keyboard.addKey('W');
+  const sKey = scene.input.keyboard.addKey('S');
   const eKey = scene.input.keyboard.addKey('ENTER');
 
-  lKey.on('down', () => {
+  const goLeft = () => {
     if (selectedIndex < 3) {
       selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
       updateSelection();
       playTone(scene, 800, 0.05);
     }
-  });
+  };
 
-  rKey.on('down', () => {
+  const goRight = () => {
     if (selectedIndex < 3) {
       selectedIndex = (selectedIndex + 1) % menuOptions.length;
       updateSelection();
       playTone(scene, 800, 0.05);
     }
-  });
+  };
 
-  uKey.on('down', () => {
+  const goUp = () => {
     if (selectedIndex === 3) {
       selectedIndex = menuOptions.length - 1;
       updateSelection();
       playTone(scene, 800, 0.05);
     }
-  });
+  };
 
-  dKey.on('down', () => {
+  const goDown = () => {
     if (selectedIndex < 3) {
       selectedIndex = 3;
       updateSelection();
       playTone(scene, 800, 0.05);
     }
-  });
+  };
+
+  lKey.on('down', goLeft);
+  aKey.on('down', goLeft);
+  rKey.on('down', goRight);
+  dKey2.on('down', goRight);
+  uKey.on('down', goUp);
+  wKey.on('down', goUp);
+  dKey.on('down', goDown);
+  sKey.on('down', goDown);
 
   eKey.on('down', () => {
     if (selectedIndex === 3) doReroll();
     else if (selectedIndex < 3) selectUpgrade(menuOptions[selectedIndex].u);
   });
 
-  menuKeys.push(lKey, rKey, uKey, dKey, eKey);
+  menuKeys.push(lKey, rKey, uKey, dKey, aKey, dKey2, wKey, sKey, eKey);
 }
 
 function showWeaponSelector(weapons) {
@@ -1501,25 +1515,32 @@ function showWeaponSelector(weapons) {
   // Keyboard controls
   const leftKey = scene.input.keyboard.addKey('LEFT');
   const rightKey = scene.input.keyboard.addKey('RIGHT');
+  const aKey = scene.input.keyboard.addKey('A');
+  const dKey = scene.input.keyboard.addKey('D');
   const enterKey = scene.input.keyboard.addKey('ENTER');
 
-  leftKey.on('down', () => {
+  const goLeft = () => {
     selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
     updateSelection();
     playTone(scene, 800, 0.05);
-  });
+  };
 
-  rightKey.on('down', () => {
+  const goRight = () => {
     selectedIndex = (selectedIndex + 1) % menuOptions.length;
     updateSelection();
     playTone(scene, 800, 0.05);
-  });
+  };
+
+  leftKey.on('down', goLeft);
+  aKey.on('down', goLeft);
+  rightKey.on('down', goRight);
+  dKey.on('down', goRight);
 
   enterKey.on('down', () => {
     selectWeapon(menuOptions[selectedIndex].weapon);
   });
 
-  menuKeys.push(leftKey, rightKey, enterKey);
+  menuKeys.push(leftKey, rightKey, aKey, dKey, enterKey);
 }
 
 function showRareUpg() {
@@ -1594,25 +1615,32 @@ function showRareUpg() {
   // Keyboard controls
   const leftKey = scene.input.keyboard.addKey('LEFT');
   const rightKey = scene.input.keyboard.addKey('RIGHT');
+  const aKey = scene.input.keyboard.addKey('A');
+  const dKey = scene.input.keyboard.addKey('D');
   const enterKey = scene.input.keyboard.addKey('ENTER');
 
-  leftKey.on('down', () => {
+  const goLeft = () => {
     selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
     updateSelection();
     playTone(scene, 800, 0.05);
-  });
+  };
 
-  rightKey.on('down', () => {
+  const goRight = () => {
     selectedIndex = (selectedIndex + 1) % menuOptions.length;
     updateSelection();
     playTone(scene, 800, 0.05);
-  });
+  };
+
+  leftKey.on('down', goLeft);
+  aKey.on('down', goLeft);
+  rightKey.on('down', goRight);
+  dKey.on('down', goRight);
 
   enterKey.on('down', () => {
     selectUpgrade(menuOptions[selectedIndex].upgrade);
   });
 
-  menuKeys.push(leftKey, rightKey, enterKey);
+  menuKeys.push(leftKey, rightKey, aKey, dKey, enterKey);
 }
 
 function showMainMenu() {
@@ -1646,17 +1674,24 @@ function showMainMenu() {
 
   const uk = scene.input.keyboard.addKey('UP');
   const dk = scene.input.keyboard.addKey('DOWN');
+  const wk = scene.input.keyboard.addKey('W');
+  const sk = scene.input.keyboard.addKey('S');
   const ek = scene.input.keyboard.addKey('ENTER');
 
-  uk.on('down', () => { selectedIndex = (selectedIndex - 1 + opts.length) % opts.length; opts.forEach((_, i) => dr(i)); playTone(scene, 800, 0.05); });
-  dk.on('down', () => { selectedIndex = (selectedIndex + 1) % opts.length; opts.forEach((_, i) => dr(i)); playTone(scene, 800, 0.05); });
+  const goUp = () => { selectedIndex = (selectedIndex - 1 + opts.length) % opts.length; opts.forEach((_, i) => dr(i)); playTone(scene, 800, 0.05); };
+  const goDown = () => { selectedIndex = (selectedIndex + 1) % opts.length; opts.forEach((_, i) => dr(i)); playTone(scene, 800, 0.05); };
+
+  uk.on('down', goUp);
+  wk.on('down', goUp);
+  dk.on('down', goDown);
+  sk.on('down', goDown);
   ek.on('down', () => {
     playTone(scene, 1200, 0.15);
     cleanupMenu();
     opts[selectedIndex].fn();
   });
 
-  menuKeys.push(uk, dk, ek);
+  menuKeys.push(uk, dk, wk, sk, ek);
 }
 
 function showFullLeaderboard() {
@@ -1744,15 +1779,22 @@ function showStartScreen() {
 
   upd();
 
-  mkTxt(400, 510, '←→: Move  ENTER: Select  ESC: Back', { [F]: '14px', [FF]: A, [CO]: CS.LG }, 101);
+  mkTxt(400, 510, '←→ or AD: Move  ENTER: Select  ESC: Back', { [F]: '14px', [FF]: A, [CO]: CS.LG }, 101);
 
   const lk = scene.input.keyboard.addKey('LEFT');
   const rk = scene.input.keyboard.addKey('RIGHT');
+  const ak = scene.input.keyboard.addKey('A');
+  const dk = scene.input.keyboard.addKey('D');
   const ek = scene.input.keyboard.addKey('ENTER');
   const bk = scene.input.keyboard.addKey('ESC');
 
-  lk.on('down', () => { selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length; upd(); playTone(scene, 800, 0.05); });
-  rk.on('down', () => { selectedIndex = (selectedIndex + 1) % menuOptions.length; upd(); playTone(scene, 800, 0.05); });
+  const goLeft = () => { selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length; upd(); playTone(scene, 800, 0.05); };
+  const goRight = () => { selectedIndex = (selectedIndex + 1) % menuOptions.length; upd(); playTone(scene, 800, 0.05); };
+
+  lk.on('down', goLeft);
+  ak.on('down', goLeft);
+  rk.on('down', goRight);
+  dk.on('down', goRight);
   ek.on('down', () => sel(menuOptions[selectedIndex].character));
   bk.on('down', () => {
     playTone(scene, 1000, 0.15);
@@ -1760,7 +1802,7 @@ function showStartScreen() {
     showMainMenu();
   });
 
-  menuKeys.push(lk, rk, ek, bk);
+  menuKeys.push(lk, rk, ak, dk, ek, bk);
 }
 
 function createUI() {
@@ -1773,7 +1815,7 @@ function createUI() {
   ui.levelText = txt(550, 10, 'Level: 1', CS.Y);
   ui.coinsText = txt(650, 10, 'Coins: 0', CS.Go);
   ui.timeText = txt(740, 10, '0:00', CS.Cy);
-  ui.statsHint = txt(580, 580, '[S]Stats [P]Pause [R]Retry', CS.Gy, '14px', 10);
+  ui.statsHint = txt(580, 580, '[P]Pause [R]Retry', CS.Gy, '14px', 10);
 }
 
 function updateUI() {
@@ -1972,7 +2014,7 @@ function showNameEntry() {
   };
 
   // Hints
-  mkTxt(400, 380, '↑↓ Letter  ←→ Move  ⏎ OK', { [F]: '18px', [FF]: A, [CO]: '#aaaaaa' }, 151);
+  mkTxt(400, 380, '↑↓/WS: Letter  ←→/AD: Move  ⏎: OK', { [F]: '18px', [FF]: A, [CO]: '#aaaaaa' }, 151);
   mkTxt(400, 410, 'Press ENTER to Submit Name', { [F]: '18px', [FF]: A, [CO]: '#ffaa00' }, 151);
 
   updateBoxes();
@@ -1982,39 +2024,46 @@ function showNameEntry() {
   const downKey = scene.input.keyboard.addKey('DOWN');
   const leftKey = scene.input.keyboard.addKey('LEFT');
   const rightKey = scene.input.keyboard.addKey('RIGHT');
+  const wKey = scene.input.keyboard.addKey('W');
+  const sKey = scene.input.keyboard.addKey('S');
+  const aKey = scene.input.keyboard.addKey('A');
+  const dKey = scene.input.keyboard.addKey('D');
   const enterKey = scene.input.keyboard.addKey('ENTER');
 
-  upKey.on('down', () => {
-    charIndex = (charIndex + 1) % CHARS.length;
+  const changeLetter = (dir) => {
+    charIndex = (charIndex + dir + CHARS.length) % CHARS.length;
     name[cursorPos] = CHARS[charIndex];
     updateBoxes();
     playTone(scene, 800, 0.05);
-  });
+  };
 
-  downKey.on('down', () => {
-    charIndex = (charIndex - 1 + CHARS.length) % CHARS.length;
-    name[cursorPos] = CHARS[charIndex];
-    updateBoxes();
-    playTone(scene, 800, 0.05);
-  });
+  upKey.on('down', () => changeLetter(1));
+  wKey.on('down', () => changeLetter(1));
+  downKey.on('down', () => changeLetter(-1));
+  sKey.on('down', () => changeLetter(-1));
 
-  rightKey.on('down', () => {
+  const moveRight = () => {
     if (cursorPos < 5) {
       cursorPos++;
       charIndex = CHARS.indexOf(name[cursorPos]);
       updateBoxes();
       playTone(scene, 900, 0.05);
     }
-  });
+  };
 
-  leftKey.on('down', () => {
+  const moveLeft = () => {
     if (cursorPos > 0) {
       cursorPos--;
       charIndex = CHARS.indexOf(name[cursorPos]);
       updateBoxes();
       playTone(scene, 700, 0.05);
     }
-  });
+  };
+
+  rightKey.on('down', moveRight);
+  dKey.on('down', moveRight);
+  leftKey.on('down', moveLeft);
+  aKey.on('down', moveLeft);
 
   const cleanup = () => {
     cleanupMenu(151);
@@ -2022,6 +2071,10 @@ function showNameEntry() {
     downKey.removeAllListeners();
     leftKey.removeAllListeners();
     rightKey.removeAllListeners();
+    wKey.removeAllListeners();
+    sKey.removeAllListeners();
+    aKey.removeAllListeners();
+    dKey.removeAllListeners();
     enterKey.removeAllListeners();
   };
 
