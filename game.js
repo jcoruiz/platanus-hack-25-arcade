@@ -22,6 +22,7 @@ let waveTimer = 0, bossTimer = 0;
 let nextWaveTime = 30000, nextBossTime = 60000;
 let warnAct = false;
 let hyperModeActive = false;
+let backgroundCreated = false;
 let scene;
 
 let selectedIndex = 0;
@@ -593,150 +594,130 @@ function create() {
   scene = this;
   gr = this.add.graphics();
 
-  // Generate Perlin noise nebula background
-  generateNebula();
+  // Create background only once (preserved across restarts)
+  if (!backgroundCreated) {
+    const rnd = (min, max) => min + Math.random() * (max - min);
+    const nc = [0x00ffff, 0xff00ff, 0xffff00];
 
-  // Helper for random range
-  const rnd = (min, max) => min + Math.random() * (max - min);
-  const nc = [0x00ffff, 0xff00ff, 0xffff00];
+    // Generate Perlin noise nebula background
+    generateNebula();
 
-  // Cyberpunk neon grid background with parallax
-  [[200, 0x00ffff, 0.3, 0.2], [120, 0xff00ff, 0.5, 0.5], [80, 0xffff00, 0.4, 0.8]].forEach(([sp, c, a, sf], i) => {
-    const g = this.add.graphics().lineStyle(1, c, a);
-    for (let x = 0; x <= 2400; x += sp) g.lineBetween(x, 0, x, 1800);
-    for (let y = 0; y <= 1800; y += sp) g.lineBetween(0, y, 2400, y);
-    g.fillStyle(C.W, a * 1.5);
-    for (let x = 0; x <= 2400; x += sp) for (let y = 0; y <= 1800; y += sp) g.fillCircle(x, y, 2 - i * 0.5);
-    g.setScrollFactor(sf)[SD](-10 + i);
-  });
+    // Cyberpunk neon grid background with parallax
+    [[200, 0x00ffff, 0.3, 0.2], [120, 0xff00ff, 0.5, 0.5], [80, 0xffff00, 0.4, 0.8]].forEach(([sp, c, a, sf], i) => {
+      const g = this.add.graphics().lineStyle(1, c, a);
+      for (let x = 0; x <= 2400; x += sp) g.lineBetween(x, 0, x, 1800);
+      for (let y = 0; y <= 1800; y += sp) g.lineBetween(0, y, 2400, y);
+      g.fillStyle(C.W, a * 1.5);
+      for (let x = 0; x <= 2400; x += sp) for (let y = 0; y <= 1800; y += sp) g.fillCircle(x, y, 2 - i * 0.5);
+      g.setScrollFactor(sf)[SD](-10 + i);
+    });
 
-  // Scanlines effect
-  const sl = this.add.graphics().lineStyle(1, C.W, 0.05);
-  for (let y = 0; y < 600; y += 4) sl.lineBetween(0, y, 800, y);
-  sl[SSF](0)[SD](-5);
+    // Scanlines effect
+    const sl = this.add.graphics().lineStyle(1, C.W, 0.05);
+    for (let y = 0; y < 600; y += 4) sl.lineBetween(0, y, 800, y);
+    sl[SSF](0)[SD](-5);
 
-  // Floating neon dots
-  const dt = this.add.graphics();
-  for (let j = 0; j < 25; j++) {
-    dt.fillStyle(nc[~~(Math.random() * 3)], rnd(0.6, 1)).fillCircle(rnd(0, 2400), rnd(0, 1800), rnd(1, 3));
+    // Floating neon dots
+    const dt = this.add.graphics();
+    for (let j = 0; j < 25; j++) {
+      dt.fillStyle(nc[~~(Math.random() * 3)], rnd(0.6, 1)).fillCircle(rnd(0, 2400), rnd(0, 1800), rnd(1, 3));
+    }
+    dt.setScrollFactor(0.6)[SD](-7);
+
+    backgroundCreated = true;
   }
-  dt.setScrollFactor(0.6)[SD](-7);
 
-  // Expand world bounds (3x larger than screen)
+  // Expand world bounds
   this.physics.world.setBounds(0, 0, 2400, 1800);
 
+  // Pause physics and show main menu
+  this.physics.pause();
+  showMainMenu();
+
+  // Start sound
+  playTone(this, 440, 0.1);
+}
+
+// Initialize gameplay elements (called when starting game, not on load)
+function initGameplay() {
   // Initialize unlocked types with first type
   unlockedTypes = [enemyTypes[0]];
 
   // Create physics groups
-  en = this.physics.add.group();
-  pr = this.physics.add.group();
-  xo = this.physics.add.group();
-  co = this.physics.add.group();
-  wc = this.physics.add.group();
-  uc = this.physics.add.group();
-  mg = this.physics.add.group();
-  hd = this.physics.add.group();
-  ob = this.physics.add.staticGroup();
+  en = scene.physics.add.group();
+  pr = scene.physics.add.group();
+  xo = scene.physics.add.group();
+  co = scene.physics.add.group();
+  wc = scene.physics.add.group();
+  uc = scene.physics.add.group();
+  mg = scene.physics.add.group();
+  hd = scene.physics.add.group();
+  ob = scene.physics.add.staticGroup();
 
-  // Spawn ob randomly across map
+  // Spawn obstacles randomly across map
   for (let i = 0; i < 80; i++) {
-    const x = 100 + Math.random() * 2200;
-    const y = 100 + Math.random() * 1600;
-    const obs = ob.create(x, y, 'obstacle');
-    obs.setCircle(20);
+    const x = 100 + Math.random() * 2200, y = 100 + Math.random() * 1600;
+    ob.create(x, y, 'obstacle').setCircle(20);
   }
 
-  // Create p at center of world
-  p = this.physics.add.image(1200, 900, 'p');
+  // Create player at center of world
+  p = scene.physics.add.image(1200, 900, 'p');
   p.setCollideWorldBounds(true);
   p.body.setCircle(16);
 
   // Idle animation for player
-  idleTween = this.tweens.add({
-    targets: p,
-    scaleX: 1.2,
-    scaleY: 1.2,
-    duration: 800,
-    yoyo: true,
-    repeat: -1,
-    ease: 'Sine.easeInOut',
-    paused: true
-  });
+  idleTween = scene.tweens.add({ targets: p, scaleX: 1.2, scaleY: 1.2, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', paused: true });
 
-  // Camera follows p
-  this.cameras.main.startFollow(p);
-  this.cameras.main.setBounds(0, 0, 2400, 1800);
+  // Camera follows player
+  scene.cameras.main.startFollow(p);
+  scene.cameras.main.setBounds(0, 0, 2400, 1800);
 
   // Input
-  cr = this.input.keyboard.createCursorKeys();
-  wasd = this.input.keyboard.addKeys({ w: 'W', a: 'A', s: 'S', d: 'D' });
+  cr = scene.input.keyboard.createCursorKeys();
+  wasd = scene.input.keyboard.addKeys({ w: 'W', a: 'A', s: 'S', d: 'D' });
 
   // Collisions
-  this.physics.add.overlap(pr, en, hitEnemy, null, this);
-  this.physics.add.overlap(p, en, hitPlayer, null, this);
-  this.physics.add.overlap(p, xo, collectXP, null, this);
-  this.physics.add.overlap(p, co, collectCoin, null, this);
-  this.physics.add.overlap(p, wc, collectChest, null, this);
-  this.physics.add.overlap(p, uc, colUpgCh, null, this);
-  this.physics.add.overlap(p, mg, collectMagnet, null, this);
-  this.physics.add.overlap(p, hd, colHeal, null, this);
-
-  // Enemy-to-enemy collisions (they push each other)
-  this.physics.add.collider(en, en);
-
-  // Obstacle collisions
-  this.physics.add.collider(p, ob);
-  this.physics.add.collider(en, ob);
-  this.physics.add.collider(pr, ob);
+  scene.physics.add.overlap(pr, en, hitEnemy, null, scene);
+  scene.physics.add.overlap(p, en, hitPlayer, null, scene);
+  scene.physics.add.overlap(p, xo, collectXP, null, scene);
+  scene.physics.add.overlap(p, co, collectCoin, null, scene);
+  scene.physics.add.overlap(p, wc, collectChest, null, scene);
+  scene.physics.add.overlap(p, uc, colUpgCh, null, scene);
+  scene.physics.add.overlap(p, mg, collectMagnet, null, scene);
+  scene.physics.add.overlap(p, hd, colHeal, null, scene);
+  scene.physics.add.collider(en, en);
+  scene.physics.add.collider(p, ob);
+  scene.physics.add.collider(en, ob);
+  scene.physics.add.collider(pr, ob);
 
   // Create UI
-  createUI(this);
+  createUI(scene);
 
   // Keyboard for restart
-  const rKey = this.input.keyboard.addKey('R');
-  rKey.on('down', () => {
-    if (!startScreen) restartGame();
-  });
+  scene.input.keyboard.addKey('R').on('down', () => { if (!startScreen) restartGame(); });
 
   // Keyboard for pause
-  const pKey = this.input.keyboard.addKey('P');
-  let pauseOverlay = null;
-  let pauseText = null;
-  let pauseHint = null;
+  const pKey = scene.input.keyboard.addKey('P');
+  let pauseOverlay = null, pauseText = null, pauseHint = null;
   pKey.on('down', () => {
     if (!gameOver && !startScreen && !levelingUp && !selectingWeapon) {
       paused = !paused;
       if (paused) {
         scene.physics.pause();
         playTone(scene, 600, 0.1);
-        // Show pause overlay
         pauseOverlay = scene.add.graphics();
-        pauseOverlay.fillStyle(C.B, 0.7);
-        pauseOverlay.fillRect(0, 0, 800, 600);
-        pauseOverlay[SSF](0);
-        pauseOverlay[SD](200);
+        pauseOverlay.fillStyle(C.B, 0.7).fillRect(0, 0, 800, 600)[SSF](0)[SD](200);
         pauseText = mkTxt(400, 300, 'PAUSED', { [F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8 }, 201);
         pauseHint = mkTxt(400, 370, 'Press [P] to resume', { [F]: '24px', [FF]: A, [CO]: CS.W }, 201);
       } else {
         scene.physics.resume();
         playTone(scene, 800, 0.1);
-        // Remove pause overlay
         if (pauseOverlay) pauseOverlay[DS]();
         if (pauseText) pauseText[DS]();
         if (pauseHint) pauseHint[DS]();
       }
     }
   });
-
-  // Pause physics until weapon is selected
-  this.physics.pause();
-
-  // Show main menu
-  showMainMenu();
-
-  // Start sound
-  playTone(this, 440, 0.1);
 }
 
 function update(_time, delta) {
@@ -1703,8 +1684,8 @@ const gt3 = (x, y, txt, sz, d) => [
 ];
 
 function showMainMenu() {
-  // Dark background with slight transparency
-  scene.add.graphics().fillStyle(C.B, 0.98).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
+  // Dark background with transparency to show background
+  scene.add.graphics().fillStyle(C.B, 0.4).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
 
   // Hotline Miami style title with glitch effect (multiple layers)
   // Pink/magenta shadow layer
@@ -1749,7 +1730,7 @@ function showMainMenu() {
 }
 
 function showFullLeaderboard() {
-  scene.add.graphics().fillStyle(C.B, 0.95).fillRect(0, 0, 800, 600)[SSF](0)[SD](150);
+  scene.add.graphics().fillStyle(C.B, 0.5).fillRect(0, 0, 800, 600)[SSF](0)[SD](150);
   mkTxt(400, 60, 'TOP 10 LEADERBOARD', { [F]: '40px', [FF]: A, [CO]: CS.Go, [STR]: CS.B, [STT]: 6 }, 151);
   mkTxt(200, 130, '#', { [F]: '20px', [FF]: A, [CO]: '#aaa' }, 151);
   mkTxt(350, 130, 'NAME', { [F]: '20px', [FF]: A, [CO]: '#aaa' }, 151);
@@ -1814,8 +1795,8 @@ function generateHeroTexture(t, sel) {
 }
 
 function showStartScreen() {
-  // Dark overlay
-  scene.add.graphics().fillStyle(C.B, 0.9).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
+  // Dark overlay with transparency to show background
+  scene.add.graphics().fillStyle(C.B, 0.3).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
 
   // Scanlines VHS effect
   const scan = mkGr(104);
@@ -1851,6 +1832,11 @@ function showStartScreen() {
   const sel = (ch) => {
     playTone(scene, 1500, 0.2);
     selCh = ch;
+
+    // Initialize gameplay elements (player, obstacles, UI, etc.)
+    initGameplay();
+
+    // Set character texture and weapon after player is created
     p.setTexture(ch.texture);
     const w = weaponTypes.find(w => w.i === ch.weapon);
     if (w) {
@@ -2072,37 +2058,45 @@ function endGame() {
 }
 
 function restartGame() {
-  // Reset state
-  gameOver = false;
-  levelingUp = false;
-  selectingWeapon = false;
-  startScreen = true;
-  mainMenu = true;
-  paused = false;
-  gameTime = 0;
-  shootTimer = 0;
-  spawnTimer = 0;
-  regenTimer = 0;
-  waveTimer = 0;
-  bossTimer = 0;
-  warnAct = false;
-  hyperModeActive = false;
-  // Reset upgrade levels
+  // Cleanup: destroy all game objects with depth >= 0 (preserve background at depth < 0)
+  scene.children.list.filter(c => c.depth >= 0).forEach(c => c[DS]());
+
+  // Clear physics groups
+  en.clear(true, true);
+  pr.clear(true, true);
+  xo.clear(true, true);
+  co.clear(true, true);
+  wc.clear(true, true);
+  uc.clear(true, true);
+  mg.clear(true, true);
+  hd.clear(true, true);
+  ob.clear(true, true);
+
+  // Reset state variables
+  gameOver = levelingUp = selectingWeapon = paused = warnAct = hyperModeActive = false;
+  startScreen = mainMenu = true;
+  gameTime = shootTimer = spawnTimer = regenTimer = waveTimer = bossTimer = orbitAngle = avB = bTmr = 0;
   ul = {};
 
-  // Reset weapons (all locked)
+  // Reset weapons
   weaponTypes = JSON.parse(JSON.stringify(iwt));
 
+  // Clear orbiting balls & boomerangs
+  orbitingBalls = boomerangs = [];
+  adc = null;
 
-  // Clear orbiting balls
-  orbitingBalls.forEach(ball => ball && ball[DS]());
-  orbitingBalls = [];
-  orbitAngle = 0;
+  // Reset unlocked enemy types
+  unlockedTypes = [enemyTypes[0]];
 
   stats = JSON.parse(JSON.stringify(inS));
   difficulty = { ...inD };
 
-  scene.scene.restart();
+  // Recreate all gameplay elements (obstacles, player, UI, colliders, etc.)
+  initGameplay();
+
+  // Pause physics and show main menu
+  scene.physics.pause();
+  showMainMenu();
 }
 
 // Leaderboard functions
