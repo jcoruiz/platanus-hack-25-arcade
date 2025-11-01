@@ -1689,6 +1689,13 @@ function showRareUpg() {
   menuKeys.push(leftKey, rightKey, aKey, dKey, enterKey);
 }
 
+// Helper: glitch text triple-layer effect (reusable)
+const gt3 = (x, y, txt, sz, d) => [
+  scene.add.text(x - 2, y - 1, txt, { [F]: sz, [FF]: A, [CO]: '#ff00ff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](d),
+  scene.add.text(x + 2, y + 1, txt, { [F]: sz, [FF]: A, [CO]: '#00ffff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](d),
+  scene.add.text(x, y, txt, { [F]: sz, [FF]: A, [CO]: CS.W, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](d + 1)
+];
+
 function showMainMenu() {
   // Dark background with slight transparency
   scene.add.graphics().fillStyle(C.B, 0.98).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
@@ -1707,62 +1714,31 @@ function showMainMenu() {
     { y: 400, txt: 'LEADERBOARDS', fn: showFullLeaderboard }
   ];
 
-  // Store text objects for glitch effect
-  opts.forEach((o, i) => {
-    o.texts = [];
-  });
+  opts.forEach(o => o.texts = []);
 
   const dr = (i) => {
-    const s = i === selectedIndex;
-
-    // Remove old text objects
-    opts[i].texts.forEach(t => t[DS]());
-    opts[i].texts = [];
+    const s = i === selectedIndex, o = opts[i];
+    o.texts.forEach(t => t[DS]());
+    o.texts = [];
 
     if (s) {
-      // Selected: Hotline Miami glitch effect (offset layers in pink and cyan)
-      const t1 = scene.add.text(398, opts[i].y - 2, opts[i].txt, { [F]: '40px', [FF]: A, [CO]: '#ff00ff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](101);
-      const t2 = scene.add.text(402, opts[i].y + 2, opts[i].txt, { [F]: '40px', [FF]: A, [CO]: '#00ffff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](101);
-      const t3 = scene.add.text(400, opts[i].y, opts[i].txt, { [F]: '40px', [FF]: A, [CO]: CS.W, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102);
-      opts[i].texts.push(t1, t2, t3);
-
-      // Add pulsing tween to selected option
+      o.texts.push(...gt3(400, o.y, o.txt, '40px', 101));
       if (pulseTween) pulseTween.stop();
-      pulseTween = scene.tweens.add({
-        targets: t3,
-        alpha: 0.7,
-        duration: 400,
-        yoyo: true,
-        repeat: -1
-      });
+      pulseTween = scene.tweens.add({ targets: o.texts[2], alpha: 0.7, duration: 400, yoyo: true, repeat: -1 });
     } else {
-      // Not selected: simple cyan text
-      const t = scene.add.text(400, opts[i].y, opts[i].txt, { [F]: '32px', [FF]: A, [CO]: '#00aaaa' }).setOrigin(0.5)[SSF](0)[SD](101);
-      opts[i].texts.push(t);
+      o.texts.push(scene.add.text(400, o.y, o.txt, { [F]: '32px', [FF]: A, [CO]: '#00aaaa' }).setOrigin(0.5)[SSF](0)[SD](101));
     }
   };
 
   opts.forEach((_, i) => dr(i));
 
-  const uk = scene.input.keyboard.addKey('UP');
-  const dk = scene.input.keyboard.addKey('DOWN');
-  const wk = scene.input.keyboard.addKey('W');
-  const sk = scene.input.keyboard.addKey('S');
-  const ek = scene.input.keyboard.addKey('ENTER');
+  const k = scene.input.keyboard;
+  const gu = () => { selectedIndex = (selectedIndex - 1 + opts.length) % opts.length; opts.forEach((_, i) => dr(i)); playTone(scene, 800, 0.05); };
+  const gd = () => { selectedIndex = (selectedIndex + 1) % opts.length; opts.forEach((_, i) => dr(i)); playTone(scene, 800, 0.05); };
+  const ge = () => { playTone(scene, 1200, 0.15); cleanupMenu(); opts[selectedIndex].fn(); };
 
-  const goUp = () => { selectedIndex = (selectedIndex - 1 + opts.length) % opts.length; opts.forEach((_, i) => dr(i)); playTone(scene, 800, 0.05); };
-  const goDown = () => { selectedIndex = (selectedIndex + 1) % opts.length; opts.forEach((_, i) => dr(i)); playTone(scene, 800, 0.05); };
-
-  uk.on('down', goUp);
-  wk.on('down', goUp);
-  dk.on('down', goDown);
-  sk.on('down', goDown);
-  ek.on('down', () => {
-    playTone(scene, 1200, 0.15);
-    cleanupMenu();
-    opts[selectedIndex].fn();
-  });
-
+  const uk = k.addKey('UP'), dk = k.addKey('DOWN'), wk = k.addKey('W'), sk = k.addKey('S'), ek = k.addKey('ENTER');
+  uk.on('down', gu); wk.on('down', gu); dk.on('down', gd); sk.on('down', gd); ek.on('down', ge);
   menuKeys.push(uk, dk, wk, sk, ek);
 }
 
@@ -1799,70 +1775,51 @@ function showFullLeaderboard() {
   menuKeys.push(ek);
 }
 
-// Generate high-res hero textures for character selection (80x80 base size, no scaling needed)
-function generateHeroTexture(tex, isSelected) {
-  const key = `${tex}_hd${isSelected ? '_sel' : ''}`;
-  if (scene.textures.exists(key)) return key;
+// Generate HD hero textures (optimized)
+function generateHeroTexture(t, sel) {
+  const k = `${t}_hd${sel ? '_s' : ''}`;
+  if (scene.textures.exists(k)) return k;
+  const g = scene.add.graphics(), s = sel ? 3.5 : 2.5, m = v => v * s;
 
-  const g = scene.add.graphics();
-  const s = isSelected ? 3.5 : 2.5; // Scale factor to match original sizes (32*2.5=80px, 32*3.5=112px)
-
-  if (tex === 'p_b') {
-    // Banana
-    g.fillStyle(C.Y, 1).fillEllipse(16 * s, 16 * s, 10 * s, 24 * s);
-    g.fillStyle(0xffdd00, 1).fillEllipse(18 * s, 16 * s, 6 * s, 20 * s);
-    g.fillStyle(0x885500, 1).fillRect(14 * s, 4 * s, 4 * s, 6 * s);
-  } else if (tex === 'p_j') {
-    // Medusa
-    g.fillStyle(0xff88dd, 1).fillCircle(16 * s, 12 * s, 10 * s);
-    g.fillStyle(0xff88dd, 0.7);
-    g.fillRect(8 * s, 18 * s, 3 * s, 12 * s);
-    g.fillRect(13 * s, 20 * s, 3 * s, 10 * s);
-    g.fillRect(18 * s, 19 * s, 3 * s, 11 * s);
-    g.fillStyle(C.B, 1);
-    g.fillCircle(12 * s, 11 * s, 2 * s);
-    g.fillCircle(20 * s, 11 * s, 2 * s);
-  } else if (tex === 'p_o') {
-    // Orb
-    g.fillStyle(0xcc00ff, 1);
-    g.slice(16 * s, 16 * s, 12 * s, Phaser.Math.DegToRad(90), Phaser.Math.DegToRad(270), false);
-    g.fillPath();
-    g.fillStyle(0x0088ff, 1);
-    g.slice(16 * s, 16 * s, 12 * s, Phaser.Math.DegToRad(270), Phaser.Math.DegToRad(90), false);
-    g.fillPath();
-    g.lineStyle(2 * s, C.W, 1).lineBetween(16 * s, 4 * s, 16 * s, 28 * s);
-    g.fillStyle(C.W, 0.8).fillCircle(16 * s, 16 * s, 4 * s);
-  } else if (tex === 'p_t') {
-    // Train
-    g.fillStyle(0xe0e0e0, 1).fillRoundedRect(6 * s, 10 * s, 20 * s, 12 * s, 3 * s);
-    g.fillStyle(C.W, 1).fillTriangle(4 * s, 16 * s, 10 * s, 12 * s, 10 * s, 20 * s);
-    g.fillStyle(0x0088ff, 1).fillRect(8 * s, 15 * s, 18 * s, 2 * s);
-    g.fillStyle(C.R, 1).fillRect(8 * s, 18 * s, 18 * s, 2 * s);
-    g.fillStyle(0x4444ff, 0.7);
-    g.fillRect(12 * s, 13 * s, 3 * s, 3 * s);
-    g.fillRect(17 * s, 13 * s, 3 * s, 3 * s);
-    g.fillRect(22 * s, 13 * s, 3 * s, 3 * s);
+  if (t === 'p_b') {
+    g.fillStyle(C.Y, 1).fillEllipse(m(16), m(16), m(10), m(24));
+    g.fillStyle(0xffdd00, 1).fillEllipse(m(18), m(16), m(6), m(20));
+    g.fillStyle(0x885500, 1).fillRect(m(14), m(4), m(4), m(6));
+  } else if (t === 'p_j') {
+    g.fillStyle(0xff88dd, 1).fillCircle(m(16), m(12), m(10));
+    g.fillStyle(0xff88dd, 0.7).fillRect(m(8), m(18), m(3), m(12)).fillRect(m(13), m(20), m(3), m(10)).fillRect(m(18), m(19), m(3), m(11));
+    g.fillStyle(C.B, 1).fillCircle(m(12), m(11), m(2)).fillCircle(m(20), m(11), m(2));
+  } else if (t === 'p_o') {
+    g.fillStyle(0xcc00ff, 1).slice(m(16), m(16), m(12), 1.57, 4.71, 0).fillPath();
+    g.fillStyle(0x0088ff, 1).slice(m(16), m(16), m(12), 4.71, 1.57, 0).fillPath();
+    g.lineStyle(m(2), C.W, 1).lineBetween(m(16), m(4), m(16), m(28));
+    g.fillStyle(C.W, 0.8).fillCircle(m(16), m(16), m(4));
+  } else {
+    g.fillStyle(0xe0e0e0, 1).fillRoundedRect(m(6), m(10), m(20), m(12), m(3));
+    g.fillStyle(C.W, 1).fillTriangle(m(4), m(16), m(10), m(12), m(10), m(20));
+    g.fillStyle(0x0088ff, 1).fillRect(m(8), m(15), m(18), m(2));
+    g.fillStyle(C.R, 1).fillRect(m(8), m(18), m(18), m(2));
+    g.fillStyle(0x4444ff, 0.7).fillRect(m(12), m(13), m(3), m(3)).fillRect(m(17), m(13), m(3), m(3)).fillRect(m(22), m(13), m(3), m(3));
   }
 
-  const size = Math.ceil(32 * s); // 80px for normal, 112px for selected
-  g.generateTexture(key, size, size);
+  g.generateTexture(k, 32 * s, 32 * s);
   g.destroy();
-  return key;
+  return k;
 }
 
 function showStartScreen() {
   // Animated neon grid background
   const grid = scene.add.graphics()[SSF](0)[SD](99);
-  const drawGrid = (time) => {
+  const drawGrid = (t) => {
     grid.clear();
-    const offset = (time * 0.02) % 50;
+    const o = (t * 0.02) % 50;
     grid.lineStyle(1, C.Cy, 0.15);
-    for (let x = 0; x <= 800; x += 50) grid.lineBetween(x, 0, x, 600);
-    for (let y = -offset; y <= 600; y += 50) grid.lineBetween(0, y, 800, y);
+    for (let i = 0; i <= 800; i += 50) grid.lineBetween(i, 0, i, 600);
+    for (let i = -o; i <= 600; i += 50) grid.lineBetween(0, i, 800, i);
     grid.lineStyle(1, C.P, 0.1);
-    for (let x = 25; x <= 800; x += 50) grid.lineBetween(x, 0, x, 600);
+    for (let i = 25; i <= 800; i += 50) grid.lineBetween(i, 0, i, 600);
   };
-  scene.events.on('update', (time) => drawGrid(time));
+  scene.events.on('update', drawGrid);
 
   // Dark overlay
   scene.add.graphics().fillStyle(C.B, 0.9).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
@@ -1883,27 +1840,18 @@ function showStartScreen() {
   const gradients = [0xffff00, 0xff00ff, 0x00ffff, 0x00ff00]; // Banana, Medusa, Orb, Train
 
   // L4D2-style large card rendering with glitch + glow + gradient
-  const dc = (g, x, y, s, i, glowAlpha) => {
+  const dc = (g, x, y, s, i, ga) => {
     g.clear();
+    const cx = x - 90, cy = y - 140, gc = gradients[i];
     if (s) {
-      // Animated glow layers (pulsing)
-      const ga = glowAlpha || 0.4;
-      g.fillStyle(C.P, ga * 0.3).fillRoundedRect(x - 100, y - 150, 200, 300, 10);
-      g.fillStyle(C.Cy, ga * 0.3).fillRoundedRect(x - 105, y - 155, 210, 310, 10);
-      // Glitch triple layer
-      g.fillStyle(C.P, 0.4).fillRoundedRect(x - 87, y - 137, 180, 280, 10);
-      g.lineStyle(5, C.P, 0.8).strokeRoundedRect(x - 87, y - 137, 180, 280, 10);
-      g.fillStyle(C.Cy, 0.4).fillRoundedRect(x - 93, y - 143, 180, 280, 10);
-      g.lineStyle(5, C.Cy, 0.8).strokeRoundedRect(x - 93, y - 143, 180, 280, 10);
-      // Main card with gradient
-      g.fillGradientStyle(gradients[i], gradients[i], C.B, C.B, 0.3);
-      g.fillRoundedRect(x - 90, y - 140, 180, 280, 10);
-      g.lineStyle(5, C.W, 1).strokeRoundedRect(x - 90, y - 140, 180, 280, 10);
+      const a = ga || 0.4;
+      g.fillStyle(C.P, a * 0.3).fillRoundedRect(x - 100, y - 150, 200, 300, 10);
+      g.fillStyle(C.Cy, a * 0.3).fillRoundedRect(x - 105, y - 155, 210, 310, 10);
+      g.fillStyle(C.P, 0.4).fillRoundedRect(x - 87, y - 137, 180, 280, 10).lineStyle(5, C.P, 0.8).strokeRoundedRect(x - 87, y - 137, 180, 280, 10);
+      g.fillStyle(C.Cy, 0.4).fillRoundedRect(x - 93, y - 143, 180, 280, 10).lineStyle(5, C.Cy, 0.8).strokeRoundedRect(x - 93, y - 143, 180, 280, 10);
+      g.fillGradientStyle(gc, gc, C.B, C.B, 0.3).fillRoundedRect(cx, cy, 180, 280, 10).lineStyle(5, C.W, 1).strokeRoundedRect(cx, cy, 180, 280, 10);
     } else {
-      // Unselected: gradient background
-      g.fillGradientStyle(gradients[i], gradients[i], C.B, C.B, 0.15);
-      g.fillRoundedRect(x - 90, y - 140, 180, 280, 10);
-      g.lineStyle(3, gradients[i], 0.5).strokeRoundedRect(x - 90, y - 140, 180, 280, 10);
+      g.fillGradientStyle(gc, gc, C.B, C.B, 0.15).fillRoundedRect(cx, cy, 180, 280, 10).lineStyle(3, gc, 0.5).strokeRoundedRect(cx, cy, 180, 280, 10);
     }
   };
 
@@ -1957,10 +1905,7 @@ function showStartScreen() {
         })[SSF](0)[SD](103);
 
         // Selected: Glitch text effect (triple layer)
-        const t1 = scene.add.text(o.x - 2 + shakeX, o.y + 82 + shakeY, o.character.name, { [F]: '22px', [FF]: A, [CO]: '#ff00ff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102);
-        const t2 = scene.add.text(o.x + 2 + shakeX, o.y + 84 + shakeY, o.character.name, { [F]: '22px', [FF]: A, [CO]: '#00ffff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102);
-        const t3 = scene.add.text(o.x + shakeX, o.y + 83 + shakeY, o.character.name, { [F]: '22px', [FF]: A, [CO]: CS.W, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](103);
-        o.texts.push(t1, t2, t3);
+        o.texts.push(...gt3(o.x + shakeX, o.y + 83 + shakeY, o.character.name, '22px', 102));
 
         // Weapon and passive (bright)
         o.texts.push(scene.add.text(o.x + shakeX, o.y + 108 + shakeY, o.character.desc, { [F]: '14px', [FF]: A, [CO]: '#00ffff' }).setOrigin(0.5)[SSF](0)[SD](102));
@@ -1982,7 +1927,7 @@ function showStartScreen() {
     duration: 600,
     yoyo: true,
     repeat: -1,
-    onUpdate: (tw) => { glowPulse = tw.getValue(); if (!startScreen) upd(false); }
+    onUpdate: (tw) => { glowPulse = tw.getValue(); if (startScreen) upd(false); }
   });
 
   characters.forEach((ch, i) => {
