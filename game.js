@@ -1537,7 +1537,7 @@ function showRareUpg() {
   overlay[SD](100);
 
   // Title
-  const title = mkTxt(400, 100, '✨ RARE UPGRADE! ✨', { [F]: '48px', [FF]: A, [CO]: '#ff00ff', [STR]: CS.B, [STT]: 6 });
+  mkTxt(400, 100, '✨ RARE UPGRADE! ✨', { [F]: '48px', [FF]: A, [CO]: '#ff00ff', [STR]: CS.B, [STT]: 6 });
 
   // Shuffle and pick 3 rare upgrades
   const shuffled = [...available].sort(() => Math.random() - 0.5).slice(0, 3);
@@ -1614,8 +1614,8 @@ function showMainMenu() {
 
   // Start synthwave music (only once)
   if (!musicStarted) {
-    playMusic(scene);
     musicStarted = true;
+    playMusic(scene);
   }
 
   selectedIndex = 0;
@@ -1640,8 +1640,8 @@ function showMainMenu() {
   const dk = scene.input.keyboard.addKey('DOWN');
   const ek = scene.input.keyboard.addKey('ENTER');
 
-  uk.on('down', () => { selectedIndex = (selectedIndex - 1 + opts.length) % opts.length; opts.forEach((o, i) => dr(i)); playTone(scene, 800, 0.05); });
-  dk.on('down', () => { selectedIndex = (selectedIndex + 1) % opts.length; opts.forEach((o, i) => dr(i)); playTone(scene, 800, 0.05); });
+  uk.on('down', () => { selectedIndex = (selectedIndex - 1 + opts.length) % opts.length; opts.forEach((_, i) => dr(i)); playTone(scene, 800, 0.05); });
+  dk.on('down', () => { selectedIndex = (selectedIndex + 1) % opts.length; opts.forEach((_, i) => dr(i)); playTone(scene, 800, 0.05); });
   ek.on('down', () => {
     playTone(scene, 1200, 0.15);
     cleanupMenu();
@@ -2023,7 +2023,7 @@ function showNameEntry() {
     if (finalName.length > 0) {
       cleanup();
       playTone(scene, 1200, 0.2);
-      const position = addToLeaderboard(name.join(''), stats.enKilled);
+      const position = addToLeaderboard(finalName, stats.enKilled);
       showLeaderboard(position);
     }
   });
