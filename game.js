@@ -16,7 +16,7 @@ new Phaser.Game(config);
 let p, cr, en, pr, xo, co, ob, wc, uc, mg, hd, gr;
 // adc=areaDamageCircle, idleTween=player idle animation
 let adc = null, idleTween = null;
-let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, showStats = false, paused = false, mainMenu = true;
+let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, paused = false, mainMenu = true;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
 let nextWaveTime = 30000, nextBossTime = 60000;
@@ -147,8 +147,6 @@ let inD = { // initial difficulty
 let difficulty = { ...inD };
 
 let ui = {};
-let statsPanel = null;
-let wasPaused = false;
 
 function getWeapon(id) {
   return weaponTypes.find(w => w.i === id);
@@ -236,6 +234,7 @@ function procDmg(enemy, srcX, srcY, baseDmg) {
   applyDmgFb(enemy, srcX, srcY, isCrit);
   if (hp <= 0) {
     playTone(scene, 660, 0.1);
+    enemy.body.enable = false;
     handleEnemyDeath(enemy);
     return true;
   }
@@ -698,7 +697,7 @@ function create() {
   let pauseText = null;
   let pauseHint = null;
   pKey.on('down', () => {
-    if (!gameOver && !startScreen && !levelingUp && !selectingWeapon && !showStats) {
+    if (!gameOver && !startScreen && !levelingUp && !selectingWeapon) {
       paused = !paused;
       if (paused) {
         scene.physics.pause();
@@ -722,12 +721,6 @@ function create() {
     }
   });
 
-  // Keyboard for stats panel
-  const sKey = this.input.keyboard.addKey('S');
-  sKey.on('down', () => {
-    if (!gameOver && !startScreen) toggleStatsPanel();
-  });
-
   // Pause physics until weapon is selected
   this.physics.pause();
 
@@ -744,7 +737,7 @@ function create() {
 }
 
 function update(_time, delta) {
-  if (gameOver || levelingUp || selectingWeapon || startScreen || showStats || paused || mainMenu) return;
+  if (gameOver || levelingUp || selectingWeapon || startScreen || paused || mainMenu) return;
 
   gameTime += delta;
   shootTimer += delta;
@@ -985,6 +978,7 @@ function createEn(type, x, y, hpMult = 1, scale = 1) {
   enemy.setData('dropChance', type.r);
   enemy.setData('enemyColor', type.c);
   enemy.setData('knockbackUntil', 0);
+  enemy.setData('originalScale', scale);
   return enemy;
 }
 
@@ -1273,6 +1267,19 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   if (getWeapon('a').u) availableUpgrades.push(...areaDamageUpgrades);
   if (getWeapon('b').u) availableUpgrades.push(...boomerangUpgrades);
   availableUpgrades = availableUpgrades.filter(u => (ul[u.id] || 0) < u.maxLevel);
+
+  // Check if no upgrades available (all maxed)
+  if (availableUpgrades.length === 0) {
+    const hpReward = 20;
+    stats.hp = Math.min(stats.maxHp, stats.hp + hpReward);
+    playTone(scene, 1500, 0.2);
+    const msg = mkTxt(400, 300, `¡MAX LEVEL!\n+${hpReward} HP`, { [F]: '32px', [FF]: A, [CO]: CS.G, [STR]: CS.B, [STT]: 4 }, 150);
+    scene.tweens.add({ targets: msg, y: 250, alpha: 0, duration: 2000, onComplete: () => msg[DS]() });
+    scene.physics.resume();
+    if (stateVar === 'levelingUp') levelingUp = false;
+    else if (stateVar === 'selectingWeapon') selectingWeapon = false;
+    return;
+  }
 
   // Render stats panel
   renderStatsPanel();
@@ -1610,8 +1617,8 @@ function showRareUpg() {
 
 function showMainMenu() {
   scene.add.graphics().fillStyle(C.B, 0.95).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
-  mkTxt(400, 120, 'HUMO SURVIVORS', { [F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8 }, 101);
-  mkTxt(400, 200, 'Survive endless waves', { [F]: '20px', [FF]: A, [CO]: CS.LG }, 101);
+  mkTxt(400, 120, 'SURVIVORS', { [F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8 }, 101);
+  mkTxt(400, 200, 'Survive', { [F]: '20px', [FF]: A, [CO]: CS.LG }, 101);
 
   // Start synthwave music (only once)
   if (!musicStarted) {
@@ -1674,7 +1681,7 @@ function showFullLeaderboard() {
     });
   }
 
-  mkTxt(400, 540, 'Press ENTER to go back', { [F]: '16px', [FF]: A, [CO]: CS.LG }, 151);
+  mkTxt(400, 540, 'ENTER to go back', { [F]: '16px', [FF]: A, [CO]: CS.LG }, 151);
 
   const ek = scene.input.keyboard.addKey('ENTER');
   ek.on('down', () => {
@@ -1737,7 +1744,7 @@ function showStartScreen() {
 
   upd();
 
-  mkTxt(400, 510, 'LEFT/RIGHT: Navigate  ENTER: Select  ESC: Back', { [F]: '14px', [FF]: A, [CO]: CS.LG }, 101);
+  mkTxt(400, 510, '←→: Move  ENTER: Select  ESC: Back', { [F]: '14px', [FF]: A, [CO]: CS.LG }, 101);
 
   const lk = scene.input.keyboard.addKey('LEFT');
   const rk = scene.input.keyboard.addKey('RIGHT');
@@ -1913,7 +1920,7 @@ function qualForLb(kills) {
 
 function showNameEntry() {
   const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-. ';
-  let name = ['A', 'A', 'A', ' ', ' ', ' '];
+  let name = ['', '', '', ' ', ' ', ' '];
   let cursorPos = 0;
   let charIndex = 0;
 
@@ -2141,6 +2148,7 @@ function spawnBoss() {
   boss.setData('enemyColor', type.c);
   boss.setData('knockbackUntil', 0);
   boss.setData('isBoss', true);
+  boss.setData('originalScale', 1.0);
 }
 
 function showWarning(text, color) {
@@ -2442,7 +2450,7 @@ function applyDmgFb(enemy, sourceX, sourceY, isCrit = false) {
   if (isCrit) {
     enemy.setTintFill(C.Y);
     // Scale up briefly for crit
-    const originalScale = enemy.scaleX;
+    const originalScale = enemy.getData('originalScale') || 1;
     enemy.setScale(originalScale * 1.3);
     scene.time.delayedCall(100, () => {
       if (enemy && enemy[AC]) {
@@ -2471,139 +2479,6 @@ function applyDmgFb(enemy, sourceX, sourceY, isCrit = false) {
     Math.cos(angle) * knockbackForce,
     Math.sin(angle) * knockbackForce
   );
-}
-
-function toggleStatsPanel() {
-  showStats = !showStats;
-
-  if (showStats) {
-    // Opening stats panel
-    // Save if game was already paused (levelingUp or selectingWeapon)
-    wasPaused = levelingUp || selectingWeapon;
-
-    // Pause the game
-    scene.physics.pause();
-
-    // Create the panel
-    createStatsPanel();
-  } else if (statsPanel) {
-    // Closing stats panel
-    statsPanel.forEach(el => el[DS]());
-    statsPanel = null;
-
-    // Resume game only if it wasn't paused before (no active menus)
-    if (!wasPaused && !levelingUp && !selectingWeapon) {
-      scene.physics.resume();
-    }
-  }
-}
-
-function createStatsPanel() {
-  if (statsPanel) {
-    statsPanel.forEach(el => el[DS]());
-  }
-
-  statsPanel = [];
-
-  // Background overlay
-  const bg = scene.add.graphics();
-  bg.fillStyle(C.B, 0.85);
-  bg.fillRoundedRect(50, 50, 700, 500, 10);
-  bg.lineStyle(3, 0xffaa00, 1);
-  bg.strokeRoundedRect(50, 50, 700, 500, 10);
-  bg[SSF](0);
-  bg[SD](150);
-  statsPanel.push(bg);
-
-  // Title
-  const title = mkTxt(400, 75, 'STATS [S to close]', { [F]: '28px', [FF]: A, [CO]: '#ffaa00', [FST]: 'bold' }, 151);
-  statsPanel.push(title);
-
-  // Player Stats
-  let y = 120;
-  const addStat = (label, value, color = CS.W) => {
-    const t = scene.add.text(80, y, `${label}: ${value}`, {
-      [F]: '16px',
-      [FF]: A,
-      [CO]: color
-    })[SSF](0)[SD](151);
-    statsPanel.push(t);
-    y += 25;
-  };
-
-  // Character info
-  if (selCh) {
-    addStat(`Character: ${selCh.name}`, '', CS.Y);
-  }
-
-  addStat('HP', `${~~stats.hp}/${stats.maxHp}`, '#ff6666');
-  addStat('Speed', ~~stats.speed, '#66ff66');
-  addStat('Knockback', ~~stats.knockback, '#66ccff');
-  addStat('HP Regen', `${stats.hpRegen}/min`, '#88ff88');
-  addStat('XP Multiplier', `${stats.xpMultiplier.toFixed(1)}x`, '#ffff66');
-  addStat('Luck', `${stats.lootChance.toFixed(1)}x`, '#66ffcc');
-  addStat('Crit Chance', `${(stats.critChance * 100).toFixed(0)}%`, '#ff88ff');
-  addStat('Crit Damage', `${stats.critDamage.toFixed(2)}x`, '#ff66ff');
-
-  // Weapons Section
-  y += 10;
-  const weaponsTitle = scene.add.text(80, y, 'WEAPONS:', {
-    [F]: '20px',
-    [FF]: A,
-    [CO]: '#ffaa00',
-    [FST]: 'bold'
-  })[SSF](0)[SD](151);
-  statsPanel.push(weaponsTitle);
-  y += 30;
-
-  // Show each unlocked weapon
-  weaponTypes.forEach(weapon => {
-    if (weapon.u) {
-      const wTitle = scene.add.text(100, y, weapon.n, {
-        [F]: '18px',
-        [FF]: A,
-        [CO]: '#ffdd00',
-        [FST]: 'bold'
-      })[SSF](0)[SD](151);
-      statsPanel.push(wTitle);
-      y += 22;
-
-      if (weapon.i === 'p') {
-        const w = scene.add.text(120, y, `Count: ${weapon.c} | Fire Rate: ${weapon.f}ms | Damage: ${weapon.m} | Penetration: ${weapon.e}`, {
-          [F]: '14px',
-          [FF]: A,
-          [CO]: CS.LG
-        })[SSF](0)[SD](151);
-        statsPanel.push(w);
-        y += 20;
-      } else if (weapon.i === 'o') {
-        const w = scene.add.text(120, y, `Count: ${weapon.c} | Rot Speed: ${weapon.r} | Radius: ${weapon.a} | Ball Size: ${weapon.b} | Damage: ${weapon.m}`, {
-          [F]: '14px',
-          [FF]: A,
-          [CO]: CS.LG
-        })[SSF](0)[SD](151);
-        statsPanel.push(w);
-        y += 20;
-      } else if (weapon.i === 'a') {
-        const w = scene.add.text(120, y, `Radius: ${weapon.a} | DPS: ${weapon.p} | Tick Rate: ${weapon.t}ms`, {
-          [F]: '14px',
-          [FF]: A,
-          [CO]: CS.LG
-        })[SSF](0)[SD](151);
-        statsPanel.push(w);
-        y += 20;
-      } else if (weapon.i === 'b') {
-        const w = scene.add.text(120, y, `Available: ${avB}/${weapon.c} | Damage: ${weapon.m} | Speed: ${~~weapon.s} | Range: ${weapon.x} | Size: ${weapon.z.toFixed(1)}x`, {
-          [F]: '14px',
-          [FF]: A,
-          [CO]: CS.LG
-        })[SSF](0)[SD](151);
-        statsPanel.push(w);
-        y += 20;
-      }
-      y += 5;
-    }
-  });
 }
 
 function playTone(sceneRef, frequency, duration) {
