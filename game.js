@@ -173,7 +173,7 @@ const pUpgrades = [
   { id: 'hp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: 10, apply: () => { stats.maxHp += 20; stats.hp += 20; ul.hp = (ul.hp || 0) + 1 } },
   u('kb', 'Knockback', '+30% Enemy', '💨', 6, 1, 'knockback', 1.3),
   u('hr', 'HP Regen', '+10 HP/min', '💚', 10, 0, 'hpRegen', 10),
-  u('xp', 'XP Boost', '+50% XP', '⭐', 8, 0, 'xpMultiplier', 0.5),
+  u('xp', 'XP Boost', '+0.5x XP', '⭐', 8, 0, 'xpMultiplier', 0.5),
   u('l', 'Luck', '+3% Chest', '🍀', 10, 0, 'lootChance', 0.03),
   u('cc', 'Crit Chance', '+5% Crit', '🎯', 10, 0, 'critChance', 0.05),
   u('cd', 'Crit Damage', '+25% Crit', '💢', 10, 0, 'critDamage', 0.25)
@@ -323,6 +323,9 @@ function generateBossTexture(type) {
 
 // Perlin Noise implementation for nebula generation
 let perm = [];
+for (let i = 0; i < 256; i++) perm[i] = i;
+perm.sort(r);
+for (let i = 0; i < 256; i++) perm[256 + i] = perm[i];
 const grad = [[1, 1], [-1, 1], [1, -1], [-1, -1], [1, 0], [-1, 0], [0, 1], [0, -1]];
 
 // Fade function for smooth interpolation
@@ -358,12 +361,6 @@ function perlin(x, y) {
 
 // Generate procedural nebula texture
 function generateNebula() {
-  // Initialize new permutation table for each nebula (creates unique pattern)
-  perm = [];
-  for (let i = 0; i < 256; i++) perm[i] = i;
-  perm.sort(() => Math.random() - 0.5);
-  for (let i = 0; i < 256; i++) perm[256 + i] = perm[i];
-
   // Remove old texture if exists
   if (scene.textures.exists('nebulaNoise')) {
     scene.textures.remove('nebulaNoise');
@@ -777,8 +774,8 @@ function update(_time, delta) {
     moving = true;
   }
 
-  // Normalize diagonal movement
-  if (moving && p.body.velocity.x !== 0 && p.body.velocity.y !== 0) {
+  // Normalize diagonal movement (only if at least one velocity component is non-zero)
+  if (moving && (p.body.velocity.x !== 0 || p.body.velocity.y !== 0)) {
     p.body.velocity.normalize().scale(stats.speed);
   }
 
@@ -1201,9 +1198,9 @@ function levelUp() {
     const value = selCh.pv;
 
     if (passive === 1) {// damage
-      // Banana: +5% weapon damage
+      // Banana: +5% weapon damage (accumulated as float for precision)
       const weapon = getWeapon(selCh.weapon);
-      if (weapon) weapon.m = ~~(weapon.m * value);
+      if (weapon) weapon.m *= value;
     } else if (passive === 2) { // regen
       // Medusa: +5 HP regen
       stats.hpRegen += value;
@@ -2095,8 +2092,9 @@ function endGame() {
 }
 
 function restartGame() {
-  // Stop tweens
+  // Stop tweens and reset to null for recreation in initGameplay()
   idleTween?.stop();
+  idleTween = null;
 
   // Cancel all pending delayed callbacks
   scene.time.removeAllEvents();
