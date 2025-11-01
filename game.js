@@ -1740,6 +1740,7 @@ function showFullLeaderboard() {
     cleanupMenu(150);
     showMainMenu();
   });
+  menuKeys.push(ek);
 }
 
 function showStartScreen() {
