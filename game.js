@@ -829,7 +829,13 @@ function update(_time, delta) {
   // Activate HYPER MODE at 10 minutes
   if (gameTime >= 600000 && !hyperModeActive) {
     hyperModeActive = true;
-    showWarning('🔥💀 HYPER MODE ACTIVATED 💀🔥', C.R);
+    // Detectar si coincide con boss spawn (bossTimer cerca de nextBossTime)
+    const isBossTime = bossTimer >= nextBossTime - 1000;
+    if (isBossTime) {
+      showWarning('🔥💀 HYPER MODE + MEGA BOSS! 💀🔥', C.R);
+    } else {
+      showWarning('🔥💀 HYPER MODE ACTIVATED 💀🔥', C.R);
+    }
     playTone(scene, 50, 1.0);
   }
 
@@ -863,8 +869,12 @@ function update(_time, delta) {
   // Boss system (every 120 seconds)
   bossTimer += delta;
   if (bossTimer >= nextBossTime - 5000 && bossTimer < nextBossTime && !warnAct) {
-    showWarning('🔥 BOSS APPROACHING!', C.R);
-    playTone(scene, 150, 0.5);
+    // No mostrar warning de boss si HYPER MODE está a punto de activarse
+    const isHyperModeTime = gameTime >= 595000 && gameTime < 600000;
+    if (!isHyperModeTime) {
+      showWarning('🔥 BOSS APPROACHING!', C.R);
+      playTone(scene, 150, 0.5);
+    }
   }
   if (bossTimer >= nextBossTime) {
     bossTimer = 0;
@@ -987,6 +997,7 @@ function createEn(type, x, y, hpMult = 1, scale = 1) {
   const enemy = en.create(x, y, `enemy_${type.n}`);
   enemy.setScale(scale);
   enemy.body.setCircle(4 * scale);
+  enemy.setCollideWorldBounds(true);
   enemy.setData('hp', difficulty.enemyHp * type.h * hpMult);
   enemy.setData('speed', difficulty.enemySpeed * type.s);
   enemy.setData('damage', difficulty.enemyDamage * type.d);
@@ -2207,6 +2218,7 @@ function spawnBoss() {
   y = Math.max(30, Math.min(1770, y));
   const boss = en.create(x, y, bossTexKey);
   boss.body.setCircle(30);
+  boss.setCollideWorldBounds(true);
   const bhp = difficulty.enemyHp * type.h * 10;
   boss.setData('hp', bhp);
   boss.setData('maxHp', bhp);
