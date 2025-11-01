@@ -128,7 +128,7 @@ const inS = { // initial stats
   critChance: 0.05,
   critDamage: 1.5,
   xp: 0,
-  coins: 1000,
+  coins: 0,
   level: 1,
   xpToNext: 10,
   enKilled: 0
@@ -137,10 +137,10 @@ const inS = { // initial stats
 let stats = JSON.parse(JSON.stringify(inS));
 
 let inD = { // initial difficulty
-  spawnRate: 1000,
+  spawnRate: 500,
   enemyHp: 20,
   enemyDamage: 10,
-  enemySpeed: 80
+  enemySpeed: 60
 };
 
 let difficulty = { ...inD };
@@ -735,6 +735,11 @@ function create() {
 
   // Start sound
   playTone(this, 440, 0.1);
+
+  // Fix audio saturation on tab switch
+  document.addEventListener('visibilitychange', () =>
+    document.hidden ? stopMusic() : musicStarted && playMusic(scene)
+  );
 }
 
 function update(_time, delta) {
@@ -1605,7 +1610,7 @@ function showRareUpg() {
 function showMainMenu() {
   scene.add.graphics().fillStyle(C.B, 0.95).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
   mkTxt(400, 120, 'HUMO SURVIVORS', { [F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8 }, 101);
-  mkTxt(400, 200, 'Survive the endless waves', { [F]: '20px', [FF]: A, [CO]: CS.LG }, 101);
+  mkTxt(400, 200, 'Survive endless waves', { [F]: '20px', [FF]: A, [CO]: CS.LG }, 101);
 
   // Start synthwave music (only once)
   if (!musicStarted) {
@@ -2120,16 +2125,14 @@ function spawnBoss() {
   else if (side === 2) { x = p.x - 500; y = p.y; }
   else { x = p.x + 500; y = p.y; }
 
-  // Generate high-res boss texture (cached after first use)
   const bossTexKey = generateBossTexture(type);
-
-  // Create boss with high-res texture (no scaling needed)
   x = Math.max(30, Math.min(2370, x));
   y = Math.max(30, Math.min(1770, y));
   const boss = en.create(x, y, bossTexKey);
   boss.body.setCircle(30);
-  boss.setData('hp', difficulty.enemyHp * type.h * 10);
-  boss.setData('maxHp', difficulty.enemyHp * type.h * 10);
+  const bhp = difficulty.enemyHp * type.h * 10;
+  boss.setData('hp', bhp);
+  boss.setData('maxHp', bhp);
   boss.setData('speed', difficulty.enemySpeed * type.s * 0.7);
   boss.setData('damage', difficulty.enemyDamage * type.d * 2);
   boss.setData('xpValue', type.x * 10);
@@ -2639,10 +2642,10 @@ function bass(c, t, f) {
   fl.connect(g);
   g.connect(c.destination);
   g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(0.25, t + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.12, t + 0.08);
-  g.gain.setValueAtTime(0.12, t + 0.22);
-  g.gain.exponentialRampToValueAtTime(0.01, t + 0.23);
+  g.gain.linearRampToValueAtTime(0.038, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.018, t + 0.08);
+  g.gain.setValueAtTime(0.018, t + 0.22);
+  g.gain.exponentialRampToValueAtTime(0.002, t + 0.23);
   o.start(t);
   o.stop(t + 0.23);
 }
@@ -2653,8 +2656,8 @@ function kick(c, t) {
   const g = c.createGain();
   o.frequency.setValueAtTime(150, t);
   o.frequency.exponentialRampToValueAtTime(40, t + 0.1);
-  g.gain.setValueAtTime(1, t);
-  g.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+  g.gain.setValueAtTime(0.15, t);
+  g.gain.exponentialRampToValueAtTime(0.002, t + 0.25);
   o.connect(g);
   g.connect(c.destination);
   o.start(t);
@@ -2672,8 +2675,8 @@ function snare(c, t) {
   fl.type = 'highpass';
   fl.frequency.value = 1500;
   const g = c.createGain();
-  g.gain.setValueAtTime(0.4, t);
-  g.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+  g.gain.setValueAtTime(0.06, t);
+  g.gain.exponentialRampToValueAtTime(0.002, t + 0.12);
   n.connect(fl);
   fl.connect(g);
   g.connect(c.destination);
@@ -2691,8 +2694,8 @@ function hihat(c, t, v) {
   fl.type = 'highpass';
   fl.frequency.value = 7000;
   const g = c.createGain();
-  g.gain.setValueAtTime(v, t);
-  g.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+  g.gain.setValueAtTime(v * 0.15, t);
+  g.gain.exponentialRampToValueAtTime(0.002, t + 0.05);
   n.connect(fl);
   fl.connect(g);
   g.connect(c.destination);
@@ -2706,8 +2709,8 @@ function lead(c, t, f) {
   o.type = 'square';
   o.frequency.value = f;
   g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(0.08, t + 0.02);
-  g.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+  g.gain.linearRampToValueAtTime(0.012, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.002, t + 0.4);
   o.connect(g);
   g.connect(c.destination);
   o.start(t);
@@ -2734,7 +2737,7 @@ function playMusic(sc) {
       kp: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
       sp: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
       hp: [0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1],
-      lp: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      lp: Array(16).fill(0),
       int: 0.7
     },
     verse: {
@@ -2749,14 +2752,14 @@ function playMusic(sc) {
       bp: [4, 4, 3, 3, 2, 2, 0, 0, 3, 3, 1, 1, 2, 2, 0, 0],
       kp: [1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0],
       sp: [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1],
-      hp: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      hp: Array(16).fill(1),
       lp: [4, 0, 3, 0, 2, 4, 1, 0, 3, 0, 2, 0, 4, 3, 2, 1],
       int: 1.2
     },
     breakdown: {
       bp: [0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2],
       kp: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-      sp: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      sp: Array(16).fill(0),
       hp: [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1],
       lp: [0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0],
       int: 0.6
