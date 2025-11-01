@@ -200,7 +200,7 @@ const boomerangUpgrades = [
   u('bg', 'Boom Damage', '+8 Damage', '💥', 10, 0, 'm', 8, 0, 'b'),
   u('bz', 'Boom Size', '+30% Size', '📏', 8, 0, 'z', 0.3, 0, 'b'),
   { id: 'bv', name: 'Boom Speed', desc: '+15% Speed', icon: '💨', weaponId: 'b', maxLevel: 8, apply: () => { const w = getWeapon('b'); w.s *= 1.15; w.w *= 1.15; ul.bv = (ul.bv || 0) + 1 } },
-  { id: 'bc', name: 'More Booms', desc: '+1 Boom', icon: '🪃', weaponId: 'b', maxLevel: 5, apply: () => { getWeapon('b').c++; avB++; ul.bc = (ul.bc || 0) + 1 } }
+  { id: 'bc', name: 'More Booms', desc: '+1 Boom', icon: '🔄', weaponId: 'b', maxLevel: 5, apply: () => { getWeapon('b').c++; avB++; ul.bc = (ul.bc || 0) + 1 } }
 ];
 
 const rareUpgrades = [
@@ -1661,8 +1661,8 @@ function showRareUpg() {
 
 function showMainMenu() {
   scene.add.graphics().fillStyle(C.B, 0.95).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
-  mkTxt(400, 120, 'SURVIVORS', { [F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8 }, 101);
-  mkTxt(400, 200, 'Survive', { [F]: '20px', [FF]: A, [CO]: CS.LG }, 101);
+  mkTxt(400, 120, 'SURVIVE', { [F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8 }, 101);
+  mkTxt(400, 200, 'The Game', { [F]: '20px', [FF]: A, [CO]: CS.LG }, 101);
 
   // Start synthwave music (only once)
   if (!musicStarted) {
