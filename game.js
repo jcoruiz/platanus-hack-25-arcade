@@ -731,11 +731,6 @@ function create() {
 
   // Start sound
   playTone(this, 440, 0.1);
-
-  // Fix audio saturation on tab switch
-  document.addEventListener('visibilitychange', () =>
-    document.hidden ? stopMusic() : musicStarted && playMusic(scene)
-  );
 }
 
 function update(_time, delta) {
@@ -1675,12 +1670,6 @@ function showMainMenu() {
   mkTxt(400, 120, 'SURVIVE', { [F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8 }, 101);
   mkTxt(400, 200, 'The Game', { [F]: '20px', [FF]: A, [CO]: CS.LG }, 101);
 
-  // Start synthwave music (only once)
-  if (!musicStarted) {
-    musicStarted = true;
-    playMusic(scene);
-  }
-
   selectedIndex = 0;
   const opts = [
     { y: 300, txt: 'START', fn: () => { mainMenu = false; showStartScreen(); } },
@@ -1943,8 +1932,6 @@ function restartGame() {
   bossTimer = 0;
   warnAct = false;
   hyperModeActive = false;
-  musicStarted = false;
-
   // Reset upgrade levels
   ul = {};
 
@@ -2579,179 +2566,4 @@ function playTone(sceneRef, frequency, duration) {
 
   osc.start(ctx.currentTime);
   osc.stop(ctx.currentTime + duration);
-}
-
-// Synthwave music system
-let musicLoop = null;
-let musicStarted = false;
-
-// Bass synth with lowpass filter
-function bass(c, t, f) {
-  const o = c.createOscillator();
-  const fl = c.createBiquadFilter();
-  const g = c.createGain();
-  o.type = 'sawtooth';
-  o.frequency.value = f;
-  fl.type = 'lowpass';
-  fl.frequency.value = 600;
-  fl.Q.value = 8;
-  o.connect(fl);
-  fl.connect(g);
-  g.connect(c.destination);
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(0.038, t + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.018, t + 0.08);
-  g.gain.setValueAtTime(0.018, t + 0.22);
-  g.gain.exponentialRampToValueAtTime(0.002, t + 0.23);
-  o.start(t);
-  o.stop(t + 0.23);
-}
-
-// Kick drum
-function kick(c, t) {
-  const o = c.createOscillator();
-  const g = c.createGain();
-  o.frequency.setValueAtTime(150, t);
-  o.frequency.exponentialRampToValueAtTime(40, t + 0.1);
-  g.gain.setValueAtTime(0.15, t);
-  g.gain.exponentialRampToValueAtTime(0.002, t + 0.25);
-  o.connect(g);
-  g.connect(c.destination);
-  o.start(t);
-  o.stop(t + 0.25);
-}
-
-// Snare drum
-function snare(c, t) {
-  const n = c.createBufferSource();
-  const b = c.createBuffer(1, c.sampleRate * 0.1, c.sampleRate);
-  const d = b.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-  n.buffer = b;
-  const fl = c.createBiquadFilter();
-  fl.type = 'highpass';
-  fl.frequency.value = 1500;
-  const g = c.createGain();
-  g.gain.setValueAtTime(0.06, t);
-  g.gain.exponentialRampToValueAtTime(0.002, t + 0.12);
-  n.connect(fl);
-  fl.connect(g);
-  g.connect(c.destination);
-  n.start(t);
-}
-
-// Hihat
-function hihat(c, t, v) {
-  const n = c.createBufferSource();
-  const b = c.createBuffer(1, c.sampleRate * 0.05, c.sampleRate);
-  const d = b.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-  n.buffer = b;
-  const fl = c.createBiquadFilter();
-  fl.type = 'highpass';
-  fl.frequency.value = 7000;
-  const g = c.createGain();
-  g.gain.setValueAtTime(v * 0.15, t);
-  g.gain.exponentialRampToValueAtTime(0.002, t + 0.05);
-  n.connect(fl);
-  fl.connect(g);
-  g.connect(c.destination);
-  n.start(t);
-}
-
-// Lead synth
-function lead(c, t, f) {
-  const o = c.createOscillator();
-  const g = c.createGain();
-  o.type = 'square';
-  o.frequency.value = f;
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(0.012, t + 0.02);
-  g.gain.exponentialRampToValueAtTime(0.002, t + 0.4);
-  o.connect(g);
-  g.connect(c.destination);
-  o.start(t);
-  o.stop(t + 0.4);
-}
-
-// Music loop with sections (intro/verse/chorus/breakdown)
-let currentBar = 0;
-
-function playMusic(sc) {
-  if (musicLoop) clearTimeout(musicLoop);
-
-  const c = sc.sound.context;
-  const bpm = 130;
-  const step = 60 / bpm / 4;
-
-  const notes = [110, 130.81, 146.83, 164.81, 196];
-  const notes2 = [220, 261.63, 293.66, 329.63, 392];
-
-  // Song sections (16 steps each)
-  const sections = {
-    intro: {
-      bp: [0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 1, 1, 1, 1],
-      kp: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-      sp: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      hp: [0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1],
-      lp: Array(16).fill(0),
-      int: 0.7
-    },
-    verse: {
-      bp: [0, 0, 0, 0, 2, 2, 1, 1, 0, 0, 3, 3, 4, 4, 2, 2],
-      kp: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-      sp: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-      hp: [0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1],
-      lp: [0, 0, 4, 0, 3, 0, 2, 0, 0, 0, 3, 0, 1, 0, 0, 0],
-      int: 1.0
-    },
-    chorus: {
-      bp: [4, 4, 3, 3, 2, 2, 0, 0, 3, 3, 1, 1, 2, 2, 0, 0],
-      kp: [1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0],
-      sp: [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1],
-      hp: Array(16).fill(1),
-      lp: [4, 0, 3, 0, 2, 4, 1, 0, 3, 0, 2, 0, 4, 3, 2, 1],
-      int: 1.2
-    },
-    breakdown: {
-      bp: [0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2],
-      kp: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-      sp: Array(16).fill(0),
-      hp: [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1],
-      lp: [0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0],
-      int: 0.6
-    }
-  };
-
-  // Song structure (order of sections)
-  const structure = ['intro', 'verse', 'chorus', 'verse', 'chorus', 'breakdown', 'chorus'];
-
-  function loop() {
-    const t = c.currentTime;
-    const sec = sections[structure[currentBar % structure.length]];
-    const mult = sec.int;
-
-    for (let i = 0; i < 16; i++) {
-      const st = t + i * step;
-
-      if (sec.bp[i] !== null) bass(c, st, notes[sec.bp[i]]);
-      if (sec.kp[i]) kick(c, st);
-      if (sec.sp[i]) snare(c, st);
-      if (sec.hp[i]) hihat(c, st, 0.15 * mult);
-      if (sec.lp[i]) lead(c, st, notes2[sec.lp[i]]);
-    }
-
-    currentBar++;
-    musicLoop = setTimeout(loop, 16 * step * 1000);
-  }
-
-  currentBar = 0;
-  loop();
-}
-
-function stopMusic() {
-  if (musicLoop) {
-    clearTimeout(musicLoop);
-    musicLoop = null;
-  }
 }
