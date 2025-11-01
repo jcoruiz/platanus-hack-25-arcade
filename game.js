@@ -1799,6 +1799,57 @@ function showFullLeaderboard() {
   menuKeys.push(ek);
 }
 
+// Generate high-res hero textures for character selection (80x80 base size, no scaling needed)
+function generateHeroTexture(tex, isSelected) {
+  const key = `${tex}_hd${isSelected ? '_sel' : ''}`;
+  if (scene.textures.exists(key)) return key;
+
+  const g = scene.add.graphics();
+  const s = isSelected ? 3.5 : 2.5; // Scale factor to match original sizes (32*2.5=80px, 32*3.5=112px)
+
+  if (tex === 'p_b') {
+    // Banana
+    g.fillStyle(C.Y, 1).fillEllipse(16 * s, 16 * s, 10 * s, 24 * s);
+    g.fillStyle(0xffdd00, 1).fillEllipse(18 * s, 16 * s, 6 * s, 20 * s);
+    g.fillStyle(0x885500, 1).fillRect(14 * s, 4 * s, 4 * s, 6 * s);
+  } else if (tex === 'p_j') {
+    // Medusa
+    g.fillStyle(0xff88dd, 1).fillCircle(16 * s, 12 * s, 10 * s);
+    g.fillStyle(0xff88dd, 0.7);
+    g.fillRect(8 * s, 18 * s, 3 * s, 12 * s);
+    g.fillRect(13 * s, 20 * s, 3 * s, 10 * s);
+    g.fillRect(18 * s, 19 * s, 3 * s, 11 * s);
+    g.fillStyle(C.B, 1);
+    g.fillCircle(12 * s, 11 * s, 2 * s);
+    g.fillCircle(20 * s, 11 * s, 2 * s);
+  } else if (tex === 'p_o') {
+    // Orb
+    g.fillStyle(0xcc00ff, 1);
+    g.slice(16 * s, 16 * s, 12 * s, Phaser.Math.DegToRad(90), Phaser.Math.DegToRad(270), false);
+    g.fillPath();
+    g.fillStyle(0x0088ff, 1);
+    g.slice(16 * s, 16 * s, 12 * s, Phaser.Math.DegToRad(270), Phaser.Math.DegToRad(90), false);
+    g.fillPath();
+    g.lineStyle(2 * s, C.W, 1).lineBetween(16 * s, 4 * s, 16 * s, 28 * s);
+    g.fillStyle(C.W, 0.8).fillCircle(16 * s, 16 * s, 4 * s);
+  } else if (tex === 'p_t') {
+    // Train
+    g.fillStyle(0xe0e0e0, 1).fillRoundedRect(6 * s, 10 * s, 20 * s, 12 * s, 3 * s);
+    g.fillStyle(C.W, 1).fillTriangle(4 * s, 16 * s, 10 * s, 12 * s, 10 * s, 20 * s);
+    g.fillStyle(0x0088ff, 1).fillRect(8 * s, 15 * s, 18 * s, 2 * s);
+    g.fillStyle(C.R, 1).fillRect(8 * s, 18 * s, 18 * s, 2 * s);
+    g.fillStyle(0x4444ff, 0.7);
+    g.fillRect(12 * s, 13 * s, 3 * s, 3 * s);
+    g.fillRect(17 * s, 13 * s, 3 * s, 3 * s);
+    g.fillRect(22 * s, 13 * s, 3 * s, 3 * s);
+  }
+
+  const size = Math.ceil(32 * s); // 80px for normal, 112px for selected
+  g.generateTexture(key, size, size);
+  g.destroy();
+  return key;
+}
+
 function showStartScreen() {
   // Animated neon grid background
   const grid = scene.add.graphics()[SSF](0)[SD](99);
@@ -1881,8 +1932,8 @@ function showStartScreen() {
 
       dc(o.btn, o.x + shakeX, o.y + shakeY, s, i, glowPulse);
 
-      // Update sprite with shake and 3D effect
-      o.sprite.setScale(s ? 3.5 : 2.5);
+      const hdTex = generateHeroTexture(o.character.texture, s);
+      o.sprite.setTexture(hdTex);
       o.sprite.setPosition(o.x + shakeX, o.y - 50 + shakeY);
       o.sprite.setAngle(s ? Math.sin(Date.now() * 0.002) * 8 : 0); // Pronounced rotation
 
@@ -1939,8 +1990,9 @@ function showStartScreen() {
     const y = 260;
     const btn = scene.add.graphics()[SSF](0)[SD](101);
 
-    // Create large sprite directly (no entrance animation)
-    const heroSprite = scene.add.sprite(x, y - 50, ch.texture).setScale(2.5)[SSF](0)[SD](102);
+    // Generate high-res texture (non-selected) and create sprite at scale 1.0
+    const hdTexture = generateHeroTexture(ch.texture, false);
+    const heroSprite = scene.add.sprite(x, y - 50, hdTexture).setScale(1.0)[SSF](0)[SD](102);
 
     menuOptions.push({ btn, character: ch, x, y, sprite: heroSprite, texts: [], particles: null });
   });
