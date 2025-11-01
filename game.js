@@ -24,7 +24,8 @@ let waveTimer = 0, bossTimer = 0;
 let nextWaveTime = 30000, nextBossTime = 60000;
 let warnAct = false;
 let hyperModeActive = false;
-let backgroundCreated = false;
+let lastOrbSize = 0; // Track orbit ball size to avoid unnecessary updates
+let lastAreaRadius = 0; // Track area damage radius to avoid unnecessary style updates
 let scene;
 
 let selectedIndex = 0;
@@ -50,12 +51,12 @@ const AC = 'active', SSF = 'setScrollFactor', SD = 'setDepth', DS = 'destroy';
 // Enemy types: n=name, c=color, h=hpMult, s=speedMult, d=damageMult, x=xp, cn=coins, r=dropRate, u=unlockTime
 const enemyTypes = [
   { n: 'g', c: C.G, h: 1.0, s: 0.5, d: 1.0, x: 5, cn: 1, r: 0.02, u: 0 },
-  { n: 'b', c: 0x0088ff, h: 1.5, s: 0.55, d: 1.2, x: 8, cn: 2, r: 0.03, u: 20000 },
-  { n: 'c', c: C.Cy, h: 2.0, s: 1.6, d: 1.4, x: 10, cn: 2, r: 0.035, u: 40000 },
-  { n: 'y', c: C.Y, h: 2.5, s: 0.65, d: 1.6, x: 15, cn: 3, r: 0.04, u: 60000 },
-  { n: 'o', c: C.O, h: 3.0, s: 0.7, d: 1.8, x: 20, cn: 3, r: 0.045, u: 90000 },
-  { n: 'r', c: C.R, h: 4.0, s: 0.8, d: 2.0, x: 25, cn: 4, r: 0.05, u: 120000 },
-  { n: 'p', c: C.P, h: 5.0, s: 0.9, d: 2.5, x: 35, cn: 5, r: 0.055, u: 150000 }
+  { n: 'b', c: 0x0088ff, h: 1.5, s: 0.55, d: 1.2, x: 8, cn: 2, r: 0.03, u: 60000 },
+  { n: 'c', c: C.Cy, h: 2.0, s: 1.6, d: 1.4, x: 10, cn: 2, r: 0.035, u: 120000 },
+  { n: 'y', c: C.Y, h: 2.5, s: 0.65, d: 1.6, x: 15, cn: 3, r: 0.04, u: 180000 },
+  { n: 'o', c: C.O, h: 3.0, s: 0.7, d: 1.8, x: 20, cn: 3, r: 0.045, u: 240000 },
+  { n: 'r', c: C.R, h: 4.0, s: 0.8, d: 2.0, x: 25, cn: 4, r: 0.05, u: 300000 },
+  { n: 'p', c: C.P, h: 5.0, s: 0.9, d: 2.5, x: 35, cn: 5, r: 0.055, u: 360000 }
 ];
 
 let unlockedTypes = [];
@@ -616,38 +617,34 @@ function create() {
     }
   };
 
-  // Create background only once (preserved across restarts)
-  if (!backgroundCreated) {
-    const rnd = (min, max) => min + Math.random() * (max - min);
-    const nc = [0x00ffff, 0xff00ff, 0xffff00];
+  // Create background (preserved across restarts at depth < 0)
+  const rnd = (min, max) => min + Math.random() * (max - min);
+  const nc = [0x00ffff, 0xff00ff, 0xffff00];
 
-    // Generate Perlin noise nebula background
-    generateNebula();
+  // Generate Perlin noise nebula background
+  generateNebula();
 
-    // Cyberpunk neon grid background with parallax
-    [[200, 0x00ffff, 0.3, 0.2], [120, 0xff00ff, 0.5, 0.5], [80, 0xffff00, 0.4, 0.8]].forEach(([sp, c, a, sf], i) => {
-      const g = this.add.graphics().lineStyle(1, c, a);
-      for (let x = 0; x <= 2400; x += sp) g.lineBetween(x, 0, x, 1800);
-      for (let y = 0; y <= 1800; y += sp) g.lineBetween(0, y, 2400, y);
-      g.fillStyle(C.W, a * 1.5);
-      for (let x = 0; x <= 2400; x += sp) for (let y = 0; y <= 1800; y += sp) g.fillCircle(x, y, 2 - i * 0.5);
-      g.setScrollFactor(sf)[SD](-10 + i);
-    });
+  // Cyberpunk neon grid background with parallax
+  [[200, 0x00ffff, 0.3, 0.2], [120, 0xff00ff, 0.5, 0.5], [80, 0xffff00, 0.4, 0.8]].forEach(([sp, c, a, sf], i) => {
+    const g = this.add.graphics().lineStyle(1, c, a);
+    for (let x = 0; x <= 2400; x += sp) g.lineBetween(x, 0, x, 1800);
+    for (let y = 0; y <= 1800; y += sp) g.lineBetween(0, y, 2400, y);
+    g.fillStyle(C.W, a * 1.5);
+    for (let x = 0; x <= 2400; x += sp) for (let y = 0; y <= 1800; y += sp) g.fillCircle(x, y, 2 - i * 0.5);
+    g.setScrollFactor(sf)[SD](-10 + i);
+  });
 
-    // Scanlines effect
-    const sl = this.add.graphics().lineStyle(1, C.W, 0.05);
-    for (let y = 0; y < 600; y += 4) sl.lineBetween(0, y, 800, y);
-    sl[SSF](0)[SD](-5);
+  // Scanlines effect
+  const sl = this.add.graphics().lineStyle(1, C.W, 0.05);
+  for (let y = 0; y < 600; y += 4) sl.lineBetween(0, y, 800, y);
+  sl[SSF](0)[SD](-5);
 
-    // Floating neon dots
-    const dt = this.add.graphics();
-    for (let j = 0; j < 25; j++) {
-      dt.fillStyle(nc[~~(Math.random() * 3)], rnd(0.6, 1)).fillCircle(rnd(0, 2400), rnd(0, 1800), rnd(1, 3));
-    }
-    dt.setScrollFactor(0.6)[SD](-7);
-
-    backgroundCreated = true;
+  // Floating neon dots
+  const dt = this.add.graphics();
+  for (let j = 0; j < 25; j++) {
+    dt.fillStyle(nc[~~(Math.random() * 3)], rnd(0.6, 1)).fillCircle(rnd(0, 2400), rnd(0, 1800), rnd(1, 3));
   }
+  dt.setScrollFactor(0.6)[SD](-7);
 
   // Expand world bounds
   this.physics.world.setBounds(0, 0, 2400, 1800);
@@ -1387,7 +1384,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     selectedIndex = 0;
     renderUpgradeOptions(newShuffled);
     updateSelection();
-    scene.children.list.filter(c => c.depth === 102 && c.text && c.y === 40 && c.text.includes('Coins')).forEach(c => c.setText(`Coins: ${stats.coins}`));
+    scene.children.list.filter(c => c.depth === 102 && c.text && c.text.includes('Coins')).forEach(c => c.setText(`Coins: ${stats.coins}`));
   };
 
   const selectUpgrade = (u) => {
@@ -2006,7 +2003,7 @@ function updateUI() {
 
   const minutes = ~~(gameTime / 60000);
   const seconds = ~~((gameTime % 60000) / 1000);
-  ui.timeText.setText(`${minutes}:${('0'+seconds).slice(-2)}`);
+  ui.timeText.setText(`${minutes}:${('0' + seconds).slice(-2)}`);
 }
 
 function drawUIBars() {
@@ -2069,7 +2066,7 @@ function endGame() {
 
   // Stats
   const mins = ~~(gameTime / 60000), secs = ~~((gameTime % 60000) / 1000);
-  const timeText = mkTxt(400, 300, `Time: ${mins}:${('0'+secs).slice(-2)}`, { [F]: '28px', [FF]: A, [CO]: CS.Cy });
+  const timeText = mkTxt(400, 300, `Time: ${mins}:${('0' + secs).slice(-2)}`, { [F]: '28px', [FF]: A, [CO]: CS.Cy });
   const levelText = mkTxt(400, 350, `Level: ${stats.level}`, { [F]: '28px', [FF]: A, [CO]: CS.Y });
   const killsText = mkTxt(400, 400, `Kills: ${stats.enKilled}`, { [F]: '28px', [FF]: A, [CO]: CS.G });
 
@@ -2113,7 +2110,7 @@ function restartGame() {
   // Reset state variables
   gameOver = levelingUp = selectingWeapon = paused = warnAct = hyperModeActive = false;
   startScreen = mainMenu = true;
-  gameTime = shootTimer = spawnTimer = regenTimer = waveTimer = bossTimer = orbitAngle = avB = bTmr = 0;
+  gameTime = shootTimer = spawnTimer = regenTimer = waveTimer = bossTimer = orbitAngle = avB = bTmr = lastOrbSize = lastAreaRadius = 0;
   ul = {};
   weaponTypes = JSON.parse(JSON.stringify(iwt));
   orbitingBalls = boomerangs = [];
@@ -2173,7 +2170,7 @@ function showNameEntry() {
   const mins = ~~(gameTime / 60000), secs = ~~((gameTime % 60000) / 1000);
   mkTxt(400, 80, qualForLb(stats.enKilled) ? 'NEW HIGH SCORE!' : 'ENTER YOUR NAME', { [F]: '48px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 6 }, 151);
   mkTxt(400, 150, `Kills: ${stats.enKilled}`, { [F]: '24px', [FF]: A, [CO]: CS.G }, 151);
-  mkTxt(400, 180, `Level: ${stats.level}  Time: ${mins}:${('0'+secs).slice(-2)}`, { [F]: '20px', [FF]: A, [CO]: CS.W }, 151);
+  mkTxt(400, 180, `Level: ${stats.level}  Time: ${mins}:${('0' + secs).slice(-2)}`, { [F]: '20px', [FF]: A, [CO]: CS.W }, 151);
 
   // Name input boxes
   const boxesY = 280;
@@ -2470,13 +2467,16 @@ function updOrbBalls(delta) {
     }
   }
 
-  // Update ball size if changed (both visual and hitbox)
-  const scale = weapon.b / 8; // 8 is base radius
-  orbitingBalls.forEach((ball) => {
-    if (!ball || !ball[AC]) return;
-    ball.setScale(scale);
-    ball.body.setCircle(weapon.b);
-  });
+  // Update ball size only when weapon.b changes (avoid unnecessary updates every frame)
+  if (weapon.b !== lastOrbSize) {
+    lastOrbSize = weapon.b;
+    const scale = weapon.b / 8; // 8 is base radius
+    orbitingBalls.forEach((ball) => {
+      if (!ball || !ball[AC]) return;
+      ball.setScale(scale);
+      ball.body.setCircle(weapon.b);
+    });
+  }
 
   // Update angle
   orbitAngle += (weapon.r * delta) / 1000;
@@ -2518,11 +2518,14 @@ function updAreaDmg(delta) {
   const weapon = getWeapon('a');
   if (!weapon.u) return;
 
-  // Update visual circle position
+  // Update visual circle position (only set styles when radius changes)
   if (adc) {
     adc.clear();
-    adc.lineStyle(2, 0xffaa00, 0.5);
-    adc.fillStyle(0xffaa00, 0.15);
+    if (weapon.a !== lastAreaRadius) {
+      lastAreaRadius = weapon.a;
+      adc.lineStyle(2, 0xffaa00, 0.5);
+      adc.fillStyle(0xffaa00, 0.15);
+    }
     adc.fillCircle(p.x, p.y, weapon.a);
     adc.strokeCircle(p.x, p.y, weapon.a);
   }
@@ -2712,14 +2715,28 @@ function applyDmgFb(enemy, sourceX, sourceY, isCrit = false) {
   const angle = Phaser.Math.Angle.Between(sourceX, sourceY, enemy.x, enemy.y);
   const knockbackForce = isCrit ? stats.knockback * 1.5 : stats.knockback;
 
-  // Set knockback state (enemy won't update velocity for 150ms)
-  enemy.setData('knockbackUntil', gameTime + 150);
+  // Estimate target position after knockback (velocity * time)
+  const kbTime = 0.15; // 150ms
+  const newX = enemy.x + Math.cos(angle) * knockbackForce * kbTime;
+  const newY = enemy.y + Math.sin(angle) * knockbackForce * kbTime;
 
-  // Apply knockback velocity (replace current velocity)
-  enemy.body.setVelocity(
-    Math.cos(angle) * knockbackForce,
-    Math.sin(angle) * knockbackForce
-  );
+  // Check if target position would collide with obstacles
+  let wouldCollide = false;
+  ob.children.entries.forEach(obstacle => {
+    const dist = Phaser.Math.Distance.Between(newX, newY, obstacle.x, obstacle.y);
+    if (dist < 36) { // enemy radius (16) + obstacle radius (20)
+      wouldCollide = true;
+    }
+  });
+
+  // Only apply knockback if it won't trap enemy in obstacle
+  if (!wouldCollide) {
+    enemy.setData('knockbackUntil', gameTime + 150);
+    enemy.body.setVelocity(
+      Math.cos(angle) * knockbackForce,
+      Math.sin(angle) * knockbackForce
+    );
+  }
 }
 
 function playTone(sceneRef, frequency, duration) {
