@@ -276,6 +276,115 @@ function handleEnemyDeath(e) {
   stats.enKilled++;
 }
 
+// Perlin Noise implementation for nebula generation
+let perm = [];
+const grad = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]];
+
+// Fade function for smooth interpolation
+const fade = t => t * t * t * (t * (t * 6 - 15) + 10);
+
+// Linear interpolation
+const lerp = (a, b, t) => a + t * (b - a);
+
+// Gradient dot product
+function grad2(hash, x, y) {
+  const g = grad[hash & 7];
+  return g[0] * x + g[1] * y;
+}
+
+// Perlin noise 2D
+function perlin(x, y) {
+  const X = Math.floor(x) & 255;
+  const Y = Math.floor(y) & 255;
+  x -= Math.floor(x);
+  y -= Math.floor(y);
+  const u = fade(x);
+  const v = fade(y);
+
+  const a = perm[X] + Y;
+  const b = perm[X + 1] + Y;
+
+  return lerp(
+    lerp(grad2(perm[a], x, y), grad2(perm[b], x - 1, y), u),
+    lerp(grad2(perm[a + 1], x, y - 1), grad2(perm[b + 1], x - 1, y - 1), u),
+    v
+  );
+}
+
+// Generate procedural nebula texture
+function generateNebula() {
+  // Initialize new permutation table for each nebula (creates unique pattern)
+  perm = [];
+  for (let i = 0; i < 256; i++) perm[i] = i;
+  perm.sort(() => Math.random() - 0.5);
+  for (let i = 0; i < 256; i++) perm[256 + i] = perm[i];
+
+  // Remove old texture if exists
+  if (scene.textures.exists('nebulaNoise')) {
+    scene.textures.remove('nebulaNoise');
+  }
+  const w = 2400, h = 1800;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const data = imgData.data;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      // Fractal Brownian Motion (4 octaves)
+      let n = 0;
+      n += perlin(x / 480, y / 480) * 1.0;
+      n += perlin(x / 240, y / 240) * 0.5;
+      n += perlin(x / 120, y / 120) * 0.25;
+      n += perlin(x / 60, y / 60) * 0.125;
+      n = (n + 1.875) / 3.75; // Normalize to 0-1
+
+      const i = (y * w + x) * 4;
+
+      // Map noise to cyberpunk color palette
+      if (n < 0.2) {
+        // Empty space
+        data[i] = data[i + 1] = data[i + 2] = 0;
+        data[i + 3] = 0;
+      } else if (n < 0.4) {
+        // Dark purple/blue
+        data[i] = 0x99;
+        data[i + 1] = 0x66;
+        data[i + 2] = 0xff;
+        data[i + 3] = Math.floor((n - 0.2) * 200);
+      } else if (n < 0.6) {
+        // Cyan
+        data[i] = 0x00;
+        data[i + 1] = 0xff;
+        data[i + 2] = 0xff;
+        data[i + 3] = Math.floor((n - 0.4) * 400);
+      } else if (n < 0.8) {
+        // Magenta
+        data[i] = 0xff;
+        data[i + 1] = 0x00;
+        data[i + 2] = 0xff;
+        data[i + 3] = Math.floor((n - 0.6) * 600);
+      } else {
+        // Yellow/white bright cores
+        data[i] = 0xff;
+        data[i + 1] = 0xff;
+        data[i + 2] = 0x00;
+        data[i + 3] = Math.floor((n - 0.8) * 900);
+      }
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+  scene.textures.addCanvas('nebulaNoise', canvas);
+
+  // Create sprite with nebula texture (full resolution, no scaling)
+  const nebula = scene.add.image(1200, 900, 'nebulaNoise');
+  nebula.setScrollFactor(0.05);
+  nebula[SD](-20);
+}
+
 function preload() {
   // Create simple textures programmatically
   const g = this.add.graphics();
@@ -442,24 +551,12 @@ function create() {
   scene = this;
   gr = this.add.graphics();
 
-  // Distant nebulae (far background)
-  const nc = [0x00ffff, 0xff00ff, 0xffff00, 0x9966ff, 0x6666ff, 0xff66cc];
+  // Generate Perlin noise nebula background
+  generateNebula();
+
+  // Helper for random range
   const rnd = (min, max) => min + Math.random() * (max - min);
-  for (let i = 0; i < 3; i++) {
-    const n = this.add.graphics();
-    const x = rnd(100, 700), y = rnd(100, 500);
-    const c1 = nc[~~(Math.random() * 6)], c2 = nc[~~(Math.random() * 6)];
-    const s = rnd(80, 200);
-    n.fillStyle(c1, 0.06).fillCircle(x + rnd(-10, 10), y + rnd(-10, 10), s);
-    n.fillStyle(c2, 0.08).fillCircle(x + rnd(-7.5, 7.5), y + rnd(-7.5, 7.5), s * 0.75);
-    n.fillStyle(c1, 0.12).fillCircle(x + rnd(-5, 5), y + rnd(-5, 5), s * 0.55);
-    n.fillStyle(c2, 0.15).fillCircle(x, y, s * 0.35);
-    for (let j = 0; j < 5; j++) {
-      const a = Math.PI * 0.4 * j + rnd(0, 0.5), d = s * rnd(0.6, 0.9);
-      n.fillStyle(j & 1 ? c1 : c2, rnd(0.08, 0.12)).fillCircle(x + Math.cos(a) * d, y + Math.sin(a) * d, s * rnd(0.15, 0.3));
-    }
-    n.setScrollFactor(rnd(0.05, 0.1))[SD](-15 + i * 0.4);
-  }
+  const nc = [0x00ffff, 0xff00ff, 0xffff00];
 
   // Cyberpunk neon grid background with parallax
   [[200, 0x00ffff, 0.3, 0.2], [120, 0xff00ff, 0.5, 0.5], [80, 0xffff00, 0.4, 0.8]].forEach(([sp, c, a, sf], i) => {
