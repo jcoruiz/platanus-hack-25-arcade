@@ -127,7 +127,7 @@ const inS = { // initial stats
   hp: 100,
   maxHp: 100,
   speed: 150,
-  knockback: 100,
+  knockback: 10,
   hpRegen: 0,
   xpMultiplier: 1.0,
   lootChance: 1.0,
@@ -603,7 +603,7 @@ function create() {
       d: this.input.keyboard.addKey('D')
     },
     mn: { // Menu navigation (events)
-      e: this.input.keyboard.addKey('ENTER'),
+      e: this.input.keyboard.addKey('SPACE'),
       x: this.input.keyboard.addKey('ESC')
     },
     ac: { // Actions (events)
@@ -1762,9 +1762,9 @@ function showFullLeaderboard() {
     });
   }
 
-  mkTxt(400, 540, 'ENTER to go back', { [F]: '16px', [FF]: A, [CO]: CS.LG }, 151);
+  mkTxt(400, 540, 'SPACE to go back', { [F]: '16px', [FF]: A, [CO]: CS.LG }, 151);
 
-  const ek = scene.input.keyboard.addKey('ENTER');
+  const ek = scene.input.keyboard.addKey('SPACE');
   ek.on('down', () => {
     playTone(scene, 1000, 0.15);
     cleanupMenu(150);
@@ -1935,7 +1935,7 @@ function showStartScreen() {
   // Initial draw
   upd(false);
 
-  mkTxt(400, 540, 'AD: Move  ENTER: Select  ESC: Back', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
+  mkTxt(400, 540, 'AD: Move  SPACE: Select  ESC: Back', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
 
   // Keyboard navigation handlers
   const goLeft = () => {
@@ -2189,8 +2189,8 @@ function showNameEntry() {
   };
 
   // Hints
-  mkTxt(400, 380, 'WS: Letter  AD: Move  ⏎: OK', { [F]: '18px', [FF]: A, [CO]: '#aaaaaa' }, 151);
-  mkTxt(400, 410, 'Press ENTER to Submit Name', { [F]: '18px', [FF]: A, [CO]: '#ffaa00' }, 151);
+  mkTxt(400, 380, 'WS: Letter  AD: Move  SPC: OK', { [F]: '18px', [FF]: A, [CO]: '#aaaaaa' }, 151);
+  mkTxt(400, 410, 'Press SPACE to Submit Name', { [F]: '18px', [FF]: A, [CO]: '#ffaa00' }, 151);
 
   updateBoxes();
 
