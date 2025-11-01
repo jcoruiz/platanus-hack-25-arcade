@@ -12,8 +12,8 @@ const config = {
 
 new Phaser.Game(config);
 
-// Global vars: p=player, cr=cursors, wasd=WASD keys, en=enemies, pr=projectiles, xo=xpOrbs, co=coins, ob=obstacles, wc=weaponChests, uc=upgradeChests, mg=magnets, hd=healthDrops, gr=graphics
-let p, cr, wasd, en, pr, xo, co, ob, wc, uc, mg, hd, gr;
+// Global vars: p=player, wasd=WASD keys, en=enemies, pr=projectiles, xo=xpOrbs, co=coins, ob=obstacles, wc=weaponChests, uc=upgradeChests, mg=magnets, hd=healthDrops, gr=graphics
+let p, wasd, en, pr, xo, co, ob, wc, uc, mg, hd, gr;
 // keys=central keyboard registry (mv=movement, mn=menu, ac=actions)
 let keys;
 // adc=areaDamageCircle, idleTween=player idle animation
@@ -597,17 +597,12 @@ function create() {
   // Input: Central key registry (initialized early for menus)
   keys = {
     mv: { // Movement (polling)
-      cr: this.input.keyboard.createCursorKeys(),
       w: this.input.keyboard.addKey('W'),
       a: this.input.keyboard.addKey('A'),
       s: this.input.keyboard.addKey('S'),
       d: this.input.keyboard.addKey('D')
     },
     mn: { // Menu navigation (events)
-      l: this.input.keyboard.addKey('LEFT'),
-      r: this.input.keyboard.addKey('RIGHT'),
-      u: this.input.keyboard.addKey('UP'),
-      d: this.input.keyboard.addKey('DOWN'),
       e: this.input.keyboard.addKey('ENTER'),
       x: this.input.keyboard.addKey('ESC')
     },
@@ -688,7 +683,6 @@ function initGameplay() {
   scene.cameras.main.setBounds(0, 0, 2400, 1800);
 
   // Backward compat for update() movement logic (keys already initialized in create())
-  cr = keys.mv.cr;
   wasd = { w: keys.mv.w, a: keys.mv.a, s: keys.mv.s, d: keys.mv.d };
 
   // Collisions
@@ -754,19 +748,19 @@ function update(_time, delta) {
   p.body.setVelocity(0, 0);
   let moving = false;
 
-  if (cr.left.isDown || wasd.a.isDown) {
+  if (wasd.a.isDown) {
     p.body.setVelocityX(-stats.speed);
     moving = true;
   }
-  if (cr.right.isDown || wasd.d.isDown) {
+  if (wasd.d.isDown) {
     p.body.setVelocityX(stats.speed);
     moving = true;
   }
-  if (cr.up.isDown || wasd.w.isDown) {
+  if (wasd.w.isDown) {
     p.body.setVelocityY(-stats.speed);
     moving = true;
   }
-  if (cr.down.isDown || wasd.s.isDown) {
+  if (wasd.s.isDown) {
     p.body.setVelocityY(stats.speed);
     moving = true;
   }
@@ -1465,13 +1459,9 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   };
 
   // Attach listeners to central keys
-  keys.mn.l.on('down', goLeft);
   keys.mv.a.on('down', goLeft);
-  keys.mn.r.on('down', goRight);
   keys.mv.d.on('down', goRight);
-  keys.mn.u.on('down', goUp);
   keys.mv.w.on('down', goUp);
-  keys.mn.d.on('down', goDown);
   keys.mv.s.on('down', goDown);
 
   keys.mn.e.on('down', () => {
@@ -1480,7 +1470,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   });
 
   // Track keys for cleanup (references only)
-  menuKeys.push(keys.mn.l, keys.mv.a, keys.mn.r, keys.mv.d, keys.mn.u, keys.mv.w, keys.mn.d, keys.mv.s, keys.mn.e);
+  menuKeys.push(keys.mv.a, keys.mv.d, keys.mv.w, keys.mv.s, keys.mn.e);
 }
 
 function showWeaponSelector(weapons) {
@@ -1582,9 +1572,7 @@ function showWeaponSelector(weapons) {
   };
 
   // Attach listeners to central keys
-  keys.mn.l.on('down', goLeft);
   keys.mv.a.on('down', goLeft);
-  keys.mn.r.on('down', goRight);
   keys.mv.d.on('down', goRight);
 
   keys.mn.e.on('down', () => {
@@ -1592,7 +1580,7 @@ function showWeaponSelector(weapons) {
   });
 
   // Track keys for cleanup (references only)
-  menuKeys.push(keys.mn.l, keys.mv.a, keys.mn.r, keys.mv.d, keys.mn.e);
+  menuKeys.push(keys.mv.a, keys.mv.d, keys.mn.e);
 }
 
 function showRareUpg() {
@@ -1681,9 +1669,7 @@ function showRareUpg() {
   };
 
   // Attach listeners to central keys
-  keys.mn.l.on('down', goLeft);
   keys.mv.a.on('down', goLeft);
-  keys.mn.r.on('down', goRight);
   keys.mv.d.on('down', goRight);
 
   keys.mn.e.on('down', () => {
@@ -1691,7 +1677,7 @@ function showRareUpg() {
   });
 
   // Track keys for cleanup (references only)
-  menuKeys.push(keys.mn.l, keys.mv.a, keys.mn.r, keys.mv.d, keys.mn.e);
+  menuKeys.push(keys.mv.a, keys.mv.d, keys.mn.e);
 }
 
 // Helper: glitch text triple-layer effect (reusable)
@@ -1746,14 +1732,12 @@ function showMainMenu() {
   const ge = () => { playTone(scene, 1200, 0.15); cleanupMenu(); opts[selectedIndex].fn(); };
 
   // Attach listeners to central keys
-  keys.mn.u.on('down', gu);
   keys.mv.w.on('down', gu);
-  keys.mn.d.on('down', gd);
   keys.mv.s.on('down', gd);
   keys.mn.e.on('down', ge);
 
   // Track keys for cleanup (references only)
-  menuKeys.push(keys.mn.u, keys.mv.w, keys.mn.d, keys.mv.s, keys.mn.e);
+  menuKeys.push(keys.mv.w, keys.mv.s, keys.mn.e);
 }
 
 function showFullLeaderboard() {
@@ -1951,7 +1935,7 @@ function showStartScreen() {
   // Initial draw
   upd(false);
 
-  mkTxt(400, 540, '←→ or AD: Move  ENTER: Select  ESC: Back', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
+  mkTxt(400, 540, 'AD: Move  ENTER: Select  ESC: Back', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
 
   // Keyboard navigation handlers
   const goLeft = () => {
@@ -1968,9 +1952,7 @@ function showStartScreen() {
   };
 
   // Attach listeners to central keys
-  keys.mn.l.on('down', goLeft);
   keys.mv.a.on('down', goLeft);
-  keys.mn.r.on('down', goRight);
   keys.mv.d.on('down', goRight);
   keys.mn.e.on('down', () => sel(menuOptions[selectedIndex].character));
   keys.mn.x.on('down', () => {
@@ -1981,7 +1963,7 @@ function showStartScreen() {
   });
 
   // Track keys for cleanup (references only)
-  menuKeys.push(keys.mn.l, keys.mv.a, keys.mn.r, keys.mv.d, keys.mn.e, keys.mn.x);
+  menuKeys.push(keys.mv.a, keys.mv.d, keys.mn.e, keys.mn.x);
 }
 
 function createUI() {
@@ -2207,7 +2189,7 @@ function showNameEntry() {
   };
 
   // Hints
-  mkTxt(400, 380, '↑↓/WS: Letter  ←→/AD: Move  ⏎: OK', { [F]: '18px', [FF]: A, [CO]: '#aaaaaa' }, 151);
+  mkTxt(400, 380, 'WS: Letter  AD: Move  ⏎: OK', { [F]: '18px', [FF]: A, [CO]: '#aaaaaa' }, 151);
   mkTxt(400, 410, 'Press ENTER to Submit Name', { [F]: '18px', [FF]: A, [CO]: '#ffaa00' }, 151);
 
   updateBoxes();
@@ -2239,22 +2221,14 @@ function showNameEntry() {
   };
 
   // Attach listeners to central keys
-  keys.mn.u.on('down', () => changeLetter(1));
   keys.mv.w.on('down', () => changeLetter(1));
-  keys.mn.d.on('down', () => changeLetter(-1));
   keys.mv.s.on('down', () => changeLetter(-1));
-  keys.mn.r.on('down', moveRight);
   keys.mv.d.on('down', moveRight);
-  keys.mn.l.on('down', moveLeft);
   keys.mv.a.on('down', moveLeft);
 
   const cleanup = () => {
     cleanupMenu(151);
     // Remove listeners from central keys
-    keys.mn.u.removeAllListeners();
-    keys.mn.d.removeAllListeners();
-    keys.mn.l.removeAllListeners();
-    keys.mn.r.removeAllListeners();
     keys.mv.w.removeAllListeners();
     keys.mv.s.removeAllListeners();
     keys.mv.a.removeAllListeners();
