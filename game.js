@@ -276,6 +276,41 @@ function handleEnemyDeath(e) {
   stats.enKilled++;
 }
 
+// Generate high-res boss texture (60x60) to avoid pixelation when scaled
+function generateBossTexture(type) {
+  const key = `boss_${type.n}`;
+
+  // Return if already cached
+  if (scene.textures.exists(key)) return key;
+
+  const g = scene.add.graphics();
+  const s = 3; // Scale factor (20x20 -> 60x60)
+
+  // Helper functions scaled 3x
+  const ey = (x1, y1, x2, y2) => {
+    g.fillStyle(C.W, 1).fillCircle(x1*s, y1*s, 2*s).fillCircle(x2*s, y2*s, 2*s);
+  };
+  const tri = (x1, y1, x2, y2, x3, y3) => g.fillTriangle(x1*s, y1*s, x2*s, y2*s, x3*s, y3*s);
+  const circ = (x, y, rad) => g.fillCircle(x*s, y*s, rad*s);
+  const rect = (x, y, w, h) => g.fillRect(x*s, y*s, w*s, h*s);
+
+  g.fillStyle(type.c, 1);
+
+  // Draw based on enemy type (same logic as preload)
+  if (type.n === 'g') { tri(10, 2, 2, 18, 18, 18); ey(7, 10, 13, 10); }
+  else if (type.n === 'b') { tri(10, 2, 2, 10, 10, 18); tri(10, 2, 18, 10, 10, 18); ey(8, 8, 12, 8); }
+  else if (type.n === 'c') { circ(10, 10, 9); ey(7, 9, 13, 9); g.fillStyle(type.c, 0.7); circ(10, 6, 3); }
+  else if (type.n === 'y') { rect(3, 3, 14, 14); g.fillStyle(C.B, 1); ey(7, 8, 13, 8); rect(6, 13, 8, 2); }
+  else if (type.n === 'o') { circ(10, 10, 9); tri(10, 1, 7, 8, 13, 8); tri(10, 19, 7, 12, 13, 12); tri(1, 10, 8, 7, 8, 13); tri(19, 10, 12, 7, 12, 13); ey(7, 8, 13, 8); }
+  else if (type.n === 'r') { circ(10, 10, 9); tri(3, 5, 5, 2, 7, 5); tri(17, 5, 15, 2, 13, 5); g.fillStyle(C.R, 1); ey(7, 9, 13, 9); rect(7, 14, 6, 2); }
+  else if (type.n === 'p') { rect(4, 6, 12, 10); circ(6, 6, 3); circ(14, 6, 3); g.fillStyle(C.G, 1); circ(7, 10, 3); circ(13, 10, 3); g.fillStyle(C.B, 1); ey(7, 10, 13, 10); }
+
+  g.generateTexture(key, 60, 60);
+  g.destroy();
+
+  return key;
+}
+
 // Perlin Noise implementation for nebula generation
 let perm = [];
 const grad = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]];
@@ -2103,12 +2138,23 @@ function spawnBoss() {
   else if (side === 2) { x = p.x - 500; y = p.y; }
   else { x = p.x + 500; y = p.y; }
 
-  const boss = createEn(type, x, y, 10, 3);
+  // Generate high-res boss texture (cached after first use)
+  const bossTexKey = generateBossTexture(type);
+
+  // Create boss with high-res texture (no scaling needed)
+  x = Math.max(30, Math.min(2370, x));
+  y = Math.max(30, Math.min(1770, y));
+  const boss = en.create(x, y, bossTexKey);
+  boss.body.setCircle(30);
+  boss.setData('hp', difficulty.enemyHp * type.h * 10);
   boss.setData('maxHp', difficulty.enemyHp * type.h * 10);
   boss.setData('speed', difficulty.enemySpeed * type.s * 0.7);
   boss.setData('damage', difficulty.enemyDamage * type.d * 2);
   boss.setData('xpValue', type.x * 10);
   boss.setData('coinValue', type.cn * 10);
+  boss.setData('dropChance', type.r);
+  boss.setData('enemyColor', type.c);
+  boss.setData('knockbackUntil', 0);
   boss.setData('isBoss', true);
 }
 
