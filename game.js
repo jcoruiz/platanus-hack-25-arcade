@@ -226,7 +226,7 @@ const mkGr = (d) => scene.add.graphics()[SSF](0)[SD](d);
 // Helper: cleanup menu elements
 function cleanupMenu(minDepth = 100) {
   scene.children.list.filter(c => c.depth >= minDepth).forEach(c => c[DS]());
-  menuKeys.forEach(k => k.removeAllListeners());
+  menuKeys.forEach(k => { k.removeAllListeners(); scene.input.keyboard.removeKey(k); });
   menuKeys = [];
   if (pulseTween) { pulseTween.stop(); pulseTween = null; }
   if (pulseOverlay) { pulseOverlay = null; }
@@ -847,6 +847,7 @@ function update(_time, delta) {
   if (waveTimer >= nextWaveTime - 3000 && waveTimer < nextWaveTime && !warnAct) {
     showWarning('⚠️ WAVE INCOMING!', C.Y);
     playTone(scene, 600, 0.3);
+    warnAct = true;
   }
   if (waveTimer >= nextWaveTime) {
     waveTimer = 0;
@@ -861,6 +862,7 @@ function update(_time, delta) {
     if (!isHyperModeTime) {
       showWarning('🔥 BOSS APPROACHING!', C.R);
       playTone(scene, 150, 0.5);
+      warnAct = true;
     }
   }
   if (bossTimer >= nextBossTime) {
@@ -1707,7 +1709,7 @@ function showMainMenu() {
 
     if (s) {
       o.texts.push(...gt3(400, o.y, o.txt, '40px', 101));
-      if (pulseTween) pulseTween.stop();
+      if (pulseTween) { pulseTween.stop(); pulseTween = null; }
       pulseTween = scene.tweens.add({ targets: o.texts[2], alpha: 0.7, duration: 400, yoyo: true, repeat: -1 });
     } else {
       o.texts.push(scene.add.text(400, o.y, o.txt, { [F]: '32px', [FF]: A, [CO]: '#00aaaa' }).setOrigin(0.5)[SSF](0)[SD](101));
@@ -1893,7 +1895,7 @@ function showStartScreen() {
   };
 
   // Glow pulse animation
-  pulseTween?.stop();
+  if (pulseTween) { pulseTween.stop(); pulseTween = null; }
   pulseTween = scene.tweens.add({
     targets: { val: 0.4 },
     val: 0.8,
@@ -2053,6 +2055,10 @@ function endGame() {
 function restartGame() {
   // Stop tweens
   idleTween?.stop();
+
+  // Cancel all pending delayed callbacks
+  scene.time.removeAllEvents();
+  scene.tweens.killAll();
 
   // Cleanup: destroy all game objects with depth >= 0 (preserve background at depth < 0)
   scene.children.list.filter(c => c.depth >= 0).forEach(c => c[DS]());
@@ -2549,10 +2555,10 @@ function updBooms(delta) {
   const weapon = getWeapon('b');
   if (!weapon.u) return;
 
-  boomerangs.forEach((boom, index) => {
+  // Filter out invalid boomerangs and process valid ones
+  boomerangs = boomerangs.filter((boom) => {
     if (!boom || !boom[AC]) {
-      boomerangs.splice(index, 1);
-      return;
+      return false; // Remove invalid boomerangs
     }
 
     const state = boom.getData('state');
@@ -2586,14 +2592,12 @@ function updBooms(delta) {
 
       // Collect if close enough (within 30 pixels)
       if (distToPlayer < 30) {
-        // Remove from array
-        boomerangs.splice(index, 1);
         // Destroy sprite
         boom[DS]();
         // Recharge
         avB++;
         playTone(scene, 1500, 0.1);
-        return;
+        return false; // Remove from array
       }
 
       // Update direction to p (homing)
@@ -2603,6 +2607,8 @@ function updBooms(delta) {
         Math.sin(angleToPlayer) * weapon.w
       );
     }
+
+    return true; // Keep this boomerang
   });
 }
 
