@@ -370,10 +370,10 @@ function generateNebula() {
   const colors = [
     [0.0, 0, 0, 0, 0],           // Transparent black
     [0.2, 0x33, 0x22, 0x66, 60], // Dark purple
-    [0.4, 0x99, 0x66, 0xff, 120], // Purple
-    [0.6, 0x00, 0xff, 0xff, 180], // Cyan
-    [0.8, 0xff, 0x00, 0xff, 220], // Magenta
-    [1.0, 0xff, 0xff, 0x00, 255]  // Yellow/white
+    [0.4, 0x66, 0x00, 0xCC, 120], // Medium purple
+    [0.6, 0x99, 0x00, 0xFF, 180], // Bright purple
+    [0.8, 0xDD, 0x00, 0xFF, 220], // Neon purple
+    [1.0, 0xFF, 0x00, 0xFF, 255]  // Magenta core
   ];
 
   for (let y = 0; y < h; y++) {
