@@ -331,6 +331,16 @@ function generateNebula() {
   const imgData = ctx.getImageData(0, 0, w, h);
   const data = imgData.data;
 
+  // Color gradient stops: [position, r, g, b, alpha]
+  const colors = [
+    [0.0, 0, 0, 0, 0],           // Transparent black
+    [0.2, 0x33, 0x22, 0x66, 60], // Dark purple
+    [0.4, 0x99, 0x66, 0xff, 120], // Purple
+    [0.6, 0x00, 0xff, 0xff, 180], // Cyan
+    [0.8, 0xff, 0x00, 0xff, 220], // Magenta
+    [1.0, 0xff, 0xff, 0x00, 255]  // Yellow/white
+  ];
+
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       // Fractal Brownian Motion (4 octaves)
@@ -341,38 +351,28 @@ function generateNebula() {
       n += perlin(x / 60, y / 60) * 0.125;
       n = (n + 1.875) / 3.75; // Normalize to 0-1
 
+      // Clamp n to [0, 1]
+      n = Math.max(0, Math.min(1, n));
+
+      // Find which two color stops to interpolate between
+      let c1, c2, t;
+      for (let j = 0; j < colors.length - 1; j++) {
+        if (n >= colors[j][0] && n <= colors[j + 1][0]) {
+          c1 = colors[j];
+          c2 = colors[j + 1];
+          // Calculate interpolation factor within this segment
+          t = (n - c1[0]) / (c2[0] - c1[0]);
+          break;
+        }
+      }
+
       const i = (y * w + x) * 4;
 
-      // Map noise to cyberpunk color palette
-      if (n < 0.2) {
-        // Empty space
-        data[i] = data[i + 1] = data[i + 2] = 0;
-        data[i + 3] = 0;
-      } else if (n < 0.4) {
-        // Dark purple/blue
-        data[i] = 0x99;
-        data[i + 1] = 0x66;
-        data[i + 2] = 0xff;
-        data[i + 3] = Math.floor((n - 0.2) * 200);
-      } else if (n < 0.6) {
-        // Cyan
-        data[i] = 0x00;
-        data[i + 1] = 0xff;
-        data[i + 2] = 0xff;
-        data[i + 3] = Math.floor((n - 0.4) * 400);
-      } else if (n < 0.8) {
-        // Magenta
-        data[i] = 0xff;
-        data[i + 1] = 0x00;
-        data[i + 2] = 0xff;
-        data[i + 3] = Math.floor((n - 0.6) * 600);
-      } else {
-        // Yellow/white bright cores
-        data[i] = 0xff;
-        data[i + 1] = 0xff;
-        data[i + 2] = 0x00;
-        data[i + 3] = Math.floor((n - 0.8) * 900);
-      }
+      // Interpolate RGB and alpha
+      data[i] = lerp(c1[1], c2[1], t);     // R
+      data[i + 1] = lerp(c1[2], c2[2], t); // G
+      data[i + 2] = lerp(c1[3], c2[3], t); // B
+      data[i + 3] = lerp(c1[4], c2[4], t); // A
     }
   }
 
