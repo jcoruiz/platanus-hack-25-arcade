@@ -1800,15 +1800,35 @@ function showFullLeaderboard() {
 }
 
 function showStartScreen() {
-  scene.add.graphics().fillStyle(C.B, 0.9).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
-  mkTxt(400, 60, 'Choose your character', { [F]: '28px', [FF]: A, [CO]: CS.W, [FST]: 'bold' }, 101);
+  // Dark background
+  scene.add.graphics().fillStyle(C.B, 0.95).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
+
+  // Title with glitch effect
+  mkTxt(403, 43, 'CHOOSE CHARACTER', { [F]: '32px', [FF]: A, [CO]: '#ff00ff', [STR]: '#ff00ff', [STT]: 2 }, 101);
+  mkTxt(400, 40, 'CHOOSE CHARACTER', { [F]: '32px', [FF]: A, [CO]: '#00ffff', [STR]: '#00ffff', [STT]: 2 }, 102);
 
   selectedIndex = 0;
   menuOptions = [];
 
-  // Helper: draw character card
+  // L4D2-style large card rendering with glitch effect
   const dc = (g, x, y, s) => {
-    g.clear().fillStyle(s ? C.DB : C.DD, 1).fillRoundedRect(x - 70, y - 80, 140, 160, 8).lineStyle(3, s ? C.Y : C.DG, 1).strokeRoundedRect(x - 70, y - 80, 140, 160, 8);
+    g.clear();
+    if (s) {
+      // Selected: Glitch effect with triple layer
+      // Magenta shadow layer
+      g.fillStyle(C.P, 0.3).fillRoundedRect(x - 87, y - 137, 180, 280, 10);
+      g.lineStyle(4, C.P, 1).strokeRoundedRect(x - 87, y - 137, 180, 280, 10);
+      // Cyan shadow layer
+      g.fillStyle(C.Cy, 0.3).fillRoundedRect(x - 93, y - 143, 180, 280, 10);
+      g.lineStyle(4, C.Cy, 1).strokeRoundedRect(x - 93, y - 143, 180, 280, 10);
+      // Main white layer
+      g.fillStyle(C.DD, 0.9).fillRoundedRect(x - 90, y - 140, 180, 280, 10);
+      g.lineStyle(4, C.W, 1).strokeRoundedRect(x - 90, y - 140, 180, 280, 10);
+    } else {
+      // Unselected: Simple dark card with cyan border
+      g.fillStyle(C.DD, 0.7).fillRoundedRect(x - 90, y - 140, 180, 280, 10);
+      g.lineStyle(3, 0x00aaaa, 1).strokeRoundedRect(x - 90, y - 140, 180, 280, 10);
+    }
   };
 
   const sel = (ch) => {
@@ -1827,32 +1847,60 @@ function showStartScreen() {
     startScreen = false;
   };
 
-  const upd = () => menuOptions.forEach((o, i) => dc(o.btn, o.x, o.y, i === selectedIndex));
+  const upd = () => {
+    menuOptions.forEach((o, i) => {
+      const s = i === selectedIndex;
+      dc(o.btn, o.x, o.y, s);
+
+      // Update sprite scale based on selection
+      o.sprite.setScale(s ? 3.5 : 2.5);
+
+      // Remove old text
+      if (o.texts) o.texts.forEach(t => t[DS]());
+      o.texts = [];
+
+      if (s) {
+        // Selected: Glitch text effect (triple layer)
+        const t1 = scene.add.text(o.x - 2, o.y + 82, o.character.name, { [F]: '22px', [FF]: A, [CO]: '#ff00ff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102);
+        const t2 = scene.add.text(o.x + 2, o.y + 84, o.character.name, { [F]: '22px', [FF]: A, [CO]: '#00ffff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102);
+        const t3 = scene.add.text(o.x, o.y + 83, o.character.name, { [F]: '22px', [FF]: A, [CO]: CS.W, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](103);
+        o.texts.push(t1, t2, t3);
+
+        // Weapon and passive (bright)
+        o.texts.push(scene.add.text(o.x, o.y + 108, o.character.desc, { [F]: '14px', [FF]: A, [CO]: '#00ffff' }).setOrigin(0.5)[SSF](0)[SD](102));
+        o.texts.push(scene.add.text(o.x, o.y + 128, o.character.passiveDesc, { [F]: '12px', [FF]: A, [CO]: '#ff00ff' }).setOrigin(0.5)[SSF](0)[SD](102));
+      } else {
+        // Unselected: Simple cyan text
+        o.texts.push(scene.add.text(o.x, o.y + 83, o.character.name, { [F]: '18px', [FF]: A, [CO]: '#00aaaa', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102));
+        o.texts.push(scene.add.text(o.x, o.y + 108, o.character.desc, { [F]: '12px', [FF]: A, [CO]: '#008888' }).setOrigin(0.5)[SSF](0)[SD](102));
+        o.texts.push(scene.add.text(o.x, o.y + 128, o.character.passiveDesc, { [F]: '10px', [FF]: A, [CO]: '#006666' }).setOrigin(0.5)[SSF](0)[SD](102));
+      }
+    });
+  };
 
   characters.forEach((ch, i) => {
-    const x = 160 + i * 160;
-    const y = 280;
+    const x = 100 + i * 200; // New spacing for larger cards
+    const y = 260;
     const btn = scene.add.graphics()[SSF](0)[SD](101);
-    dc(btn, x, y, 0);
-    const heroSprite = scene.add.sprite(x, y - 30, ch.texture).setScale(1.5)[SSF](0)[SD](102);
+
+    // Create large sprite
+    const heroSprite = scene.add.sprite(x, y - 50, ch.texture).setScale(2.5)[SSF](0)[SD](102);
     scene.tweens.add({
       targets: heroSprite,
-      scaleX: 1.8,
-      scaleY: 1.8,
+      scaleX: 3.0,
+      scaleY: 3.0,
       duration: 1000 + i * 100,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
     });
-    mkTxt(x, y + 15, ch.name, { [F]: '18px', [FF]: A, [CO]: CS.W, [FST]: 'bold' }, 102);
-    mkTxt(x, y + 38, ch.desc, { [F]: '12px', [FF]: A, [CO]: CS.LG }, 102);
-    mkTxt(x, y + 58, ch.passiveDesc, { [F]: '10px', [FF]: A, [CO]: '#0f8' }, 102);
-    menuOptions.push({ btn, character: ch, x, y });
+
+    menuOptions.push({ btn, character: ch, x, y, sprite: heroSprite, texts: [] });
   });
 
   upd();
 
-  mkTxt(400, 510, '←→ or AD: Move  ENTER: Select  ESC: Back', { [F]: '14px', [FF]: A, [CO]: CS.LG }, 101);
+  mkTxt(400, 540, '←→ or AD: Move  ENTER: Select  ESC: Back', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
 
   const lk = scene.input.keyboard.addKey('LEFT');
   const rk = scene.input.keyboard.addKey('RIGHT');
