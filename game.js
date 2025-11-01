@@ -19,7 +19,7 @@ let adc = null, idleTween = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, showStats = false, paused = false, mainMenu = true;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
-let nextWaveTime = 60000, nextBossTime = 10000;
+let nextWaveTime = 30000, nextBossTime = 60000;
 let warnAct = false;
 let scene;
 
@@ -288,11 +288,11 @@ function generateBossTexture(type) {
 
   // Helper functions scaled 3x
   const ey = (x1, y1, x2, y2) => {
-    g.fillStyle(C.W, 1).fillCircle(x1*s, y1*s, 2*s).fillCircle(x2*s, y2*s, 2*s);
+    g.fillStyle(C.W, 1).fillCircle(x1 * s, y1 * s, 2 * s).fillCircle(x2 * s, y2 * s, 2 * s);
   };
-  const tri = (x1, y1, x2, y2, x3, y3) => g.fillTriangle(x1*s, y1*s, x2*s, y2*s, x3*s, y3*s);
-  const circ = (x, y, rad) => g.fillCircle(x*s, y*s, rad*s);
-  const rect = (x, y, w, h) => g.fillRect(x*s, y*s, w*s, h*s);
+  const tri = (x1, y1, x2, y2, x3, y3) => g.fillTriangle(x1 * s, y1 * s, x2 * s, y2 * s, x3 * s, y3 * s);
+  const circ = (x, y, rad) => g.fillCircle(x * s, y * s, rad * s);
+  const rect = (x, y, w, h) => g.fillRect(x * s, y * s, w * s, h * s);
 
   g.fillStyle(type.c, 1);
 
@@ -313,7 +313,7 @@ function generateBossTexture(type) {
 
 // Perlin Noise implementation for nebula generation
 let perm = [];
-const grad = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]];
+const grad = [[1, 1], [-1, 1], [1, -1], [-1, -1], [1, 0], [-1, 0], [0, 1], [0, -1]];
 
 // Fade function for smooth interpolation
 const fade = t => t * t * t * (t * (t * 6 - 15) + 10);
@@ -1604,11 +1604,14 @@ function showRareUpg() {
 
 function showMainMenu() {
   scene.add.graphics().fillStyle(C.B, 0.95).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
-  mkTxt(400, 120, 'BULLET HEAVEN', { [F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8 }, 101);
+  mkTxt(400, 120, 'HUMO SURVIVORS', { [F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8 }, 101);
   mkTxt(400, 200, 'Survive the endless waves', { [F]: '20px', [FF]: A, [CO]: CS.LG }, 101);
 
-  // Start synthwave music
-  playMusic(scene);
+  // Start synthwave music (only once)
+  if (!musicStarted) {
+    playMusic(scene);
+    musicStarted = true;
+  }
 
   selectedIndex = 0;
   const opts = [
@@ -1767,31 +1770,6 @@ function updateUI() {
   const minutes = ~~(gameTime / 60000);
   const seconds = ~~((gameTime % 60000) / 1000);
   ui.timeText.setText(`${minutes}:${seconds.toString().padStart(2, '0')}`);
-
-  // Update weapon indicators
-  let weaponX = 10;
-  let weaponY = 40;
-
-  // Clear old indicators
-  if (ui.weaponIndicators) {
-    ui.weaponIndicators.forEach(ind => ind[DS]());
-  }
-  ui.weaponIndicators = [];
-
-  // Show unlocked weapons
-  weaponTypes.forEach(weapon => {
-    if (weapon.u && !weapon.i.startsWith('placeholder')) {
-      const icon = scene.add.text(weaponX, weaponY, weapon.n.charAt(0), {
-        [F]: '16px',
-        [FF]: A,
-        [CO]: '#ffaa00',
-        backgroundColor: '#333333',
-        padding: { x: 6, y: 4 }
-      })[SSF](0);
-      ui.weaponIndicators.push(icon);
-      weaponX += 30;
-    }
-  });
 }
 
 function drawUIBars() {
@@ -1882,6 +1860,7 @@ function restartGame() {
   waveTimer = 0;
   bossTimer = 0;
   warnAct = false;
+  musicStarted = false;
 
   // Reset upgrade levels
   ul = {};
@@ -2644,6 +2623,7 @@ function playTone(sceneRef, frequency, duration) {
 
 // Synthwave music system
 let musicLoop = null;
+let musicStarted = false;
 
 // Bass synth with lowpass filter
 function bass(c, t, f) {
@@ -2734,52 +2714,78 @@ function lead(c, t, f) {
   o.stop(t + 0.4);
 }
 
-// Music loop
+// Music loop with sections (intro/verse/chorus/breakdown)
+let currentBar = 0;
+
 function playMusic(sc) {
   if (musicLoop) clearTimeout(musicLoop);
 
   const c = sc.sound.context;
   const bpm = 130;
-  const step = 60 / bpm / 4; // 16th note
+  const step = 60 / bpm / 4;
 
-  // Scale: A minor (darksynth)
-  const notes = [110, 130.81, 146.83, 164.81, 196]; // A2, C3, D3, E3, G3
-  const notes2 = [220, 261.63, 293.66, 329.63, 392]; // A3, C4, D4, E4, G4
+  const notes = [110, 130.81, 146.83, 164.81, 196];
+  const notes2 = [220, 261.63, 293.66, 329.63, 392];
 
-  // Patterns (16 steps)
-  const bp = [0, 0, 0, 0, 2, 2, 1, 1, 0, 0, 3, 3, 4, 4, 2, 2]; // Bass
-  const kp = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]; // Kick
-  const sp = [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]; // Snare
-  const hp = [0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1]; // Hihat
-  const lp = [0, 0, 4, 0, 3, 0, 2, 0, 0, 0, 3, 0, 1, 0, 0, 0]; // Lead
+  // Song sections (16 steps each)
+  const sections = {
+    intro: {
+      bp: [0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 1, 1, 1, 1],
+      kp: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      sp: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      hp: [0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1],
+      lp: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      int: 0.7
+    },
+    verse: {
+      bp: [0, 0, 0, 0, 2, 2, 1, 1, 0, 0, 3, 3, 4, 4, 2, 2],
+      kp: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+      sp: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      hp: [0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1],
+      lp: [0, 0, 4, 0, 3, 0, 2, 0, 0, 0, 3, 0, 1, 0, 0, 0],
+      int: 1.0
+    },
+    chorus: {
+      bp: [4, 4, 3, 3, 2, 2, 0, 0, 3, 3, 1, 1, 2, 2, 0, 0],
+      kp: [1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0],
+      sp: [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1],
+      hp: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      lp: [4, 0, 3, 0, 2, 4, 1, 0, 3, 0, 2, 0, 4, 3, 2, 1],
+      int: 1.2
+    },
+    breakdown: {
+      bp: [0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2],
+      kp: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      sp: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      hp: [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1],
+      lp: [0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0],
+      int: 0.6
+    }
+  };
+
+  // Song structure (order of sections)
+  const structure = ['intro', 'verse', 'chorus', 'verse', 'chorus', 'breakdown', 'chorus'];
 
   function loop() {
     const t = c.currentTime;
+    const sec = sections[structure[currentBar % structure.length]];
+    const mult = sec.int;
 
-    // Play 16 steps
     for (let i = 0; i < 16; i++) {
       const st = t + i * step;
 
-      // Bass
-      if (bp[i] !== null) bass(c, st, notes[bp[i]]);
-
-      // Kick
-      if (kp[i]) kick(c, st);
-
-      // Snare
-      if (sp[i]) snare(c, st);
-
-      // Hihat
-      if (hp[i]) hihat(c, st, hp[i] === 1 ? 0.15 : 0.08);
-
-      // Lead
-      if (lp[i]) lead(c, st, notes2[lp[i]]);
+      if (sec.bp[i] !== null) bass(c, st, notes[sec.bp[i]]);
+      if (sec.kp[i]) kick(c, st);
+      if (sec.sp[i]) snare(c, st);
+      if (sec.hp[i]) hihat(c, st, 0.15 * mult);
+      if (sec.lp[i]) lead(c, st, notes2[sec.lp[i]]);
     }
 
-    // Loop
+    currentBar++;
     musicLoop = setTimeout(loop, 16 * step * 1000);
   }
 
+  currentBar = 0;
   loop();
 }
 
