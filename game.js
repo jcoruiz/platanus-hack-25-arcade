@@ -1607,6 +1607,9 @@ function showMainMenu() {
   mkTxt(400, 120, 'BULLET HEAVEN', { [F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8 }, 101);
   mkTxt(400, 200, 'Survive the endless waves', { [F]: '20px', [FF]: A, [CO]: CS.LG }, 101);
 
+  // Start synthwave music
+  playMusic(scene);
+
   selectedIndex = 0;
   const opts = [
     { y: 300, txt: 'START', fn: () => { mainMenu = false; showStartScreen(); } },
@@ -2637,4 +2640,152 @@ function playTone(sceneRef, frequency, duration) {
 
   osc.start(ctx.currentTime);
   osc.stop(ctx.currentTime + duration);
+}
+
+// Synthwave music system
+let musicLoop = null;
+
+// Bass synth with lowpass filter
+function bass(c, t, f) {
+  const o = c.createOscillator();
+  const fl = c.createBiquadFilter();
+  const g = c.createGain();
+  o.type = 'sawtooth';
+  o.frequency.value = f;
+  fl.type = 'lowpass';
+  fl.frequency.value = 600;
+  fl.Q.value = 8;
+  o.connect(fl);
+  fl.connect(g);
+  g.connect(c.destination);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.25, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.12, t + 0.08);
+  g.gain.setValueAtTime(0.12, t + 0.22);
+  g.gain.exponentialRampToValueAtTime(0.01, t + 0.23);
+  o.start(t);
+  o.stop(t + 0.23);
+}
+
+// Kick drum
+function kick(c, t) {
+  const o = c.createOscillator();
+  const g = c.createGain();
+  o.frequency.setValueAtTime(150, t);
+  o.frequency.exponentialRampToValueAtTime(40, t + 0.1);
+  g.gain.setValueAtTime(1, t);
+  g.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+  o.connect(g);
+  g.connect(c.destination);
+  o.start(t);
+  o.stop(t + 0.25);
+}
+
+// Snare drum
+function snare(c, t) {
+  const n = c.createBufferSource();
+  const b = c.createBuffer(1, c.sampleRate * 0.1, c.sampleRate);
+  const d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  n.buffer = b;
+  const fl = c.createBiquadFilter();
+  fl.type = 'highpass';
+  fl.frequency.value = 1500;
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.4, t);
+  g.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+  n.connect(fl);
+  fl.connect(g);
+  g.connect(c.destination);
+  n.start(t);
+}
+
+// Hihat
+function hihat(c, t, v) {
+  const n = c.createBufferSource();
+  const b = c.createBuffer(1, c.sampleRate * 0.05, c.sampleRate);
+  const d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  n.buffer = b;
+  const fl = c.createBiquadFilter();
+  fl.type = 'highpass';
+  fl.frequency.value = 7000;
+  const g = c.createGain();
+  g.gain.setValueAtTime(v, t);
+  g.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+  n.connect(fl);
+  fl.connect(g);
+  g.connect(c.destination);
+  n.start(t);
+}
+
+// Lead synth
+function lead(c, t, f) {
+  const o = c.createOscillator();
+  const g = c.createGain();
+  o.type = 'square';
+  o.frequency.value = f;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.08, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+  o.connect(g);
+  g.connect(c.destination);
+  o.start(t);
+  o.stop(t + 0.4);
+}
+
+// Music loop
+function playMusic(sc) {
+  if (musicLoop) clearTimeout(musicLoop);
+
+  const c = sc.sound.context;
+  const bpm = 130;
+  const step = 60 / bpm / 4; // 16th note
+
+  // Scale: A minor (darksynth)
+  const notes = [110, 130.81, 146.83, 164.81, 196]; // A2, C3, D3, E3, G3
+  const notes2 = [220, 261.63, 293.66, 329.63, 392]; // A3, C4, D4, E4, G4
+
+  // Patterns (16 steps)
+  const bp = [0, 0, 0, 0, 2, 2, 1, 1, 0, 0, 3, 3, 4, 4, 2, 2]; // Bass
+  const kp = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]; // Kick
+  const sp = [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]; // Snare
+  const hp = [0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1]; // Hihat
+  const lp = [0, 0, 4, 0, 3, 0, 2, 0, 0, 0, 3, 0, 1, 0, 0, 0]; // Lead
+
+  function loop() {
+    const t = c.currentTime;
+
+    // Play 16 steps
+    for (let i = 0; i < 16; i++) {
+      const st = t + i * step;
+
+      // Bass
+      if (bp[i] !== null) bass(c, st, notes[bp[i]]);
+
+      // Kick
+      if (kp[i]) kick(c, st);
+
+      // Snare
+      if (sp[i]) snare(c, st);
+
+      // Hihat
+      if (hp[i]) hihat(c, st, hp[i] === 1 ? 0.15 : 0.08);
+
+      // Lead
+      if (lp[i]) lead(c, st, notes2[lp[i]]);
+    }
+
+    // Loop
+    musicLoop = setTimeout(loop, 16 * step * 1000);
+  }
+
+  loop();
+}
+
+function stopMusic() {
+  if (musicLoop) {
+    clearTimeout(musicLoop);
+    musicLoop = null;
+  }
 }
