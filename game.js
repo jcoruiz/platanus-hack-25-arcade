@@ -1703,7 +1703,10 @@ function showMainMenu() {
   mkTxt(400, 150, 'THE GAME', { [F]: '24px', [FF]: A, [CO]: '#ff00ff', [STR]: CS.B, [STT]: 2 }, 102);
 
   // Version text
-  mkTxt(750, 580, 'V1.10', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
+  mkTxt(750, 580, 'V1.11', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
+
+  // Control instructions
+  mkTxt(400, 540, 'WS: Move  SPACE: Select', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
 
   selectedIndex = 0;
   const opts = [
@@ -2372,12 +2375,12 @@ function showWarning(text, color) {
   // Create warning overlay
   const warning = scene.add.graphics();
   warning.fillStyle(color, 0.3);
-  warning.fillRect(0, 250, 800, 100);
+  warning.fillRect(0, 100, 800, 80);
   warning[SSF](0);
   warning[SD](50);
 
   // Warning text
-  const warningText = mkTxt(400, 300, text, { [F]: '48px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 6 }, 51);
+  const warningText = mkTxt(400, 140, text, { [F]: '42px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 6 }, 51);
 
   // Flash animation
   scene.tweens.add({
