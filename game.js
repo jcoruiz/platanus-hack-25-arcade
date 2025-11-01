@@ -629,12 +629,8 @@ function create() {
 
   // Expand world bounds
   this.physics.world.setBounds(0, 0, 2400, 1800);
-
-  // Pause physics and show main menu
   this.physics.pause();
   showMainMenu();
-
-  // Start sound
   playTone(this, 440, 0.1);
 }
 
@@ -644,20 +640,20 @@ function initGameplay() {
   unlockedTypes = [enemyTypes[0]];
 
   // Create physics groups
-  en = scene.physics.add.group();
-  pr = scene.physics.add.group();
-  xo = scene.physics.add.group();
-  co = scene.physics.add.group();
-  wc = scene.physics.add.group();
-  uc = scene.physics.add.group();
-  mg = scene.physics.add.group();
-  hd = scene.physics.add.group();
+  const addGrp = () => scene.physics.add.group();
+  en = addGrp();
+  pr = addGrp();
+  xo = addGrp();
+  co = addGrp();
+  wc = addGrp();
+  uc = addGrp();
+  mg = addGrp();
+  hd = addGrp();
   ob = scene.physics.add.staticGroup();
 
   // Spawn obstacles randomly across map
   for (let i = 0; i < 80; i++) {
-    const x = 100 + Math.random() * 2200, y = 100 + Math.random() * 1600;
-    ob.create(x, y, 'obstacle').setCircle(20);
+    ob.create(100 + Math.random() * 2200, 100 + Math.random() * 1600, 'obstacle').setCircle(20);
   }
 
   // Create player at center of world
@@ -677,18 +673,19 @@ function initGameplay() {
   wasd = scene.input.keyboard.addKeys({ w: 'W', a: 'A', s: 'S', d: 'D' });
 
   // Collisions
-  scene.physics.add.overlap(pr, en, hitEnemy, null, scene);
-  scene.physics.add.overlap(p, en, hitPlayer, null, scene);
-  scene.physics.add.overlap(p, xo, collectXP, null, scene);
-  scene.physics.add.overlap(p, co, collectCoin, null, scene);
-  scene.physics.add.overlap(p, wc, collectChest, null, scene);
-  scene.physics.add.overlap(p, uc, colUpgCh, null, scene);
-  scene.physics.add.overlap(p, mg, collectMagnet, null, scene);
-  scene.physics.add.overlap(p, hd, colHeal, null, scene);
-  scene.physics.add.collider(en, en);
-  scene.physics.add.collider(p, ob);
-  scene.physics.add.collider(en, ob);
-  scene.physics.add.collider(pr, ob);
+  const ph = scene.physics;
+  ph.add.overlap(pr, en, hitEnemy, null, scene);
+  ph.add.overlap(p, en, hitPlayer, null, scene);
+  ph.add.overlap(p, xo, collectXP, null, scene);
+  ph.add.overlap(p, co, collectCoin, null, scene);
+  ph.add.overlap(p, wc, collectChest, null, scene);
+  ph.add.overlap(p, uc, colUpgCh, null, scene);
+  ph.add.overlap(p, mg, collectMagnet, null, scene);
+  ph.add.overlap(p, hd, colHeal, null, scene);
+  ph.add.collider(en, en);
+  ph.add.collider(p, ob);
+  ph.add.collider(en, ob);
+  ph.add.collider(pr, ob);
 
   // Create UI
   createUI(scene);
@@ -712,9 +709,9 @@ function initGameplay() {
       } else {
         scene.physics.resume();
         playTone(scene, 800, 0.1);
-        if (pauseOverlay) pauseOverlay[DS]();
-        if (pauseText) pauseText[DS]();
-        if (pauseHint) pauseHint[DS]();
+        pauseOverlay?.[DS]();
+        pauseText?.[DS]();
+        pauseHint?.[DS]();
       }
     }
   });
@@ -1832,11 +1829,7 @@ function showStartScreen() {
   const sel = (ch) => {
     playTone(scene, 1500, 0.2);
     selCh = ch;
-
-    // Initialize gameplay elements (player, obstacles, UI, etc.)
     initGameplay();
-
-    // Set character texture and weapon after player is created
     p.setTexture(ch.texture);
     const w = weaponTypes.find(w => w.i === ch.weapon);
     if (w) {
@@ -2062,39 +2055,20 @@ function restartGame() {
   scene.children.list.filter(c => c.depth >= 0).forEach(c => c[DS]());
 
   // Clear physics groups
-  en.clear(true, true);
-  pr.clear(true, true);
-  xo.clear(true, true);
-  co.clear(true, true);
-  wc.clear(true, true);
-  uc.clear(true, true);
-  mg.clear(true, true);
-  hd.clear(true, true);
-  ob.clear(true, true);
+  [en, pr, xo, co, wc, uc, mg, hd, ob].forEach(g => g.clear(true, true));
 
   // Reset state variables
   gameOver = levelingUp = selectingWeapon = paused = warnAct = hyperModeActive = false;
   startScreen = mainMenu = true;
   gameTime = shootTimer = spawnTimer = regenTimer = waveTimer = bossTimer = orbitAngle = avB = bTmr = 0;
   ul = {};
-
-  // Reset weapons
   weaponTypes = JSON.parse(JSON.stringify(iwt));
-
-  // Clear orbiting balls & boomerangs
   orbitingBalls = boomerangs = [];
   adc = null;
-
-  // Reset unlocked enemy types
   unlockedTypes = [enemyTypes[0]];
-
   stats = JSON.parse(JSON.stringify(inS));
   difficulty = { ...inD };
-
-  // Recreate all gameplay elements (obstacles, player, UI, colliders, etc.)
   initGameplay();
-
-  // Pause physics and show main menu
   scene.physics.pause();
   showMainMenu();
 }
