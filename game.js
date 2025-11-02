@@ -151,7 +151,7 @@ let inD = { // initial difficulty
 
 let difficulty = { ...inD };
 
-let ui = {};
+let ui = { bossData: [] };
 
 function getWeapon(id) {
   return weaponTypes.find(w => w.i === id);
@@ -1703,7 +1703,7 @@ function showMainMenu() {
   mkTxt(400, 150, 'THE GAME', { [F]: '24px', [FF]: A, [CO]: '#ff00ff', [STR]: CS.B, [STT]: 2 }, 102);
 
   // Version text
-  mkTxt(750, 580, 'V1.11', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
+  mkTxt(750, 580, 'V1.12', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
 
   // Control instructions
   mkTxt(400, 540, 'WS: Move  SPACE: Select', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
@@ -2005,37 +2005,53 @@ function drawUIBars() {
   bar(50, 10, 200, 20, stats.hp, stats.maxHp, C.DR, C.R, C.W, 2);
   bar(330, 10, 180, 20, stats.xp, stats.xpToNext, 0x004444, C.Cy, C.W, 2);
 
-  // Find active boss
-  let boss = null;
+  // Find all active bosses
+  let bosses = [];
   en.children.entries.forEach(enemy => {
     if (enemy[AC] && enemy.getData('isBoss')) {
-      boss = enemy;
+      bosses.push(enemy);
     }
   });
 
-  // Draw boss HP bar at top center
-  if (boss) {
-    const hp = boss.getData('hp'), maxHp = boss.getData('maxHp');
+  // Track rendered bosses for cleanup
+  const rendered = [];
 
-    // Only recreate text if boss HP changed or text doesn't exist
-    if (!ui.bossLabelText) {
-      ui.bossLabelText = mkTxt(400, 40, '⚔️ BOSS ⚔️', { [F]: '20px', [FF]: A, [CO]: CS.R, [STR]: CS.B, [STT]: 4 }, 200);
-    }
+  // Draw boss HP bars horizontally
+  if (bosses.length) {
+    const w = 600 / bosses.length; // Dynamic width per boss
+    bosses.forEach((boss, i) => {
+      const hp = boss.getData('hp'), maxHp = boss.getData('maxHp');
+      const xStart = 100 + (i * w);
+      const xCenter = xStart + (w / 2);
 
-    if (!ui.bossHpText || ui.lastBossHp !== hp) {
-      if (ui.bossHpText) ui.bossHpText[DS]();
-      ui.bossHpText = mkTxt(400, 62, `${~~hp} / ${~~maxHp}`, { [F]: '14px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 3 }, 200);
-      ui.lastBossHp = hp;
-    }
+      // Find or create boss UI entry
+      let bUI = ui.bossData.find(b => b.enemy === boss);
+      if (!bUI) {
+        bUI = { enemy: boss, hpText: null, lastHp: null };
+        ui.bossData.push(bUI);
+      }
 
-    bar(100, 50, 600, 25, hp, maxHp, C.DR, C.R, C.Y, 3);
-  } else if (ui.bossLabelText) {
-    ui.bossLabelText[DS]();
-    ui.bossLabelText = null;
-    ui.bossHpText[DS]();
-    ui.bossHpText = null;
-    ui.lastBossHp = null;
+      // Update HP text if changed
+      if (!bUI.hpText || bUI.lastHp !== hp) {
+        if (bUI.hpText) bUI.hpText[DS]();
+        bUI.hpText = mkTxt(xCenter, 62, `${~~hp} / ${~~maxHp}`, { [F]: '14px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 3 }, 200);
+        bUI.lastHp = hp;
+      }
+
+      // Draw HP bar
+      bar(xStart, 50, w - 10, 25, hp, maxHp, C.DR, C.R, C.Y, 3);
+      rendered.push(boss);
+    });
   }
+
+  // Cleanup dead boss UI
+  ui.bossData = ui.bossData.filter(bUI => {
+    if (!rendered.includes(bUI.enemy)) {
+      if (bUI.hpText) bUI.hpText[DS]();
+      return false;
+    }
+    return true;
+  });
 }
 
 function endGame() {
@@ -2094,6 +2110,14 @@ function restartGame() {
 
   // Clear physics groups
   if (en) [en, pr, xo, co, wc, uc, mg, hd, ob].forEach(g => g.clear(true, true));
+
+  // Cleanup boss UI elements
+  if (ui.bossData) {
+    ui.bossData.forEach(bUI => {
+      if (bUI.hpText) bUI.hpText[DS]();
+    });
+    ui.bossData = [];
+  }
 
   // Reset state variables
   gameOver = levelingUp = selectingWeapon = paused = warnAct = hyperModeActive = false;
@@ -2375,12 +2399,12 @@ function showWarning(text, color) {
   // Create warning overlay
   const warning = scene.add.graphics();
   warning.fillStyle(color, 0.3);
-  warning.fillRect(0, 100, 800, 80);
+  warning.fillRect(0, 130, 800, 80);
   warning[SSF](0);
   warning[SD](50);
 
   // Warning text
-  const warningText = mkTxt(400, 140, text, { [F]: '42px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 6 }, 51);
+  const warningText = mkTxt(400, 170, text, { [F]: '42px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 6 }, 51);
 
   // Flash animation
   scene.tweens.add({
