@@ -1695,14 +1695,14 @@ function showMainMenu() {
 
   // Hotline Miami style title with glitch effect (multiple layers)
   // Pink/magenta shadow layer
-  mkTxt(403, 83, 'SURVIVE', { [F]: '72px', [FF]: A, [CO]: '#ff00ff', [STR]: '#ff00ff', [STT]: 3 }, 101);
+  mkTxt(403, 83, '50K Survivors', { [F]: '72px', [FF]: A, [CO]: '#ff00ff', [STR]: '#ff00ff', [STT]: 3 }, 101);
   // Cyan main layer
-  mkTxt(400, 80, 'SURVIVE', { [F]: '72px', [FF]: A, [CO]: CS.Cy, [STR]: CS.Cy, [STT]: 3 }, 102);
+  mkTxt(400, 80, '50K Survivors', { [F]: '72px', [FF]: A, [CO]: CS.Cy, [STR]: CS.Cy, [STT]: 3 }, 102);
   // Subtitle in pink
   mkTxt(400, 150, 'THE GAME', { [F]: '24px', [FF]: A, [CO]: '#ff00ff', [STR]: CS.B, [STT]: 2 }, 102);
 
   // Version text
-  mkTxt(750, 580, 'V1.13', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
+  mkTxt(750, 580, 'V1.14', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
 
   // Control instructions
   mkTxt(400, 540, 'WS: Move  SPACE: Select', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
