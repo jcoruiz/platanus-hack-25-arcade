@@ -45,6 +45,18 @@ const CS = { W: '#ffffff', B: '#000000', Y: '#ffff00', R: '#ff0000', G: '#00ff00
 const F = 'fontSize', FF = 'fontFamily', A = 'Arial', CO = 'color', STR = 'stroke', STT = 'strokeThickness', FST = 'fontStyle';
 // Common strings
 const AC = 'active', SSF = 'setScrollFactor', SD = 'setDepth', DS = 'destroy';
+// Graphics factory functions (g=graphics reference)
+let g;
+const fs = (c, a = 1) => g.fillStyle(c, a);
+const gt = (k, w, h) => (g.generateTexture(k, w, h), g.clear());
+const ls = (w, c, a = 1) => g.lineStyle(w, c, a);
+// Ultra-short shape factories (max 3 chars)
+const fc = (x, y, r) => g.fillCircle(x, y, r);
+const fr = (x, y, w, h) => g.fillRect(x, y, w, h);
+const ft = (...a) => g.fillTriangle(...a);
+const sr = (x, y, w, h) => g.strokeRect(x, y, w, h);
+const lt = (x, y) => g.lineTo(x, y);
+const fp = () => g.fillPath();
 
 // Enemy types: n=name, c=color, h=hpMult, s=speedMult, d=damageMult, x=xp, cn=coins, r=dropRate, u=unlockTime
 const enemyTypes = [
@@ -292,27 +304,27 @@ function generateBossTexture(type) {
   // Return if already cached
   if (s.textures.exists(key)) return key;
 
-  const g = s.add.graphics();
+  g = s.add.graphics();
   const c = 3; // Scale factor (20x20 -> 60x60)
 
   // Helper functions scaled 3x
   const ey = (x1, y1, x2, y2) => {
-    g.fillStyle(C.W, 1).fillCircle(x1 * c, y1 * c, 2 * c).fillCircle(x2 * c, y2 * c, 2 * c);
+    fs(C.W, 1).fillCircle(x1 * c, y1 * c, 2 * c).fillCircle(x2 * c, y2 * c, 2 * c);
   };
   const tri = (x1, y1, x2, y2, x3, y3) => g.fillTriangle(x1 * c, y1 * c, x2 * c, y2 * c, x3 * c, y3 * c);
   const circ = (x, y, rad) => g.fillCircle(x * c, y * c, rad * c);
   const rect = (x, y, w, h) => g.fillRect(x * c, y * c, w * c, h * c);
 
-  g.fillStyle(type.c, 1);
+  fs(type.c, 1);
 
   // Draw based on enemy type (same logic as preload)
   if (type.n === 'g') { tri(10, 2, 2, 18, 18, 18); ey(7, 10, 13, 10); }
   else if (type.n === 'b') { tri(10, 2, 2, 10, 10, 18); tri(10, 2, 18, 10, 10, 18); ey(8, 8, 12, 8); }
-  else if (type.n === 'c') { circ(10, 10, 9); ey(7, 9, 13, 9); g.fillStyle(type.c, 0.7); circ(10, 6, 3); }
-  else if (type.n === 'y') { rect(3, 3, 14, 14); g.fillStyle(C.B, 1); ey(7, 8, 13, 8); rect(6, 13, 8, 2); }
+  else if (type.n === 'c') { circ(10, 10, 9); ey(7, 9, 13, 9); fs(type.c, 0.7); circ(10, 6, 3); }
+  else if (type.n === 'y') { rect(3, 3, 14, 14); fs(C.B, 1); ey(7, 8, 13, 8); rect(6, 13, 8, 2); }
   else if (type.n === 'o') { circ(10, 10, 9); tri(10, 1, 7, 8, 13, 8); tri(10, 19, 7, 12, 13, 12); tri(1, 10, 8, 7, 8, 13); tri(19, 10, 12, 7, 12, 13); ey(7, 8, 13, 8); }
-  else if (type.n === 'r') { circ(10, 10, 9); tri(3, 5, 5, 2, 7, 5); tri(17, 5, 15, 2, 13, 5); g.fillStyle(C.R, 1); ey(7, 9, 13, 9); rect(7, 14, 6, 2); }
-  else if (type.n === 'p') { rect(4, 6, 12, 10); circ(6, 6, 3); circ(14, 6, 3); g.fillStyle(C.G, 1); circ(7, 10, 3); circ(13, 10, 3); g.fillStyle(C.B, 1); ey(7, 10, 13, 10); }
+  else if (type.n === 'r') { circ(10, 10, 9); tri(3, 5, 5, 2, 7, 5); tri(17, 5, 15, 2, 13, 5); fs(C.R, 1); ey(7, 9, 13, 9); rect(7, 14, 6, 2); }
+  else if (type.n === 'p') { rect(4, 6, 12, 10); circ(6, 6, 3); circ(14, 6, 3); fs(C.G, 1); circ(7, 10, 3); circ(13, 10, 3); fs(C.B, 1); ey(7, 10, 13, 10); }
 
   g.generateTexture(key, 60, 60);
   g.destroy();
@@ -428,162 +440,148 @@ function generateNebula() {
 
 function preload() {
   // Create simple textures programmatically
-  const g = this.add.graphics();
+  g = this.add.graphics();
 
   // Player texture (banana shape)
-  g.fillStyle(C.Y, 1);
+  fs(C.Y, 1);
   g.fillEllipse(16, 16, 10, 24);
-  g.fillStyle(0xffdd00, 1);
+  fs(0xffdd00, 1);
   g.fillEllipse(18, 16, 6, 20);
-  g.fillStyle(0x885500, 1);
-  g.fillRect(14, 4, 4, 6);
-  g.generateTexture('p_b', 32, 32);
-  g.clear();
+  fs(0x885500, 1);
+  fr(14, 4, 4, 6);
+  gt('p_b', 32, 32);
 
   // Medusa/Jellyfish texture
-  g.fillStyle(0xff88dd, 1); // Pink body
-  g.fillCircle(16, 12, 10); // Head/body
+  fs(0xff88dd, 1); // Pink body
+  fc(16, 12, 10); // Head/body
   // Tentacles
-  g.fillStyle(0xff88dd, 0.7);
-  g.fillRect(8, 18, 3, 12);
-  g.fillRect(13, 20, 3, 10);
-  g.fillRect(18, 19, 3, 11);
+  fs(0xff88dd, 0.7);
+  fr(8, 18, 3, 12);
+  fr(13, 20, 3, 10);
+  fr(18, 19, 3, 11);
   // Eyes
-  g.fillStyle(C.B, 1);
-  g.fillCircle(12, 11, 2);
-  g.fillCircle(20, 11, 2);
-  g.generateTexture('p_j', 32, 32);
-  g.clear();
+  fs(C.B, 1);
+  fc(12, 11, 2);
+  fc(20, 11, 2);
+  gt('p_j', 32, 32);
 
   // Orbe texture (half purple, half blue)
-  g.fillStyle(0xcc00ff, 1); // Purple left half
+  fs(0xcc00ff, 1); // Purple left half
   g.slice(16, 16, 12, Phaser.Math.DegToRad(90), Phaser.Math.DegToRad(270), false);
   g.fillPath();
-  g.fillStyle(0x0088ff, 1); // Blue right half
+  fs(0x0088ff, 1); // Blue right half
   g.slice(16, 16, 12, Phaser.Math.DegToRad(270), Phaser.Math.DegToRad(90), false);
   g.fillPath();
   // Dividing line
-  g.lineStyle(2, C.W, 1);
+  ls(2, C.W, 1);
   g.lineBetween(16, 4, 16, 28);
   // Center glow
-  g.fillStyle(C.W, 0.8);
-  g.fillCircle(16, 16, 4);
-  g.generateTexture('p_o', 32, 32);
-  g.clear();
+  fs(C.W, 0.8);
+  fc(16, 16, 4);
+  gt('p_o', 32, 32);
 
   // Bullet Train texture
-  g.fillStyle(0xe0e0e0, 1); // Silver body
+  fs(0xe0e0e0, 1); // Silver body
   g.fillRoundedRect(6, 10, 20, 12, 3);
-  g.fillStyle(C.W, 1); // White front
-  g.fillTriangle(4, 16, 10, 12, 10, 20);
-  g.fillStyle(0x0088ff, 1); // Blue stripe
-  g.fillRect(8, 15, 18, 2);
-  g.fillStyle(C.R, 1); // Red stripe
-  g.fillRect(8, 18, 18, 2);
+  fs(C.W, 1); // White front
+  ft(4, 16, 10, 12, 10, 20);
+  fs(0x0088ff, 1); // Blue stripe
+  fr(8, 15, 18, 2);
+  fs(C.R, 1); // Red stripe
+  fr(8, 18, 18, 2);
   // Windows
-  g.fillStyle(0x4444ff, 0.7);
-  g.fillRect(12, 13, 3, 3);
-  g.fillRect(17, 13, 3, 3);
-  g.fillRect(22, 13, 3, 3);
-  g.generateTexture('p_t', 32, 32);
-  g.clear();
+  fs(0x4444ff, 0.7);
+  fr(12, 13, 3, 3);
+  fr(17, 13, 3, 3);
+  fr(22, 13, 3, 3);
+  gt('p_t', 32, 32);
 
   // Boomerang texture
-  g.lineStyle(0);
-  g.fillStyle(0xffaa00, 1); // Orange
+  ls(0);
+  fs(0xffaa00, 1); // Orange
   g.beginPath();
   g.moveTo(8, 12);
-  g.lineTo(8, 4);
-  g.lineTo(12, 8);
-  g.lineTo(12, 12);
+  lt(8, 4);
+  lt(12, 8);
+  lt(12, 12);
   g.closePath();
-  g.fillPath();
+  fp();
   g.beginPath();
   g.moveTo(12, 12);
-  g.lineTo(20, 12);
-  g.lineTo(16, 8);
-  g.lineTo(12, 8);
+  lt(20, 12);
+  lt(16, 8);
+  lt(12, 8);
   g.closePath();
-  g.fillPath();
+  fp();
   // Outline
-  g.lineStyle(2, 0x884400, 1);
-  g.strokeRect(8, 4, 4, 8);
-  g.strokeRect(12, 8, 8, 4);
-  g.generateTexture('b', 16, 16);
-  g.clear();
+  ls(2, 0x884400, 1);
+  sr(8, 4, 4, 8);
+  sr(12, 8, 8, 4);
+  gt('b', 16, 16);
 
   // Enemy textures (one for each type) - different shapes
-  const ey = (x1, y1, x2, y2) => { g.fillStyle(C.W, 1).fillCircle(x1, y1, 2).fillCircle(x2, y2, 2); };
-  const tri = (...a) => g.fillTriangle(...a);
-  const circ = (x, y, rad) => g.fillCircle(x, y, rad);
-  const rect = (x, y, w, h) => g.fillRect(x, y, w, h);
+  const ey = (x1, y1, x2, y2) => { fs(C.W, 1).fillCircle(x1, y1, 2).fillCircle(x2, y2, 2); };
   const dm = {
-    g: () => { tri(10, 2, 2, 18, 18, 18); ey(7, 10, 13, 10); },
-    b: () => { tri(10, 2, 2, 10, 10, 18); tri(10, 2, 18, 10, 10, 18); ey(8, 8, 12, 8); },
-    c: (col) => { circ(10, 10, 9); ey(7, 9, 13, 9); g.fillStyle(col, 0.7); circ(10, 6, 3); },
-    y: () => { rect(3, 3, 14, 14); g.fillStyle(C.B, 1); ey(7, 8, 13, 8); rect(6, 13, 8, 2); },
-    o: () => { circ(10, 10, 9); tri(10, 1, 7, 8, 13, 8); tri(10, 19, 7, 12, 13, 12); tri(1, 10, 8, 7, 8, 13); tri(19, 10, 12, 7, 12, 13); ey(7, 8, 13, 8); },
-    r: () => { circ(10, 10, 9); tri(3, 5, 5, 2, 7, 5); tri(17, 5, 15, 2, 13, 5); g.fillStyle(C.R, 1); ey(7, 9, 13, 9); rect(7, 14, 6, 2); },
-    p: () => { rect(4, 6, 12, 10); circ(6, 6, 3); circ(14, 6, 3); g.fillStyle(C.G, 1); circ(7, 10, 3); circ(13, 10, 3); g.fillStyle(C.B, 1); ey(7, 10, 13, 10); }
+    g: () => { ft(10, 2, 2, 18, 18, 18); ey(7, 10, 13, 10); },
+    b: () => { ft(10, 2, 2, 10, 10, 18); ft(10, 2, 18, 10, 10, 18); ey(8, 8, 12, 8); },
+    c: (col) => { fc(10, 10, 9); ey(7, 9, 13, 9); fs(col, 0.7); fc(10, 6, 3); },
+    y: () => { fr(3, 3, 14, 14); fs(C.B, 1); ey(7, 8, 13, 8); fr(6, 13, 8, 2); },
+    o: () => { fc(10, 10, 9); ft(10, 1, 7, 8, 13, 8); ft(10, 19, 7, 12, 13, 12); ft(1, 10, 8, 7, 8, 13); ft(19, 10, 12, 7, 12, 13); ey(7, 8, 13, 8); },
+    r: () => { fc(10, 10, 9); ft(3, 5, 5, 2, 7, 5); ft(17, 5, 15, 2, 13, 5); fs(C.R, 1); ey(7, 9, 13, 9); fr(7, 14, 6, 2); },
+    p: () => { fr(4, 6, 12, 10); fc(6, 6, 3); fc(14, 6, 3); fs(C.G, 1); fc(7, 10, 3); fc(13, 10, 3); fs(C.B, 1); ey(7, 10, 13, 10); }
   };
-  enemyTypes.forEach(t => { g.fillStyle(t.c, 1); dm[t.n](t.c); g.generateTexture(`enemy_${t.n}`, 20, 20).clear(); });
+  enemyTypes.forEach(t => { fs(t.c, 1); dm[t.n](t.c); gt(`enemy_${t.n}`, 20, 20); });
 
   // Generic orb texture with glow (white for tinting)
-  g.fillStyle(C.W, 0.3);
-  g.fillCircle(6, 6, 7);
-  g.fillStyle(C.W, 1);
-  g.fillCircle(6, 6, 4);
-  g.generateTexture('orb', 12, 12);
-  g.clear();
+  fs(C.W, 0.3);
+  fc(6, 6, 7);
+  fs(C.W, 1);
+  fc(6, 6, 4);
+  gt('orb', 12, 12);
 
   // Health drop texture (red medical cross)
-  g.fillStyle(C.W, 1);
-  g.fillCircle(10, 10, 10);
-  g.fillStyle(C.R, 1);
-  g.fillRect(8, 4, 4, 12);
-  g.fillRect(4, 8, 12, 4);
-  g.lineStyle(2, C.W, 1);
-  g.strokeRect(8, 4, 4, 12);
-  g.strokeRect(4, 8, 12, 4);
-  g.generateTexture('healthDrop', 20, 20);
-  g.clear();
+  fs(C.W, 1);
+  fc(10, 10, 10);
+  fs(C.R, 1);
+  fr(8, 4, 4, 12);
+  fr(4, 8, 12, 4);
+  ls(2, C.W, 1);
+  sr(8, 4, 4, 12);
+  sr(4, 8, 12, 4);
+  gt('healthDrop', 20, 20);
 
   // Obstacle texture (gray rock)
-  g.fillStyle(C.DB, 1);
-  g.fillCircle(20, 20, 20);
-  g.fillStyle(0x777777, 0.5);
-  g.fillCircle(15, 15, 10);
-  g.generateTexture('obstacle', 40, 40);
-  g.clear();
+  fs(C.DB, 1);
+  fc(20, 20, 20);
+  fs(0x777777, 0.5);
+  fc(15, 15, 10);
+  gt('obstacle', 40, 40);
 
   // Generic chest texture (white for tinting)
-  g.fillStyle(0xcccccc, 1);
-  g.fillRect(3, 8, 14, 12);
-  g.fillStyle(C.W, 1);
-  g.fillRect(6, 5, 8, 8);
-  g.lineStyle(2, C.W, 1);
-  g.strokeRect(3, 8, 14, 12);
-  g.generateTexture('chest', 20, 20);
-  g.clear();
+  fs(0xcccccc, 1);
+  fr(3, 8, 14, 12);
+  fs(C.W, 1);
+  fr(6, 5, 8, 8);
+  ls(2, C.W, 1);
+  sr(3, 8, 14, 12);
+  gt('chest', 20, 20);
 
   // Magnet texture (horseshoe magnet)
-  g.fillStyle(C.R, 1);
-  g.fillRect(2, 2, 5, 16);
-  g.fillRect(2, 14, 16, 4);
-  g.fillStyle(0x0088ff, 1);
-  g.fillRect(13, 2, 5, 16);
-  g.fillStyle(C.W, 1);
-  g.fillCircle(10, 10, 3);
-  g.generateTexture('magnet', 20, 20);
-  g.clear();
+  fs(C.R, 1);
+  fr(2, 2, 5, 16);
+  fr(2, 14, 16, 4);
+  fs(0x0088ff, 1);
+  fr(13, 2, 5, 16);
+  fs(C.W, 1);
+  fc(10, 10, 3);
+  gt('magnet', 20, 20);
 
   // Orbiting ball texture (white ball with glow)
-  g.fillStyle(C.W, 1);
-  g.fillCircle(8, 8, 8);
-  g.fillStyle(0xffffaa, 0.5);
-  g.fillCircle(8, 8, 6);
-  g.generateTexture('o', 16, 16);
-  g.clear();
+  fs(C.W, 1);
+  fc(8, 8, 8);
+  fs(0xffffaa, 0.5);
+  fc(8, 8, 6);
+  gt('o', 16, 16);
 
   g[DS]();
 }
@@ -620,11 +618,11 @@ function create() {
 
   // Cyberpunk neon grid background with parallax
   [[200, 0x00ffff, 0.3, 0.2], [120, 0xff00ff, 0.5, 0.5], [80, 0xffff00, 0.4, 0.8]].forEach(([sp, c, a, sf], i) => {
-    const g = this.add.graphics().lineStyle(1, c, a);
+    g = this.add.graphics().lineStyle(1, c, a);
     for (let x = 0; x <= 2400; x += sp) g.lineBetween(x, 0, x, 1800);
     for (let y = 0; y <= 1800; y += sp) g.lineBetween(0, y, 2400, y);
-    g.fillStyle(C.W, a * 1.5);
-    for (let x = 0; x <= 2400; x += sp) for (let y = 0; y <= 1800; y += sp) g.fillCircle(x, y, 2 - i * 0.5);
+    fs(C.W, a * 1.5);
+    for (let x = 0; x <= 2400; x += sp) for (let y = 0; y <= 1800; y += sp) fc(x, y, 2 - i * 0.5);
     g.setScrollFactor(sf)[SD](-10 + i);
   });
 
@@ -686,14 +684,15 @@ function initGameplay() {
 
   // Collisions
   const ph = s.physics;
-  ph.add.overlap(pr, en, hitEnemy, null, s);
-  ph.add.overlap(p, en, hitPlayer, null, s);
-  ph.add.overlap(p, xo, collectXP, null, s);
-  ph.add.overlap(p, co, collectCoin, null, s);
-  ph.add.overlap(p, wc, collectChest, null, s);
-  ph.add.overlap(p, uc, colUpgCh, null, s);
-  ph.add.overlap(p, mg, collectMagnet, null, s);
-  ph.add.overlap(p, hd, colHeal, null, s);
+  const ov = (a, b, cb) => ph.add.overlap(a, b, cb, null, s);
+  ov(pr, en, hitEnemy);
+  ov(p, en, hitPlayer);
+  ov(p, xo, collectXP);
+  ov(p, co, collectCoin);
+  ov(p, wc, collectChest);
+  ov(p, uc, colUpgCh);
+  ov(p, mg, collectMagnet);
+  ov(p, hd, colHeal);
   ph.add.collider(en, en);
   ph.add.collider(p, ob);
   ph.add.collider(en, ob);
@@ -1782,27 +1781,28 @@ function showFullLeaderboard() {
 function generateHeroTexture(t, sel) {
   const k = `${t}_hd${sel ? '_s' : ''}`;
   if (s.textures.exists(k)) return k;
-  const g = s.add.graphics(), d = sel ? 3.5 : 2.5, m = v => v * d;
+  g = s.add.graphics();
+  const d = sel ? 3.5 : 2.5, m = v => v * d;
 
   if (t === 'p_b') {
-    g.fillStyle(C.Y, 1).fillEllipse(m(16), m(16), m(10), m(24));
-    g.fillStyle(0xffdd00, 1).fillEllipse(m(18), m(16), m(6), m(20));
-    g.fillStyle(0x885500, 1).fillRect(m(14), m(4), m(4), m(6));
+    fs(C.Y, 1).fillEllipse(m(16), m(16), m(10), m(24));
+    fs(0xffdd00, 1).fillEllipse(m(18), m(16), m(6), m(20));
+    fs(0x885500, 1).fillRect(m(14), m(4), m(4), m(6));
   } else if (t === 'p_j') {
-    g.fillStyle(0xff88dd, 1).fillCircle(m(16), m(12), m(10));
-    g.fillStyle(0xff88dd, 0.7).fillRect(m(8), m(18), m(3), m(12)).fillRect(m(13), m(20), m(3), m(10)).fillRect(m(18), m(19), m(3), m(11));
-    g.fillStyle(C.B, 1).fillCircle(m(12), m(11), m(2)).fillCircle(m(20), m(11), m(2));
+    fs(0xff88dd, 1).fillCircle(m(16), m(12), m(10));
+    fs(0xff88dd, 0.7).fillRect(m(8), m(18), m(3), m(12)).fillRect(m(13), m(20), m(3), m(10)).fillRect(m(18), m(19), m(3), m(11));
+    fs(C.B, 1).fillCircle(m(12), m(11), m(2)).fillCircle(m(20), m(11), m(2));
   } else if (t === 'p_o') {
-    g.fillStyle(0xcc00ff, 1).slice(m(16), m(16), m(12), 1.57, 4.71, 0).fillPath();
-    g.fillStyle(0x0088ff, 1).slice(m(16), m(16), m(12), 4.71, 1.57, 0).fillPath();
-    g.lineStyle(m(2), C.W, 1).lineBetween(m(16), m(4), m(16), m(28));
-    g.fillStyle(C.W, 0.8).fillCircle(m(16), m(16), m(4));
+    fs(0xcc00ff, 1).slice(m(16), m(16), m(12), 1.57, 4.71, 0).fillPath();
+    fs(0x0088ff, 1).slice(m(16), m(16), m(12), 4.71, 1.57, 0).fillPath();
+    ls(m(2), C.W, 1).lineBetween(m(16), m(4), m(16), m(28));
+    fs(C.W, 0.8).fillCircle(m(16), m(16), m(4));
   } else {
-    g.fillStyle(0xe0e0e0, 1).fillRoundedRect(m(6), m(10), m(20), m(12), m(3));
-    g.fillStyle(C.W, 1).fillTriangle(m(4), m(16), m(10), m(12), m(10), m(20));
-    g.fillStyle(0x0088ff, 1).fillRect(m(8), m(15), m(18), m(2));
-    g.fillStyle(C.R, 1).fillRect(m(8), m(18), m(18), m(2));
-    g.fillStyle(0x4444ff, 0.7).fillRect(m(12), m(13), m(3), m(3)).fillRect(m(17), m(13), m(3), m(3)).fillRect(m(22), m(13), m(3), m(3));
+    fs(0xe0e0e0, 1).fillRoundedRect(m(6), m(10), m(20), m(12), m(3));
+    fs(C.W, 1).fillTriangle(m(4), m(16), m(10), m(12), m(10), m(20));
+    fs(0x0088ff, 1).fillRect(m(8), m(15), m(18), m(2));
+    fs(C.R, 1).fillRect(m(8), m(18), m(18), m(2));
+    fs(0x4444ff, 0.7).fillRect(m(12), m(13), m(3), m(3)).fillRect(m(17), m(13), m(3), m(3)).fillRect(m(22), m(13), m(3), m(3));
   }
 
   g.generateTexture(k, 32 * d, 32 * d);
@@ -1838,10 +1838,10 @@ function showStartScreen() {
     const cx = x - 90, cy = y - 140, gc = gradients[i];
     if (d) {
       const a = ga || 0.4;
-      g.fillStyle(C.P, a * 0.3).fillRoundedRect(x - 100, y - 150, 200, 300, 10);
-      g.fillStyle(C.Cy, a * 0.3).fillRoundedRect(x - 105, y - 155, 210, 310, 10);
-      g.fillStyle(C.P, 0.4).fillRoundedRect(x - 87, y - 137, 180, 280, 10).lineStyle(5, C.P, 0.8).strokeRoundedRect(x - 87, y - 137, 180, 280, 10);
-      g.fillStyle(C.Cy, 0.4).fillRoundedRect(x - 93, y - 143, 180, 280, 10).lineStyle(5, C.Cy, 0.8).strokeRoundedRect(x - 93, y - 143, 180, 280, 10);
+      fs(C.P, a * 0.3).fillRoundedRect(x - 100, y - 150, 200, 300, 10);
+      fs(C.Cy, a * 0.3).fillRoundedRect(x - 105, y - 155, 210, 310, 10);
+      fs(C.P, 0.4).fillRoundedRect(x - 87, y - 137, 180, 280, 10).lineStyle(5, C.P, 0.8).strokeRoundedRect(x - 87, y - 137, 180, 280, 10);
+      fs(C.Cy, 0.4).fillRoundedRect(x - 93, y - 143, 180, 280, 10).lineStyle(5, C.Cy, 0.8).strokeRoundedRect(x - 93, y - 143, 180, 280, 10);
       g.fillGradientStyle(gc, gc, C.B, C.B, 0.3).fillRoundedRect(cx, cy, 180, 280, 10).lineStyle(5, C.W, 1).strokeRoundedRect(cx, cy, 180, 280, 10);
     } else {
       g.fillGradientStyle(gc, gc, C.B, C.B, 0.15).fillRoundedRect(cx, cy, 180, 280, 10).lineStyle(3, gc, 0.5).strokeRoundedRect(cx, cy, 180, 280, 10);
