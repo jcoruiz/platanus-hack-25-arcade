@@ -176,7 +176,7 @@ const inS = { // initial stats
   cC: 0.05, // critChance
   cD: 1.5, // critDamage
   xp: 0,
-  c: 0, // coins
+  c: 1000, // coins
   lv: 1, // level
   xN: 10, // xpToNext
   k: 0 // enKilled - enemies killed
@@ -1333,7 +1333,7 @@ function renderStatsPanel() {
 }
 
 // Lightweight selector (options array + optional reroll)
-function showSelector(opts, hasRr, onSel) {
+function showSelector(opts, fullPool, hasRr, onSel) {
   cleanupMenu();
   renderStatsPanel();
   mkTxt(400, 320, '▸ Choose:', { [F]: '16px', [FF]: A, [CO]: CS.Cy }, 102);
@@ -1428,7 +1428,7 @@ function showSelector(opts, hasRr, onSel) {
       playTone(s, 1400, 0.1);
       m.forEach(o => o.btn[DS]());
       s.children.list.filter(c => c.depth === 102 && c.text && c.y >= 380 && c.y <= 460).forEach(c => c[DS]());
-      const newOpts = [...opts].sort(r).slice(0, 3);
+      const newOpts = [...fullPool].sort(r).slice(0, 3);
       m = [];
       sI = 0;
       renderOpts(newOpts);
@@ -1463,7 +1463,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   }
 
   const shuffled = [...availableUpgrades].sort(r).slice(0, 3);
-  showSelector(shuffled, true, (u) => {
+  showSelector(shuffled, availableUpgrades, true, (u) => {
     u.apply();
     playTone(s, 1000, 0.1);
     cleanupMenu();
@@ -1479,7 +1479,7 @@ function showWeaponSelector(weapons) {
   selectingWeapon = true;
   s.physics.pause();
 
-  showSelector(weapons, false, (w) => {
+  showSelector(weapons, weapons, false, (w) => {
     w.u = true;
     playTone(s, 1500, 0.2);
     if (w.i === 'o') initOrbBalls();
@@ -1506,7 +1506,7 @@ function showRareUpg() {
 
   const shuffled = [...available].sort(r).slice(0, 3);
 
-  showSelector(shuffled, false, (u) => {
+  showSelector(shuffled, shuffled, false, (u) => {
     u.apply();
     playTone(s, 1800, 0.1);
     cleanupMenu();
