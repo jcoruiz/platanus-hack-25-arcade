@@ -48,15 +48,16 @@ const AC = 'active', SSF = 'setScrollFactor', SD = 'setDepth', DS = 'destroy';
 // Graphics factory functions (g=graphics reference)
 let g;
 const fs = (c, a = 1) => g.fillStyle(c, a);
-const gt = (k, w, h) => (g.generateTexture(k, w, h), g.clear());
+const gt = (...a) => (g.generateTexture(...a), g.clear());
 const ls = (w, c, a = 1) => g.lineStyle(w, c, a);
-// Ultra-short shape factories (max 3 chars)
-const fc = (x, y, r) => g.fillCircle(x, y, r);
-const fr = (x, y, w, h) => g.fillRect(x, y, w, h);
-const ft = (...a) => g.fillTriangle(...a);
-const sr = (x, y, w, h) => g.strokeRect(x, y, w, h);
-const lt = (x, y) => g.lineTo(x, y);
-const fp = () => g.fillPath();
+// Ultra-short shape factories (meta-factory pattern)
+const mk = fn => (...a) => g[fn](...a);
+const fc = mk('fillCircle');
+const fr = mk('fillRect');
+const ft = mk('fillTriangle');
+const sr = mk('strokeRect');
+const lt = mk('lineTo');
+const fp = mk('fillPath');
 
 // Enemy types: n=name, c=color, h=hpMult, s=speedMult, d=damageMult, x=xp, cn=coins, r=dropRate, u=unlockTime
 const enemyTypes = [
