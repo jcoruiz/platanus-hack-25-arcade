@@ -44,7 +44,7 @@ const CS = { W: '#ffffff', B: '#000000', Y: '#ffff00', R: '#ff0000', G: '#00ff00
 // Style property shortcuts
 const F = 'fontSize', FF = 'fontFamily', A = 'Arial', CO = 'color', STR = 'stroke', STT = 'strokeThickness', FST = 'fontStyle';
 // Common strings
-const AC = 'active', SSF = 'setScrollFactor', SD = 'setDepth', DS = 'destroy';
+const AC = 'active', SSF = 'setScrollFactor', SD = 'setDepth', DS = 'destroy', SO = 'setOrigin';
 // Graphics factory functions (g=graphics reference)
 let g;
 const fs = (c, a = 1) => g.fillStyle(c, a);
@@ -228,7 +228,7 @@ const rareUpgrades = [
 ];
 
 // Helper: create text with common properties
-function mkTxt(x, y, t, l, d = 101) { return s.add.text(x, y, t, l).setOrigin(0.5)[SSF](0)[SD](d); }
+function mkTxt(x, y, t, l, d = 101) { return s.add.text(x, y, t, l)[SO](0.5)[SSF](0)[SD](d); }
 
 // Helper: random centering
 const r = () => Math.random() - 0.5;
@@ -1252,7 +1252,7 @@ function renderStatsPanel() {
     statBox.lineStyle(2, isUpgraded ? C.Cy : 0x333333, 1).strokeRoundedRect(x - 20, y - 20, 40, 40, 4);
 
     // Icon (grayed if not upgraded)
-    const iconTxt = s.add.text(x, y, upg.icon, { [F]: '22px' }).setOrigin(0.5)[SSF](0)[SD](102);
+    const iconTxt = s.add.text(x, y, upg.icon, { [F]: '22px' })[SO](0.5)[SSF](0)[SD](102);
     if (!isUpgraded) iconTxt.setTint(0x666666);
 
     // Level number (only if upgraded)
@@ -1293,7 +1293,7 @@ function renderStatsPanel() {
         ugBox.lineStyle(2, isUp ? C.Cy : 0x333333, 1).strokeRoundedRect(ux - 16, uy - 16, 32, 32, 3);
 
         // Icon
-        const uIcon = s.add.text(ux, uy, upg.icon, { [F]: '18px' }).setOrigin(0.5)[SSF](0)[SD](102);
+        const uIcon = s.add.text(ux, uy, upg.icon, { [F]: '18px' })[SO](0.5)[SSF](0)[SD](102);
         if (!isUp) uIcon.setTint(0x666666);
 
         // Level (if upgraded)
@@ -1680,9 +1680,9 @@ function showRareUpg() {
 
 // Helper: glitch text triple-layer effect (reusable)
 const gt3 = (x, y, txt, sz, d) => [
-  s.add.text(x - 2, y - 1, txt, { [F]: sz, [FF]: A, [CO]: '#ff00ff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](d),
-  s.add.text(x + 2, y + 1, txt, { [F]: sz, [FF]: A, [CO]: CS.Cy, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](d),
-  s.add.text(x, y, txt, { [F]: sz, [FF]: A, [CO]: CS.W, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](d + 1)
+  s.add.text(x - 2, y - 1, txt, { [F]: sz, [FF]: A, [CO]: '#ff00ff', [FST]: 'bold' })[SO](0.5)[SSF](0)[SD](d),
+  s.add.text(x + 2, y + 1, txt, { [F]: sz, [FF]: A, [CO]: CS.Cy, [FST]: 'bold' })[SO](0.5)[SSF](0)[SD](d),
+  s.add.text(x, y, txt, { [F]: sz, [FF]: A, [CO]: CS.W, [FST]: 'bold' })[SO](0.5)[SSF](0)[SD](d + 1)
 ];
 
 function showMainMenu() {
@@ -1724,7 +1724,7 @@ function showMainMenu() {
       if (pulseTween) { pulseTween.stop(); pulseTween = null; }
       pulseTween = s.tweens.add({ targets: o.texts[2], alpha: 0.7, duration: 400, yoyo: true, repeat: -1 });
     } else {
-      o.texts.push(s.add.text(400, o.y, o.txt, { [F]: '32px', [FF]: A, [CO]: '#00aaaa' }).setOrigin(0.5)[SSF](0)[SD](101));
+      o.texts.push(s.add.text(400, o.y, o.txt, { [F]: '32px', [FF]: A, [CO]: '#00aaaa' })[SO](0.5)[SSF](0)[SD](101));
     }
   };
 
@@ -1760,9 +1760,9 @@ function showFullLeaderboard() {
       const y = 180 + i * 35;
       const c = [CS.Go, CS.Si, CS.Br][i] || CS.W;
       const t = { [F]: '18px', [FF]: A, [CO]: c, [FST]: 'bold' };
-      s.add.text(200, y, i + 1, t).setOrigin(0.5)[SSF](0)[SD](151);
-      s.add.text(350, y, e.name, t).setOrigin(0.5)[SSF](0)[SD](151);
-      s.add.text(550, y, e.kills, t).setOrigin(0.5)[SSF](0)[SD](151);
+      s.add.text(200, y, i + 1, t)[SO](0.5)[SSF](0)[SD](151);
+      s.add.text(350, y, e.name, t)[SO](0.5)[SSF](0)[SD](151);
+      s.add.text(550, y, e.kills, t)[SO](0.5)[SSF](0)[SD](151);
     });
   }
 
@@ -1903,14 +1903,14 @@ function showStartScreen() {
         o.texts.push(...gt3(o.x + shakeX, o.y + 83 + shakeY, o.character.name, '22px', 102));
 
         // Weapon and passive (bright)
-        o.texts.push(s.add.text(o.x + shakeX, o.y + 108 + shakeY, o.character.desc, { [F]: '14px', [FF]: A, [CO]: CS.Cy }).setOrigin(0.5)[SSF](0)[SD](102));
-        o.texts.push(s.add.text(o.x + shakeX, o.y + 128 + shakeY, o.character.passiveDesc, { [F]: '12px', [FF]: A, [CO]: '#ff00ff' }).setOrigin(0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x + shakeX, o.y + 108 + shakeY, o.character.desc, { [F]: '14px', [FF]: A, [CO]: CS.Cy })[SO](0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x + shakeX, o.y + 128 + shakeY, o.character.passiveDesc, { [F]: '12px', [FF]: A, [CO]: '#ff00ff' })[SO](0.5)[SSF](0)[SD](102));
       } else {
         // Unselected: Simple colored text
         const col = ['#ffff00', '#ff00ff', CS.Cy, '#00ff00'][i];
-        o.texts.push(s.add.text(o.x, o.y + 83, o.character.name, { [F]: '18px', [FF]: A, [CO]: col, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102));
-        o.texts.push(s.add.text(o.x, o.y + 108, o.character.desc, { [F]: '12px', [FF]: A, [CO]: col }).setOrigin(0.5)[SSF](0)[SD](102));
-        o.texts.push(s.add.text(o.x, o.y + 128, o.character.passiveDesc, { [F]: '10px', [FF]: A, [CO]: col }).setOrigin(0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x, o.y + 83, o.character.name, { [F]: '18px', [FF]: A, [CO]: col, [FST]: 'bold' })[SO](0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x, o.y + 108, o.character.desc, { [F]: '12px', [FF]: A, [CO]: col })[SO](0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x, o.y + 128, o.character.passiveDesc, { [F]: '10px', [FF]: A, [CO]: col })[SO](0.5)[SSF](0)[SD](102));
       }
     });
   };
