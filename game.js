@@ -1597,9 +1597,9 @@ function showMainMenu() {
 
   let tlt = '50K Survivors';
   // Hotline Miami style title with chromatic aberration + animated shake/pulse
-  const t1 = mkTxt(396, 78, tlt, { [F]: '72px', [FF]: A, [CO]: '#ff0044', [STR]: '#ff0044', [STT]: 3 }, 100);
-  const t2 = mkTxt(404, 82, tlt, { [F]: '72px', [FF]: A, [CO]: '#00ffff', [STR]: '#00ffff', [STT]: 3 }, 101);
-  const t3 = mkTxt(400, 80, tlt, { [F]: '72px', [FF]: A, [CO]: CS.W, [STR]: CS.W, [STT]: 3 }, 102);
+  const t1 = mkTxt(396, 98, tlt, { [F]: '80px', [FF]: A, [CO]: '#ff0044', [STR]: '#ff0044', [STT]: 3 }, 100);
+  const t2 = mkTxt(404, 102, tlt, { [F]: '80px', [FF]: A, [CO]: '#00ffff', [STR]: '#00ffff', [STT]: 3 }, 101);
+  const t3 = mkTxt(400, 100, tlt, { [F]: '80px', [FF]: A, [CO]: CS.W, [STR]: CS.W, [STT]: 3 }, 102);
 
   // Shake effect: rotation + position offset
   s.tweens.add({
