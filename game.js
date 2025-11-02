@@ -595,20 +595,21 @@ function create() {
   gr = this.add.graphics();
 
   // Input: Central key registry (initialized early for menus)
+  const k = key => this.input.keyboard.addKey(key);
   keys = {
     mv: { // Movement (polling)
-      w: this.input.keyboard.addKey('W'),
-      a: this.input.keyboard.addKey('A'),
-      s: this.input.keyboard.addKey('S'),
-      d: this.input.keyboard.addKey('D')
+      w: k('W'),
+      a: k('A'),
+      s: k('S'),
+      d: k('D')
     },
     mn: { // Menu navigation (events)
-      e: this.input.keyboard.addKey('SPACE'),
-      x: this.input.keyboard.addKey('ESC')
+      e: k('SPACE'),
+      x: k('ESC')
     },
     ac: { // Actions (events)
-      p: this.input.keyboard.addKey('P'),
-      r: this.input.keyboard.addKey('R')
+      p: k('P'),
+      r: k('R')
     }
   };
 
