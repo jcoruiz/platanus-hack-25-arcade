@@ -753,7 +753,7 @@ function initGameplay() {
   keys.ac.r.on('down', () => { if (!startScreen) restartGame(); });
 
   // Keyboard for pause (using central keys)
-  let pauseOverlay = null, pauseText = null, pauseHint = null;
+  let pauseOverlay = null, pauseTexts = null, pauseTweens = null, pauseHint = null;
   keys.ac.p.on('down', () => {
     if (!gameOver && !startScreen && !levelingUp && !selectingWeapon) {
       paused = !paused;
@@ -762,13 +762,44 @@ function initGameplay() {
         playTone(s, 600, 0.1);
         pauseOverlay = s.add.graphics();
         pauseOverlay.fillStyle(C.B, 0.7).fillRect(0, 0, 800, 600)[SSF](0)[SD](200);
-        pauseText = mkTxt(400, 300, 'PAUSED', { [F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8 }, 201);
-        pauseHint = mkTxt(400, 370, 'Press [P] to resume', { [F]: '24px', [FF]: A, [CO]: CS.W }, 201);
+
+        // Chromatic aberration effect for PAUSED text (matching main menu title)
+        const pt1 = mkTxt(396, 298, 'PAUSED', { [F]: '72px', [FF]: A, [CO]: '#ff0044', [STR]: '#ff0044', [STT]: 3 }, 200);
+        const pt2 = mkTxt(404, 302, 'PAUSED', { [F]: '72px', [FF]: A, [CO]: '#00ffff', [STR]: '#00ffff', [STT]: 3 }, 201);
+        const pt3 = mkTxt(400, 300, 'PAUSED', { [F]: '72px', [FF]: A, [CO]: CS.W, [STR]: CS.W, [STT]: 3 }, 202);
+        pauseTexts = [pt1, pt2, pt3];
+
+        // Shake animation on all layers
+        const shakeTween = s.tweens.add({
+          targets: pauseTexts,
+          rotation: 0.035,
+          x: '+=2',
+          duration: 1000,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+
+        // Pulse animation on white layer only
+        const pulseTween = s.tweens.add({
+          targets: pt3,
+          scaleX: 1.03,
+          scaleY: 1.03,
+          alpha: 0.92,
+          duration: 1500,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Cubic.easeInOut'
+        });
+
+        pauseTweens = [shakeTween, pulseTween];
+        pauseHint = mkTxt(400, 370, 'Press [P] to resume', { [F]: '24px', [FF]: A, [CO]: CS.W }, 203);
       } else {
         s.physics.resume();
         playTone(s, 800, 0.1);
         pauseOverlay?.[DS]();
-        pauseText?.[DS]();
+        if (pauseTweens) { pauseTweens.forEach(t => t.stop()); pauseTweens = null; }
+        if (pauseTexts) { pauseTexts.forEach(t => t[DS]()); pauseTexts = null; }
         pauseHint?.[DS]();
       }
     }
