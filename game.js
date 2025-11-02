@@ -644,7 +644,7 @@ function create() {
   // Expand world bounds
   this.physics.world.setBounds(0, 0, 2400, 1800);
   this.physics.pause();
-  showMainMenu();
+  this.time.delayedCall(0, showMainMenu);
   playTone(this, 440, 0.1);
 }
 
@@ -1995,7 +1995,7 @@ function updateUI() {
 }
 
 function drawUIBars() {
-  gr.clear()[SSF](0);
+  gr.clear()[SSF](0)[SD](150);
   // Helper: draw bar (x, y, w, h, val, max, bgCol, fgCol, borderCol, borderW)
   const bar = (x, y, w, h, v, m, bg, fg, br, bw) => {
     gr.fillStyle(bg, 1).fillRect(x, y, w, h);
