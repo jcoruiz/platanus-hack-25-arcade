@@ -1703,7 +1703,7 @@ function showMainMenu() {
   mkTxt(400, 150, 'THE GAME', { [F]: '24px', [FF]: A, [CO]: '#ff00ff', [STR]: CS.B, [STT]: 2 }, 102);
 
   // Version text
-  mkTxt(750, 580, 'V1.12', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
+  mkTxt(750, 580, 'V1.13', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
 
   // Control instructions
   mkTxt(400, 540, 'WS: Move  SPACE: Select', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
