@@ -1315,11 +1315,117 @@ function renderStatsPanel() {
   });
 }
 
+// Lightweight selector (options array + optional reroll)
+function showSelector(opts, hasRr, onSel) {
+  cleanupMenu();
+  renderStatsPanel();
+  mkTxt(400, 320, '▸ Choose:', { [F]: '16px', [FF]: A, [CO]: CS.Cy }, 102);
+
+  sI = 0;
+  m = [];
+  const y = 360;
+  let rrBtn = null, rrCost = 10;
+
+  // Reroll button
+  if (hasRr) {
+    rrBtn = mkGr(101);
+    mkTxt(400, 550, `REROLL (${rrCost} Coins)`, { [F]: '18px', [FF]: A, [CO]: stats.c >= rrCost ? CS.Go : '#666' }, 102);
+  }
+
+  const renderOpts = (items) => {
+    items.forEach((it, i) => {
+      const x = 150 + i * 250;
+      const btn = mkGr(101);
+      btn.fillStyle(C.VG, 1).fillRoundedRect(x - 80, y - 10, 160, 110, 8).lineStyle(3, C.G, 1).strokeRoundedRect(x - 80, y - 10, 160, 110, 8);
+      mkTxt(x, y + 30, it.icon || it.n[0], { [F]: '40px' }, 102);
+      mkTxt(x, y + 70, it.name || it.n, { [F]: '16px', [FF]: A, [CO]: CS.W }, 102);
+      mkTxt(x, y + 90, it.desc || it.d, { [F]: '12px', [FF]: A, [CO]: CS.LG }, 102);
+      m.push({ btn, it, x });
+    });
+  };
+
+  const updSel = () => {
+    if (pulseTween) { pulseTween.stop(); pulseTween = null; }
+    if (pulseOverlay) { pulseOverlay.destroy(); pulseOverlay = null; }
+
+    m.forEach((o, i) => {
+      const sel = i === sI;
+      o.btn.clear().fillStyle(sel ? C.DB : C.VG, 1).fillRoundedRect(o.x - 80, y - 10, 160, 110, 8);
+      o.btn.lineStyle(3, sel ? C.Y : C.G, 1).strokeRoundedRect(o.x - 80, y - 10, 160, 110, 8);
+
+      if (sel) {
+        pulseOverlay = mkGr(103);
+        pulseOverlay.fillStyle(C.P, 0.3).fillRoundedRect(o.x - 80, y - 10, 160, 110, 8);
+        pulseTween = s.tweens.add({ targets: pulseOverlay, alpha: { from: 0.3, to: 0.7 }, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      }
+    });
+
+    if (hasRr && rrBtn) {
+      const canRr = stats.c >= rrCost;
+      const rrSel = sI === opts.length;
+      rrBtn.clear().fillStyle(rrSel ? (canRr ? 0x776600 : 0x444444) : (canRr ? 0x554400 : C.VG), 1).fillRoundedRect(260, 528, 280, 45, 8);
+      rrBtn.lineStyle(3, rrSel ? C.Y : (canRr ? CS.Go : C.DB), 1).strokeRoundedRect(260, 528, 280, 45, 8);
+    }
+  };
+
+  renderOpts(opts);
+  updSel();
+
+  // Navigation
+  const goL = () => {
+    if (!hasRr || sI < opts.length) {
+      sI = (sI - 1 + opts.length) % opts.length;
+      updSel();
+      playTone(s, 800, 0.05);
+    }
+  };
+
+  const goR = () => {
+    if (!hasRr || sI < opts.length) {
+      sI = (sI + 1) % opts.length;
+      updSel();
+      playTone(s, 800, 0.05);
+    }
+  };
+
+  keys.mv.a.on('down', goL);
+  keys.mv.d.on('down', goR);
+  menuKeys.push(keys.mv.a, keys.mv.d);
+
+  if (hasRr) {
+    const goU = () => {
+      if (sI === opts.length) { sI = opts.length - 1; updSel(); playTone(s, 800, 0.05); }
+    };
+    const goD = () => {
+      if (sI < opts.length) { sI = opts.length; updSel(); playTone(s, 800, 0.05); }
+    };
+    keys.mv.w.on('down', goU);
+    keys.mv.s.on('down', goD);
+    menuKeys.push(keys.mv.w, keys.mv.s);
+  }
+
+  keys.mn.e.on('down', () => {
+    if (hasRr && sI === opts.length) {
+      if (stats.c < rrCost) return;
+      stats.c -= rrCost;
+      playTone(s, 1400, 0.1);
+      m.forEach(o => o.btn[DS]());
+      s.children.list.filter(c => c.depth === 102 && c.text && c.y >= 380 && c.y <= 460).forEach(c => c[DS]());
+      const newOpts = [...opts].sort(r).slice(0, 3);
+      m = [];
+      sI = 0;
+      renderOpts(newOpts);
+      updSel();
+      s.children.list.filter(c => c.depth === 102 && c.text && c.text.includes('Coins')).forEach(c => c.setText(`Coins: ${stats.c}`));
+    } else onSel(m[sI].it);
+  });
+
+  menuKeys.push(keys.mn.e);
+}
+
 function showUpgradeMenu(stateVar = 'levelingUp') {
-  // Clean any previous menu first
   cleanupMenu();
 
-  // Build available upgrades pool
   let availableUpgrades = [...pUpgrades];
   if (getWeapon('p').u) availableUpgrades.push(...projectileUpgrades);
   if (getWeapon('o').u) availableUpgrades.push(...orbitingBallUpgrades);
@@ -1327,10 +1433,9 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   if (getWeapon('b').u) availableUpgrades.push(...boomerangUpgrades);
   availableUpgrades = availableUpgrades.filter(u => (ul[u.id] || 0) < u.maxLevel);
 
-  // Check if no upgrades available (all maxed)
   if (availableUpgrades.length === 0) {
     const hpReward = 20;
-    stats.hp = Math.min(stats.mH, stats.hp + hpReward); // maxHp
+    stats.hp = Math.min(stats.mH, stats.hp + hpReward);
     playTone(s, 1500, 0.2);
     const msg = mkTxt(400, 300, `¡MAX LEVEL!\n+${hpReward} HP`, { [F]: '32px', [FF]: A, [CO]: CS.G, [STR]: CS.B, [STT]: 4 }, 150);
     s.tweens.add({ targets: msg, y: 250, alpha: 0, duration: 2000, onComplete: () => msg[DS]() });
@@ -1340,347 +1445,57 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     return;
   }
 
-  // Render stats panel
-  renderStatsPanel();
-
-  // Shuffle upgrades
   const shuffled = [...availableUpgrades].sort(r).slice(0, 3);
-  sI = 0;
-  m = [];
-
-  // Choose upgrade section (adjusted position)
-  const upgradeY = 360;
-  mkTxt(400, 320, '▸ Choose Upgrade:', { [F]: '16px', [FF]: A, [CO]: CS.Cy }, 102);
-
-  // Reroll vars (adjusted position)
-  const rerollCost = 10;
-  const rerollY = 550;
-  const rerollBtn = mkGr(101);
-  mkTxt(400, rerollY, `REROLL (${rerollCost} Coins)`, { [F]: '18px', [FF]: A, [CO]: stats.c >= rerollCost ? CS.Go : '#666' }, 102);
-
-  const renderUpgradeOptions = (upgrades) => {
-    upgrades.forEach((u, i) => {
-      const x = 150 + i * 250;
-      const btn = mkGr(101);
-      btn.fillStyle(C.VG, 1).fillRoundedRect(x - 80, upgradeY - 10, 160, 110, 8).lineStyle(3, C.G, 1).strokeRoundedRect(x - 80, upgradeY - 10, 160, 110, 8);
-      mkTxt(x, upgradeY + 30, u.icon, { [F]: '40px' }, 102);
-      mkTxt(x, upgradeY + 70, u.name, { [F]: '16px', [FF]: A, [CO]: CS.W }, 102);
-      mkTxt(x, upgradeY + 90, u.desc, { [F]: '12px', [FF]: A, [CO]: CS.LG }, 102);
-      m.push({ btn, u, x, y: upgradeY + 40 });
-    });
-  };
-
-  const doReroll = () => {
-    if (stats.c < rerollCost) return;
-    stats.c -= rerollCost;
-    playTone(s, 1400, 0.1);
-    m.forEach(opt => opt.btn[DS]());
-    s.children.list.filter(c => c.depth === 102 && c.text && c.y >= 380 && c.y <= 460).forEach(c => c[DS]());
-    const newShuffled = [...availableUpgrades].sort(r).slice(0, 3);
-    m = [];
-    sI = 0;
-    renderUpgradeOptions(newShuffled);
-    updateSelection();
-    s.children.list.filter(c => c.depth === 102 && c.text && c.text.includes('Coins')).forEach(c => c.setText(`Coins: ${stats.c}`));
-  };
-
-  const selectUpgrade = (u) => {
+  showSelector(shuffled, true, (u) => {
     u.apply();
     playTone(s, 1000, 0.1);
     cleanupMenu();
     s.physics.resume();
     if (stateVar === 'levelingUp') levelingUp = false;
     else if (stateVar === 'selectingWeapon') selectingWeapon = false;
-  };
-
-  const updateSelection = () => {
-    // Limpiar tween y overlay anteriores
-    if (pulseTween) { pulseTween.stop(); pulseTween = null; }
-    if (pulseOverlay) { pulseOverlay.destroy(); pulseOverlay = null; }
-
-    m.forEach((opt, i) => {
-      const sel = i === sI;
-      opt.btn.clear().fillStyle(sel ? C.DB : C.VG, 1).fillRoundedRect(opt.x - 80, upgradeY - 10, 160, 110, 8);
-      opt.btn.lineStyle(3, sel ? C.Y : C.G, 1).strokeRoundedRect(opt.x - 80, upgradeY - 10, 160, 110, 8);
-
-      // Efecto de pulso para opción seleccionada
-      if (sel) {
-        pulseOverlay = mkGr(103);
-        pulseOverlay.fillStyle(C.P, 0.3);
-        pulseOverlay.fillRoundedRect(opt.x - 80, upgradeY - 10, 160, 110, 8);
-
-        pulseTween = s.tweens.add({
-          targets: pulseOverlay,
-          alpha: { from: 0.3, to: 0.7 },
-          duration: 600,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut'
-        });
-      }
-    });
-    const canRr = stats.c >= rerollCost;
-    const rrSel = sI === 3;
-    rerollBtn.clear().fillStyle(rrSel ? (canRr ? 0x776600 : 0x444444) : (canRr ? 0x554400 : C.VG), 1).fillRoundedRect(260, rerollY - 22, 280, 45, 8);
-    rerollBtn.lineStyle(3, rrSel ? C.Y : (canRr ? CS.Go : C.DB), 1).strokeRoundedRect(260, rerollY - 22, 280, 45, 8);
-  };
-
-  renderUpgradeOptions(shuffled);
-  updateSelection();
-
-  // Keyboard navigation handlers
-  const goLeft = () => {
-    if (sI < 3) {
-      sI = (sI - 1 + m.length) % m.length;
-      updateSelection();
-      playTone(s, 800, 0.05);
-    }
-  };
-
-  const goRight = () => {
-    if (sI < 3) {
-      sI = (sI + 1) % m.length;
-      updateSelection();
-      playTone(s, 800, 0.05);
-    }
-  };
-
-  const goUp = () => {
-    if (sI === 3) {
-      sI = m.length - 1;
-      updateSelection();
-      playTone(s, 800, 0.05);
-    }
-  };
-
-  const goDown = () => {
-    if (sI < 3) {
-      sI = 3;
-      updateSelection();
-      playTone(s, 800, 0.05);
-    }
-  };
-
-  // Attach listeners to central keys
-  keys.mv.a.on('down', goLeft);
-  keys.mv.d.on('down', goRight);
-  keys.mv.w.on('down', goUp);
-  keys.mv.s.on('down', goDown);
-
-  keys.mn.e.on('down', () => {
-    if (sI === 3) doReroll();
-    else if (sI < 3) selectUpgrade(m[sI].u);
   });
-
-  // Track keys for cleanup (references only)
-  menuKeys.push(keys.mv.a, keys.mv.d, keys.mv.w, keys.mv.s, keys.mn.e);
 }
 
 function showWeaponSelector(weapons) {
-  // Prevent multiple simultaneous menu states
   if (gameOver || levelingUp || selectingWeapon || startScreen || paused) return;
 
   selectingWeapon = true;
   s.physics.pause();
 
-  // Clean any previous menu first
-  cleanupMenu();
-
-  // Render stats panel
-  renderStatsPanel();
-
-  // Reset menu state
-  sI = 0;
-  m = [];
-
-  // Choose weapon section
-  const weaponY = 360;
-  mkTxt(400, 320, '▸ Choose Weapon:', { [F]: '16px', [FF]: A, [CO]: CS.Cy }, 102);
-
-  const selectWeapon = (weapon) => {
-    weapon.u = true;
+  showSelector(weapons, false, (w) => {
+    w.u = true;
     playTone(s, 1500, 0.2);
-
-    // Initialize weapon
-    if (weapon.i === 'o') {
-      initOrbBalls();
-    } else if (weapon.i === 'a') {
-      initAreaDamage();
-    } else if (weapon.i === 'b') {
-      initBoom();
-    }
-
-    // Clean up menu
+    if (w.i === 'o') initOrbBalls();
+    else if (w.i === 'a') initAreaDamage();
+    else if (w.i === 'b') initBoom();
     cleanupMenu();
-
-    // Resume
     s.physics.resume();
     selectingWeapon = false;
-  };
-
-  const updateSelection = () => {
-    // Limpiar tween y overlay anteriores
-    if (pulseTween) { pulseTween.stop(); pulseTween = null; }
-    if (pulseOverlay) { pulseOverlay.destroy(); pulseOverlay = null; }
-
-    m.forEach((option, i) => {
-      const isSelected = i === sI;
-      option.btn.clear();
-      option.btn.fillStyle(isSelected ? C.DB : C.VG, 1);
-      option.btn.fillRoundedRect(option.x - 90, weaponY - 10, 180, 200, 10);
-      option.btn.lineStyle(3, isSelected ? C.Y : C.G, 1);
-      option.btn.strokeRoundedRect(option.x - 90, weaponY - 10, 180, 200, 10);
-
-      // Efecto de pulso para arma seleccionada
-      if (isSelected) {
-        pulseOverlay = mkGr(103);
-        pulseOverlay.fillStyle(C.P, 0.3);
-        pulseOverlay.fillRoundedRect(option.x - 90, weaponY - 10, 180, 200, 10);
-
-        pulseTween = s.tweens.add({
-          targets: pulseOverlay,
-          alpha: { from: 0.3, to: 0.7 },
-          duration: 600,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut'
-        });
-      }
-    });
-  };
-
-  weapons.forEach((weapon, i) => {
-    const x = 200 + i * 200;
-    const btn = mkGr(101);
-    btn.fillStyle(C.VG, 1).fillRoundedRect(x - 90, weaponY - 10, 180, 200, 10).lineStyle(3, C.G, 1).strokeRoundedRect(x - 90, weaponY - 10, 180, 200, 10);
-    mkTxt(x, weaponY + 50, weapon.n, { [F]: '20px', [FF]: A, [CO]: CS.W, [FST]: 'bold' }, 102);
-    mkTxt(x, weaponY + 110, weapon.d, { [F]: '14px', [FF]: A, [CO]: CS.LG }, 102);
-    m.push({ btn, weapon, x });
   });
-
-  // Initial selection highlight
-  updateSelection();
-
-  // Keyboard navigation handlers
-  const goLeft = () => {
-    sI = (sI - 1 + m.length) % m.length;
-    updateSelection();
-    playTone(s, 800, 0.05);
-  };
-
-  const goRight = () => {
-    sI = (sI + 1) % m.length;
-    updateSelection();
-    playTone(s, 800, 0.05);
-  };
-
-  // Attach listeners to central keys
-  keys.mv.a.on('down', goLeft);
-  keys.mv.d.on('down', goRight);
-
-  keys.mn.e.on('down', () => {
-    selectWeapon(m[sI].weapon);
-  });
-
-  // Track keys for cleanup (references only)
-  menuKeys.push(keys.mv.a, keys.mv.d, keys.mn.e);
 }
 
 function showRareUpg() {
-  // Prevent multiple simultaneous menu states
   if (gameOver || levelingUp || selectingWeapon || startScreen || paused) return;
 
   selectingWeapon = true;
   s.physics.pause();
 
-  // Clean any previous menu first
-  cleanupMenu();
-
-  // Filter rare upgrades to only unlocked weapons and not maxed
   const available = rareUpgrades.filter(u => {
-    if (!u.weaponId) return true; // Player upgrades
+    if (!u.weaponId) return true;
     const isUnlocked = getWeapon(u.weaponId).u;
     const notMaxed = (ul[u.id] || 0) < u.maxLevel;
     return isUnlocked && notMaxed;
   });
 
-  // Semi-transparent overlay
-  const overlay = s.add.graphics();
-  overlay.fillStyle(C.B, 0.85);
-  overlay.fillRect(0, 0, 800, 600);
-  overlay[SSF](0);
-  overlay[SD](100);
-
-  // Title
-  mkTxt(400, 100, '✨ RARE UPGRADE! ✨', { [F]: '48px', [FF]: A, [CO]: '#ff00ff', [STR]: CS.B, [STT]: 6 });
-
-  // Shuffle and pick 3 rare upgrades
   const shuffled = [...available].sort(r).slice(0, 3);
 
-  // Reset menu state
-  sI = 0;
-  m = [];
-
-  const selectUpgrade = (upgrade) => {
-    upgrade.apply();
+  showSelector(shuffled, false, (u) => {
+    u.apply();
     playTone(s, 1800, 0.1);
-
-    // Clean up menu
     cleanupMenu();
-
-    // Resume
     s.physics.resume();
     selectingWeapon = false;
-  };
-
-  const updateSelection = () => {
-    m.forEach((option, i) => {
-      const isSelected = i === sI;
-      option.btn.clear();
-      option.btn.fillStyle(isSelected ? 0x550055 : 0x330033, 1);
-      option.btn.fillRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
-      option.btn.lineStyle(3, isSelected ? C.Y : C.P, 1);
-      option.btn.strokeRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
-    });
-  };
-
-  shuffled.forEach((upgrade, i) => {
-    const x = 150 + i * 250;
-    const y = 300;
-    const btn = mkGr(101);
-    btn.fillStyle(0x330033, 1).fillRoundedRect(x - 90, y - 80, 180, 160, 10).lineStyle(3, C.P, 1).strokeRoundedRect(x - 90, y - 80, 180, 160, 10);
-    mkTxt(x, y - 30, upgrade.icon, { [F]: '48px' }, 102);
-    mkTxt(x, y + 20, upgrade.name, { [F]: '18px', [FF]: A, [CO]: '#f0f', [FST]: 'bold' }, 102);
-    mkTxt(x, y + 50, upgrade.desc, { [F]: '14px', [FF]: A, [CO]: '#faf' }, 102);
-    m.push({ btn, upgrade, x, y });
   });
-
-  // Initial selection highlight
-  updateSelection();
-
-  // Keyboard navigation handlers
-  const goLeft = () => {
-    sI = (sI - 1 + m.length) % m.length;
-    updateSelection();
-    playTone(s, 800, 0.05);
-  };
-
-  const goRight = () => {
-    sI = (sI + 1) % m.length;
-    updateSelection();
-    playTone(s, 800, 0.05);
-  };
-
-  // Attach listeners to central keys
-  keys.mv.a.on('down', goLeft);
-  keys.mv.d.on('down', goRight);
-
-  keys.mn.e.on('down', () => {
-    selectUpgrade(m[sI].upgrade);
-  });
-
-  // Track keys for cleanup (references only)
-  menuKeys.push(keys.mv.a, keys.mv.d, keys.mn.e);
 }
 
 // Helper: glitch text triple-layer effect (reusable)
@@ -2794,9 +2609,9 @@ function playTone(sceneRef, frequency, duration) {
 
 // Techno Music System - Procedural 140 BPM loop
 // Patterns: bp=bass, sp=synth chords (note offsets from root)
-const bp = [1,0,0,0,1,0,1,0,0,1,0,0,1,0,0,0]; // 16-step bass pattern
-const sp = [[0,7,12],[0,3,7],[0,5,9],[0,7,12]]; // Em, C, Am, Em chord progression
-const sn = [64,60,57,64]; // Root notes: E, C, A, E (MIDI)
+const bp = [1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0]; // 16-step bass pattern
+const sp = [[0, 7, 12], [0, 3, 7], [0, 5, 9], [0, 7, 12]]; // Em, C, Am, Em chord progression
+const sn = [64, 60, 57, 64]; // Root notes: E, C, A, E (MIDI)
 
 // Kick drum with punch (FM synthesis + pitch bend)
 function playKick(ctx, time) {
