@@ -46,6 +46,7 @@ const F = 'fontSize', FF = 'fontFamily', A = 'Arial', CO = 'color', STR = 'strok
 // Common strings
 const AC = 'active', SSF = 'setScrollFactor', SD = 'setDepth', DS = 'destroy', SO = 'setOrigin';
 // Graphics factory functions (g=graphics reference)
+const INST = '[WASD]Move  [SPACE]Select  [ESC]Back  [P]Pause  [R]Restart';
 let g;
 const fs = (c, a = 1) => g.fillStyle(c, a);
 const gt = (...a) => (g.generateTexture(...a), g.clear());
@@ -1726,7 +1727,7 @@ function showMainMenu() {
   mkTxt(750, 580, 'V1.14', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
 
   // Control instructions
-  mkTxt(400, 540, 'WASD: Move  SPACE: Select ESC: Back', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
+  mkTxt(400, 540, INST, { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
 
   sI = 0;
   const opts = [
@@ -1963,7 +1964,7 @@ function showStartScreen() {
   // Initial draw
   upd(false);
 
-  mkTxt(400, 540, 'AD: Move  SPACE: Select  ESC: Back', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
+  mkTxt(400, 540, INST, { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
 
   // Keyboard navigation handlers
   const goLeft = () => {
@@ -2004,7 +2005,7 @@ function createUI() {
   ui.levelText = txt(550, 10, 'Level: 1', CS.Y);
   ui.coinsText = txt(650, 10, 'Coins: 0', CS.Go);
   ui.timeText = txt(740, 10, '0:00', CS.Cy);
-  ui.statsHint = txt(580, 580, '[P]Pause [R]Retry', CS.Gy, '14px', 10);
+  // ui.statsHint = txt(580, 580, '[P]Pause [R]Retry', CS.Gy, '14px', 10);
 }
 
 function updateUI() {
