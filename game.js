@@ -468,10 +468,10 @@ function preload() {
   // Orbe texture (half purple, half blue)
   fs(0xcc00ff, 1); // Purple left half
   g.slice(16, 16, 12, Phaser.Math.DegToRad(90), Phaser.Math.DegToRad(270), false);
-  g.fillPath();
+  fp();
   fs(0x0088ff, 1); // Blue right half
   g.slice(16, 16, 12, Phaser.Math.DegToRad(270), Phaser.Math.DegToRad(90), false);
-  g.fillPath();
+  fp();
   // Dividing line
   ls(2, C.W, 1);
   g.lineBetween(16, 4, 16, 28);
