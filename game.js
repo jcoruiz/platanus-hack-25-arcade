@@ -125,19 +125,19 @@ let bTmr = 0;
 
 const inS = { // initial stats
   hp: 100,
-  maxHp: 100,
-  speed: 150,
-  knockback: 10,
-  hpRegen: 0,
-  xpMultiplier: 1.0,
-  lootChance: 1.0,
-  critChance: 0.05,
-  critDamage: 1.5,
+  mH: 100, // maxHp
+  sp: 150, // speed
+  kb: 10, // knockback
+  hR: 0, // hpRegen
+  xM: 1.0, // xpMultiplier
+  lC: 1.0, // lootChance
+  cC: 0.05, // critChance
+  cD: 1.5, // critDamage
   xp: 0,
-  coins: 0,
-  level: 1,
-  xpToNext: 10,
-  enKilled: 0
+  c: 0, // coins
+  lv: 1, // level
+  xN: 10, // xpToNext
+  k: 0 // enKilled - enemies killed
 };
 
 let stats = JSON.parse(JSON.stringify(inS));
@@ -170,9 +170,9 @@ const u = (id, n, d, ic, ml, t, prop, val, min, w) => ({
 });
 
 const pUpgrades = [
-  u('s', 'Speed', '+15% Move', '👟', 8, 1, 'speed', 1.15),
-  { id: 'hp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: 10, apply: () => { stats.maxHp += 20; stats.hp += 20; ul.hp = (ul.hp || 0) + 1 } },
-  u('kb', 'Knockback', '+30% Enemy', '💨', 6, 1, 'knockback', 1.3),
+  u('s', 'Speed', '+15% Move', '👟', 8, 1, 'sp', 1.15), // speed
+  { id: 'hp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: 10, apply: () => { stats.mH += 20; stats.hp += 20; ul.hp = (ul.hp || 0) + 1 } }, // maxHp
+  u('kb', 'Knockback', '+30% Enemy', '💨', 6, 1, 'kb', 1.3), // knockback
   u('hr', 'HP Regen', '+10 HP/min', '💚', 10, 0, 'hpRegen', 10),
   u('xp', 'XP Boost', '+0.5x XP', '⭐', 8, 0, 'xpMultiplier', 0.5),
   u('l', 'Luck', '+3% Chest', '🍀', 10, 0, 'lootChance', 0.03),
@@ -238,8 +238,8 @@ function cleanupMenu(minDepth = 100) {
 // Helper: process damage with crit and feedback
 function procDmg(enemy, srcX, srcY, baseDmg) {
   if (!enemy[AC]) return false;
-  const isCrit = Math.random() < stats.critChance;
-  const dmg = isCrit ? baseDmg * stats.critDamage : baseDmg;
+  const isCrit = Math.random() < stats.cC; // critChance
+  const dmg = isCrit ? baseDmg * stats.cD : baseDmg; // critDamage
   const hp = enemy.getData('hp') - dmg;
   enemy.setData('hp', hp);
   applyDmgFb(enemy, srcX, srcY, isCrit);
@@ -279,12 +279,12 @@ function handleEnemyDeath(e) {
   if (Math.random() < 0.25) dropCoin(e.x, e.y, cn);
   if (iB) { dropChest(e.x, e.y); dropMagnet(e.x + 40, e.y); }
   else {
-    if (Math.random() < dc * stats.lootChance) dropUpgCh(e.x, e.y);
-    if (Math.random() < 0.015 * stats.lootChance) dropMagnet(e.x, e.y);
-    if (Math.random() < 0.015 * stats.lootChance) dropHealthHeal(e.x, e.y);
+    if (Math.random() < dc * stats.lC) dropUpgCh(e.x, e.y); // lootChance
+    if (Math.random() < 0.015 * stats.lC) dropMagnet(e.x, e.y);
+    if (Math.random() < 0.015 * stats.lC) dropHealthHeal(e.x, e.y);
   }
   e[DS]();
-  stats.enKilled++;
+  stats.k++; // enemies killed
 }
 
 // Generate high-res boss texture (60x60) to avoid pixelation when scaled
@@ -738,10 +738,10 @@ function update(_time, delta) {
   regenTimer += delta;
 
   // HP Regeneration (every 1 second)
-  if (regenTimer >= 1000 && stats.hpRegen > 0) {
+  if (regenTimer >= 1000 && stats.hR > 0) { // hpRegen
     regenTimer = 0;
-    const healAmount = stats.hpRegen / 60;
-    stats.hp = Math.min(stats.maxHp, stats.hp + healAmount);
+    const healAmount = stats.hR / 60;
+    stats.hp = Math.min(stats.mH, stats.hp + healAmount); // maxHp
   }
 
   // Player movement
@@ -749,25 +749,25 @@ function update(_time, delta) {
   let moving = false;
 
   if (wasd.a.isDown) {
-    p.body.setVelocityX(-stats.speed);
+    p.body.setVelocityX(-stats.sp); // speed
     moving = true;
   }
   if (wasd.d.isDown) {
-    p.body.setVelocityX(stats.speed);
+    p.body.setVelocityX(stats.sp); // speed
     moving = true;
   }
   if (wasd.w.isDown) {
-    p.body.setVelocityY(-stats.speed);
+    p.body.setVelocityY(-stats.sp); // speed
     moving = true;
   }
   if (wasd.s.isDown) {
-    p.body.setVelocityY(stats.speed);
+    p.body.setVelocityY(stats.sp); // speed
     moving = true;
   }
 
   // Normalize diagonal movement (only if at least one velocity component is non-zero)
   if (moving && (p.body.velocity.x !== 0 || p.body.velocity.y !== 0)) {
-    p.body.velocity.normalize().scale(stats.speed);
+    p.body.velocity.normalize().scale(stats.sp); // speed
   }
 
   // Handle idle/movement animations
@@ -1095,10 +1095,10 @@ function collectXP(_pObj, orb) {
   if (!orb[AC]) return;
   const baseXpValue = orb.getData('xpValue') || 5;
   orb[DS]();
-  const xpValue = baseXpValue * stats.xpMultiplier;
+  const xpValue = baseXpValue * stats.xM; // xpMultiplier
   stats.xp += xpValue;
 
-  if (stats.xp >= stats.xpToNext) {
+  if (stats.xp >= stats.xN) { // xpToNext
     levelUp();
   }
 }
@@ -1111,7 +1111,7 @@ function collectCoin(_pObj, coin) {
   if (!coin[AC]) return;
   const coinValue = coin.getData('coinValue') || 1;
   coin[DS]();
-  stats.coins += coinValue;
+  stats.c += coinValue; // coins
   playTone(scene, 1800, 0.15);
 }
 
@@ -1173,15 +1173,15 @@ function collectMagnet(_pObj, magnet) {
 function colHeal(_pObj, healDrop) {
   if (!healDrop[AC]) return;
   healDrop[DS]();
-  stats.hp = Math.min(stats.maxHp, stats.hp + 30);
+  stats.hp = Math.min(stats.mH, stats.hp + 30); // maxHp
   playTone(scene, 900, 0.2);
 }
 
 function levelUp() {
   levelingUp = true;
-  stats.level++;
-  stats.xp -= stats.xpToNext;
-  stats.xpToNext = ~~(stats.xpToNext * 1.2);
+  stats.lv++; // level
+  stats.xp -= stats.xN;
+  stats.xN = ~~(stats.xN * 1.2);
 
   // Apply character passive ability
   if (selCh) {
@@ -1194,13 +1194,13 @@ function levelUp() {
       if (weapon) weapon.m *= value;
     } else if (passive === 2) { // regen
       // Medusa: +5 HP regen
-      stats.hpRegen += value;
+      stats.hR += value;
     } else if (passive === 3) { // crit
       // Orbe: +2% crit chance
-      stats.critChance = Math.min(1, stats.critChance + value);
+      stats.cC = Math.min(1, stats.cC + value);
     } else if (passive === 4) { // speed
       // Tren Bala: +3% speed
-      stats.speed = ~~(stats.speed * value);
+      stats.sp = ~~(stats.sp * value); // speed
     }
   }
 
@@ -1233,8 +1233,8 @@ function renderStatsPanel() {
   topPanel.lineStyle(3, C.P, 1).strokeRoundedRect(15, 15, 770, 270, 8);
 
   // Header text + Coins
-  mkTxt(60, 30, `LEVEL ${stats.level}`, { [F]: '20px', [FF]: A, [CO]: CS.Y }, 102);
-  mkTxt(720, 30, `Coins: ${stats.coins}`, { [F]: '18px', [FF]: A, [CO]: CS.Go }, 102);
+  mkTxt(60, 30, `LEVEL ${stats.lv}`, { [F]: '20px', [FF]: A, [CO]: CS.Y }, 102); // level
+  mkTxt(720, 30, `Coins: ${stats.c}`, { [F]: '18px', [FF]: A, [CO]: CS.Go }, 102);
 
   // Hero sprite with purple border
   scene.add.sprite(70, 110, selCh.texture).setScale(3)[SSF](0)[SD](102);
@@ -1327,7 +1327,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   // Check if no upgrades available (all maxed)
   if (availableUpgrades.length === 0) {
     const hpReward = 20;
-    stats.hp = Math.min(stats.maxHp, stats.hp + hpReward);
+    stats.hp = Math.min(stats.mH, stats.hp + hpReward); // maxHp
     playTone(scene, 1500, 0.2);
     const msg = mkTxt(400, 300, `¡MAX LEVEL!\n+${hpReward} HP`, { [F]: '32px', [FF]: A, [CO]: CS.G, [STR]: CS.B, [STT]: 4 }, 150);
     scene.tweens.add({ targets: msg, y: 250, alpha: 0, duration: 2000, onComplete: () => msg[DS]() });
@@ -1353,7 +1353,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   const rerollCost = 10;
   const rerollY = 550;
   const rerollBtn = mkGr(101);
-  mkTxt(400, rerollY, `REROLL (${rerollCost} Coins)`, { [F]: '18px', [FF]: A, [CO]: stats.coins >= rerollCost ? CS.Go : '#666' }, 102);
+  mkTxt(400, rerollY, `REROLL (${rerollCost} Coins)`, { [F]: '18px', [FF]: A, [CO]: stats.c >= rerollCost ? CS.Go : '#666' }, 102);
 
   const renderUpgradeOptions = (upgrades) => {
     upgrades.forEach((u, i) => {
@@ -1368,8 +1368,8 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   };
 
   const doReroll = () => {
-    if (stats.coins < rerollCost) return;
-    stats.coins -= rerollCost;
+    if (stats.c < rerollCost) return;
+    stats.c -= rerollCost;
     playTone(scene, 1400, 0.1);
     menuOptions.forEach(opt => opt.btn[DS]());
     scene.children.list.filter(c => c.depth === 102 && c.text && c.y >= 380 && c.y <= 460).forEach(c => c[DS]());
@@ -1378,7 +1378,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     selectedIndex = 0;
     renderUpgradeOptions(newShuffled);
     updateSelection();
-    scene.children.list.filter(c => c.depth === 102 && c.text && c.text.includes('Coins')).forEach(c => c.setText(`Coins: ${stats.coins}`));
+    scene.children.list.filter(c => c.depth === 102 && c.text && c.text.includes('Coins')).forEach(c => c.setText(`Coins: ${stats.c}`));
   };
 
   const selectUpgrade = (u) => {
@@ -1416,7 +1416,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
         });
       }
     });
-    const canRr = stats.coins >= rerollCost;
+    const canRr = stats.c >= rerollCost;
     const rrSel = selectedIndex === 3;
     rerollBtn.clear().fillStyle(rrSel ? (canRr ? 0x776600 : 0x444444) : (canRr ? 0x554400 : C.VG), 1).fillRoundedRect(260, rerollY - 22, 280, 45, 8);
     rerollBtn.lineStyle(3, rrSel ? C.Y : (canRr ? CS.Go : C.DB), 1).strokeRoundedRect(260, rerollY - 22, 280, 45, 8);
@@ -1986,8 +1986,8 @@ function createUI() {
 }
 
 function updateUI() {
-  ui.levelText.setText(`Level: ${stats.level}`);
-  ui.coinsText.setText(`Coins: ${stats.coins}`);
+  ui.levelText.setText(`Level: ${stats.lv}`); // level
+  ui.coinsText.setText(`Coins: ${stats.c}`);
 
   const minutes = ~~(gameTime / 60000);
   const seconds = ~~((gameTime % 60000) / 1000);
@@ -2002,8 +2002,8 @@ function drawUIBars() {
     gr.fillStyle(fg, 1).fillRect(x, y, w * (v / m), h);
     gr.lineStyle(bw, br, 1).strokeRect(x, y, w, h);
   };
-  bar(50, 10, 200, 20, stats.hp, stats.maxHp, C.DR, C.R, C.W, 2);
-  bar(330, 10, 180, 20, stats.xp, stats.xpToNext, 0x004444, C.Cy, C.W, 2);
+  bar(50, 10, 200, 20, stats.hp, stats.mH, C.DR, C.R, C.W, 2); // maxHp
+  bar(330, 10, 180, 20, stats.xp, stats.xN, 0x004444, C.Cy, C.W, 2);
 
   // Find all active bosses
   let bosses = [];
@@ -2071,8 +2071,8 @@ function endGame() {
   // Stats
   const mins = ~~(gameTime / 60000), secs = ~~((gameTime % 60000) / 1000);
   const timeText = mkTxt(400, 300, `Time: ${mins}:${('0' + secs).slice(-2)}`, { [F]: '28px', [FF]: A, [CO]: CS.Cy });
-  const levelText = mkTxt(400, 350, `Level: ${stats.level}`, { [F]: '28px', [FF]: A, [CO]: CS.Y });
-  const killsText = mkTxt(400, 400, `Kills: ${stats.enKilled}`, { [F]: '28px', [FF]: A, [CO]: CS.G });
+  const levelText = mkTxt(400, 350, `Level: ${stats.lv}`, { [F]: '28px', [FF]: A, [CO]: CS.Y }); // level
+  const killsText = mkTxt(400, 400, `Kills: ${stats.k}`, { [F]: '28px', [FF]: A, [CO]: CS.G });
 
   // After 2 seconds, transition to leaderboard flow
   scene.time.delayedCall(2000, () => {
@@ -2084,7 +2084,7 @@ function endGame() {
     killsText[DS]();
 
     // Show leaderboard flow
-    if (qualForLb(stats.enKilled)) {
+    if (qualForLb(stats.k)) {
       showNameEntry();
     } else {
       showLeaderboard();
@@ -2180,9 +2180,9 @@ function showNameEntry() {
 
   // Title & Stats
   const mins = ~~(gameTime / 60000), secs = ~~((gameTime % 60000) / 1000);
-  mkTxt(400, 80, qualForLb(stats.enKilled) ? 'NEW HIGH SCORE!' : 'ENTER YOUR NAME', { [F]: '48px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 6 }, 151);
-  mkTxt(400, 150, `Kills: ${stats.enKilled}`, { [F]: '24px', [FF]: A, [CO]: CS.G }, 151);
-  mkTxt(400, 180, `Level: ${stats.level}  Time: ${mins}:${('0' + secs).slice(-2)}`, { [F]: '20px', [FF]: A, [CO]: CS.W }, 151);
+  mkTxt(400, 80, qualForLb(stats.k) ? 'NEW HIGH SCORE!' : 'ENTER YOUR NAME', { [F]: '48px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 6 }, 151);
+  mkTxt(400, 150, `Kills: ${stats.k}`, { [F]: '24px', [FF]: A, [CO]: CS.G }, 151);
+  mkTxt(400, 180, `Level: ${stats.lv}  Time: ${mins}:${('0' + secs).slice(-2)}`, { [F]: '20px', [FF]: A, [CO]: CS.W }, 151); // level
 
   // Name input boxes
   const boxesY = 280;
@@ -2271,7 +2271,7 @@ function showNameEntry() {
     if (finalName.length) {
       cleanup();
       playTone(scene, 1200, 0.2);
-      const position = addToLeaderboard(finalName, stats.enKilled);
+      const position = addToLeaderboard(finalName, stats.k);
       showLeaderboard(position);
     }
   });
@@ -2717,7 +2717,7 @@ function applyDmgFb(enemy, sourceX, sourceY, isCrit = false) {
 
   // Calculate knockback direction (away from source)
   const angle = Phaser.Math.Angle.Between(sourceX, sourceY, enemy.x, enemy.y);
-  const knockbackForce = isCrit ? stats.knockback * 1.5 : stats.knockback;
+  const knockbackForce = isCrit ? stats.kb * 1.5 : stats.kb; // knockback
 
   // Estimate target position after knockback (velocity * time)
   const kbTime = 0.15; // 150ms
