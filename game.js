@@ -848,10 +848,10 @@ function update(_time, delta) {
 
   // HYPER scaling every 20 seconds (only after 10 minutes)
   if (hyperModeActive && ~~(gameTime / 20000) > ~~((gameTime - delta) / 20000)) {
-    difficulty.spawnRate = Math.max(50, difficulty.spawnRate * 0.3);
-    difficulty.enemyHp *= 5;
-    difficulty.enemyDamage *= 5;
-    difficulty.enemySpeed *= 3;
+    difficulty.spawnRate = Math.max(50, difficulty.spawnRate * 0.5);
+    difficulty.enemyHp *= 1.5;
+    difficulty.enemyDamage *= 1.2;
+    difficulty.enemySpeed *= 1.1;
   }
 
   // Wave system (every 60 seconds)
