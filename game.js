@@ -1693,13 +1693,34 @@ function showMainMenu() {
   // Dark background with transparency to show background
   s.add.graphics().fillStyle(C.B, 0.4).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
 
-  // Hotline Miami style title with glitch effect (multiple layers)
-  // Pink/magenta shadow layer
-  mkTxt(403, 83, '50K Survivors', { [F]: '72px', [FF]: A, [CO]: '#ff00ff', [STR]: '#ff00ff', [STT]: 3 }, 101);
-  // Cyan main layer
-  mkTxt(400, 80, '50K Survivors', { [F]: '72px', [FF]: A, [CO]: CS.Cy, [STR]: CS.Cy, [STT]: 3 }, 102);
-  // Subtitle in pink
-  mkTxt(400, 150, 'THE GAME', { [F]: '24px', [FF]: A, [CO]: '#ff00ff', [STR]: CS.B, [STT]: 2 }, 102);
+  let tlt = '50K Survivors';
+  // Hotline Miami style title with chromatic aberration + animated shake/pulse
+  const t1 = mkTxt(396, 78, tlt, { [F]: '72px', [FF]: A, [CO]: '#ff0044', [STR]: '#ff0044', [STT]: 3 }, 100);
+  const t2 = mkTxt(404, 82, tlt, { [F]: '72px', [FF]: A, [CO]: '#00ffff', [STR]: '#00ffff', [STT]: 3 }, 101);
+  const t3 = mkTxt(400, 80, tlt, { [F]: '72px', [FF]: A, [CO]: CS.W, [STR]: CS.W, [STT]: 3 }, 102);
+
+  // Shake effect: rotation + position offset
+  s.tweens.add({
+    targets: [t1, t2, t3],
+    rotation: 0.035,
+    x: '+=2',
+    duration: 1000,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut'
+  });
+
+  // Pulse effect on main layer
+  s.tweens.add({
+    targets: t3,
+    scaleX: 1.03,
+    scaleY: 1.03,
+    alpha: 0.92,
+    duration: 1500,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Cubic.easeInOut'
+  });
 
   // Version text
   mkTxt(750, 580, 'V1.14', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
