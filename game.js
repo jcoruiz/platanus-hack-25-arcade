@@ -28,6 +28,9 @@ let lastOrbSize = 0; // Track orbit ball size to avoid unnecessary updates
 let lastAreaRadius = 0; // Track area damage radius to avoid unnecessary style updates
 let s;
 
+// Music system: bgm=sequencer state, bgmInt=scheduler interval, bgmB=current beat, bgmT=next note time
+let bgm = null, bgmInt = null, bgmB = 0, bgmT = 0;
+
 let sI = 0; // selectedIndex
 let m = []; // menu items
 let menuKeys = [];
@@ -1887,6 +1890,7 @@ function showStartScreen() {
     cleanupMenu();
     s.physics.resume();
     startScreen = false;
+    startMusic(); // Start techno music loop
   };
 
   let glowPulse = 0.4;
@@ -2079,6 +2083,7 @@ function drawUIBars() {
 
 function endGame() {
   gameOver = true;
+  stopMusic(); // Stop techno music
   playTone(s, 150, 0.5);
 
   // Overlay
@@ -2116,6 +2121,9 @@ function endGame() {
 }
 
 function restartGame() {
+  // Stop music first
+  stopMusic();
+
   // Stop tweens and reset to null for recreation in initGameplay()
   idleTween?.stop();
   idleTween = null;
@@ -2782,4 +2790,259 @@ function playTone(sceneRef, frequency, duration) {
 
   osc.start(ctx.currentTime);
   osc.stop(ctx.currentTime + duration);
+}
+
+// Techno Music System - Procedural 140 BPM loop
+// Patterns: bp=bass, sp=synth chords (note offsets from root)
+const bp = [1,0,0,0,1,0,1,0,0,1,0,0,1,0,0,0]; // 16-step bass pattern
+const sp = [[0,7,12],[0,3,7],[0,5,9],[0,7,12]]; // Em, C, Am, Em chord progression
+const sn = [64,60,57,64]; // Root notes: E, C, A, E (MIDI)
+
+// Kick drum with punch (FM synthesis + pitch bend)
+function playKick(ctx, time) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const comp = ctx.createDynamicsCompressor();
+
+  osc.connect(gain);
+  gain.connect(comp);
+  comp.connect(ctx.destination);
+
+  // Pitch bend for punch: 50Hz -> 35Hz
+  osc.frequency.setValueAtTime(50, time);
+  osc.frequency.exponentialRampToValueAtTime(35, time + 0.05);
+  osc.type = 'sine';
+
+  // Aggressive ADSR envelope
+  gain.gain.setValueAtTime(0, time);
+  gain.gain.linearRampToValueAtTime(0.5, time + 0.001); // Instant attack
+  gain.gain.exponentialRampToValueAtTime(0.01, time + 0.15); // Fast decay
+
+  // Compression for punch
+  comp.threshold.setValueAtTime(-10, time);
+  comp.ratio.setValueAtTime(12, time);
+
+  osc.start(time);
+  osc.stop(time + 0.2);
+}
+
+// Bassline (square wave + resonant filter)
+function playBass(ctx, time, noteIndex) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+
+  // Note sequence: E1, G1, A1, C2
+  const notes = [41.2, 49, 55, 65.4]; // Hz
+  osc.frequency.value = notes[noteIndex % 4];
+  osc.type = 'square';
+
+  // Resonant low-pass filter
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(800, time);
+  filter.Q.value = 8;
+
+  // Plucky envelope
+  gain.gain.setValueAtTime(0, time);
+  gain.gain.linearRampToValueAtTime(0.15, time + 0.005);
+  gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+
+  osc.start(time);
+  osc.stop(time + 0.12);
+}
+
+// Hi-hat (white noise + high-pass filter)
+function playHiHat(ctx, time, open) {
+  const bufferSize = 2048;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  // Generate white noise
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+
+  const noise = ctx.createBufferSource();
+  const filter = ctx.createBiquadFilter();
+  const gain = ctx.createGain();
+
+  noise.buffer = buffer;
+  noise.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+
+  // High-pass filter
+  filter.type = 'highpass';
+  filter.frequency.value = open ? 8000 : 10000;
+
+  // Envelope (open vs closed)
+  const duration = open ? 0.15 : 0.05;
+  const volume = open ? 0.08 : 0.05;
+
+  gain.gain.setValueAtTime(volume, time);
+  gain.gain.exponentialRampToValueAtTime(0.01, time + duration);
+
+  noise.start(time);
+  noise.stop(time + duration);
+}
+
+// Clap/Snare (pink noise + multi-transient)
+function playClap(ctx, time) {
+  // Create 3 layered transients for realistic clap
+  for (let i = 0; i < 3; i++) {
+    const bufferSize = 2048;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    // Pink noise (filtered white noise)
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    for (let j = 0; j < bufferSize; j++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.96900 * b2 + white * 0.1538520;
+      b3 = 0.86650 * b3 + white * 0.3104856;
+      b4 = 0.55000 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.0168980;
+      data[j] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+      data[j] *= 0.11;
+      b6 = white * 0.115926;
+    }
+
+    const noise = ctx.createBufferSource();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+
+    noise.buffer = buffer;
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    // Band-pass filter around 2kHz
+    filter.type = 'bandpass';
+    filter.frequency.value = 2000;
+    filter.Q.value = 1;
+
+    // Envelope for this layer
+    const layerTime = time + (i * 0.03);
+    gain.gain.setValueAtTime(0.15, layerTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, layerTime + 0.12);
+
+    noise.start(layerTime);
+    noise.stop(layerTime + 0.12);
+  }
+}
+
+// Synth pad (detuned saw waves + chorus effect)
+function playSynth(ctx, time, chordIndex) {
+  const rootNote = sn[chordIndex % 4]; // MIDI note
+  const offsets = sp[chordIndex % 4]; // Chord intervals
+
+  // Create 3 notes per chord, each with 2 detuned oscillators
+  offsets.forEach((offset, idx) => {
+    const midiNote = rootNote + offset;
+    const freq = 440 * Math.pow(2, (midiNote - 69) / 12); // MIDI to Hz
+
+    // Two detuned oscillators for chorus
+    for (let detune of [-7, 7]) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.frequency.value = freq;
+      osc.detune.value = detune; // ±7 cents
+      osc.type = 'sawtooth';
+
+      // Low-pass filter with LFO (wobble)
+      filter.type = 'lowpass';
+      const wobble = Math.sin(time * Math.PI * 0.5) * 300 + 1200;
+      filter.frequency.setValueAtTime(wobble, time);
+      filter.Q.value = 2;
+
+      // Pad envelope (slow attack, long release)
+      gain.gain.setValueAtTime(0, time);
+      gain.gain.linearRampToValueAtTime(0.04, time + 0.3); // Slow attack
+      gain.gain.setValueAtTime(0.04, time + 3.5);
+      gain.gain.linearRampToValueAtTime(0, time + 4); // Fade at end of chord
+
+      osc.start(time);
+      osc.stop(time + 4);
+    }
+  });
+}
+
+// Main music scheduler (called every 25ms)
+function scheduleMusicNotes() {
+  if (!bgm || paused || gameOver || startScreen || mainMenu) return;
+
+  const ctx = bgm;
+  const lookahead = 0.1; // Schedule 100ms ahead
+  const beatDuration = 60 / 140; // 140 BPM = 0.4286s per beat
+
+  // Initialize timing on first call
+  if (bgmT === 0) bgmT = ctx.currentTime;
+
+  // Schedule all notes within lookahead window
+  while (bgmT < ctx.currentTime + lookahead) {
+    const beat = bgmB % 32; // 32 beats per loop (8 bars of 4/4)
+
+    // KICK: 4-on-the-floor (every beat)
+    if (beat % 4 === 0 || beat % 4 === 1 || beat % 4 === 2 || beat % 4 === 3) {
+      playKick(ctx, bgmT);
+    }
+
+    // CLAP: On beats 2 and 4 of each bar
+    if (beat % 8 === 4) {
+      playClap(ctx, bgmT);
+    }
+
+    // BASS: Follow 16-step pattern (plays on 16th-note grid)
+    const bassStep = (beat * 2) % 16; // Convert beat to 16th note
+    if (bp[bassStep]) {
+      playBass(ctx, bgmT, Math.floor(beat / 8)); // Change note every 2 bars
+    }
+
+    // HI-HATS: 16th notes (4 per beat)
+    for (let i = 0; i < 4; i++) {
+      const hhatTime = bgmT + (i * beatDuration / 4);
+      const isOpen = (i === 3 && beat % 2 === 1); // Open on off-beats
+      playHiHat(ctx, hhatTime, isOpen);
+    }
+
+    // SYNTH: Change chord every 2 bars (8 beats)
+    if (beat % 8 === 0) {
+      playSynth(ctx, bgmT, Math.floor(beat / 8));
+    }
+
+    // Advance to next beat
+    bgmT += beatDuration;
+    bgmB = (bgmB + 1) % 32; // Loop after 32 beats
+  }
+}
+
+// Start music system
+function startMusic() {
+  if (bgm || !s) return;
+  bgm = s.sound.context;
+  bgmB = 0;
+  bgmT = 0;
+  if (bgmInt) clearInterval(bgmInt);
+  bgmInt = setInterval(scheduleMusicNotes, 25); // High-precision scheduling
+}
+
+// Stop music system
+function stopMusic() {
+  if (bgmInt) clearInterval(bgmInt);
+  bgmInt = null;
+  bgm = null;
+  bgmB = 0;
+  bgmT = 0;
 }
