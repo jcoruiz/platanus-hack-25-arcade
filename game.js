@@ -2034,7 +2034,7 @@ function drawUIBars() {
       // Update HP text if changed
       if (!bUI.hpText || bUI.lastHp !== hp) {
         if (bUI.hpText) bUI.hpText[DS]();
-        bUI.hpText = mkTxt(xCenter, 62, `${~~hp} / ${~~maxHp}`, { [F]: '14px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 3 }, 200);
+        bUI.hpText = mkTxt(xCenter, 62, `${~~hp} / ${~~maxHp}`, { [F]: '14px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 3 }, 99);
         bUI.lastHp = hp;
       }
 
