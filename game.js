@@ -2014,7 +2014,7 @@ function saveLeaderboard(entries) {
 
 function addToLeaderboard(name, kills) {
   const entries = loadLeaderboard();
-  entries.push({ name: name.trim(), kills, date: Date.now() });
+  entries.push({ name: name.trim(), kills });
   entries.sort((a, b) => b.kills - a.kills);
   const trimmed = entries.slice(0, 10);
   saveLeaderboard(trimmed);
