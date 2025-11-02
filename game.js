@@ -58,15 +58,17 @@ const sr = (...a) => g.strokeRect(...a);
 const lt = (...a) => g.lineTo(...a);
 const fp = () => g.fillPath();
 
-// Enemy types: n=name, c=color, h=hpMult, s=speedMult, d=damageMult, x=xp, cn=coins, r=dropRate, u=unlockTime
+// Enemy type array indices: 0=name, 1=color, 2=hpMult, 3=speedMult, 4=damageMult, 5=xp, 6=coins, 7=dropRate, 8=unlockTime
+const EN=0, EC=1, EH=2, ES=3, ED=4, EX=5, ECN=6, ER=7, EU=8;
+// Enemy types as arrays for compression
 const enemyTypes = [
-  { n: 'g', c: C.G, h: 1.0, s: 0.5, d: 1.0, x: 5, cn: 1, r: 0.02, u: 0 },
-  { n: 'b', c: 0x0088ff, h: 1.5, s: 0.55, d: 1.2, x: 8, cn: 2, r: 0.03, u: 60000 },
-  { n: 'c', c: C.Cy, h: 2.0, s: 1.6, d: 1.4, x: 10, cn: 2, r: 0.035, u: 120000 },
-  { n: 'y', c: C.Y, h: 2.5, s: 0.65, d: 1.6, x: 15, cn: 3, r: 0.04, u: 180000 },
-  { n: 'o', c: C.O, h: 3.0, s: 0.7, d: 1.8, x: 20, cn: 3, r: 0.045, u: 240000 },
-  { n: 'r', c: C.R, h: 4.0, s: 0.8, d: 2.0, x: 25, cn: 4, r: 0.05, u: 300000 },
-  { n: 'p', c: C.P, h: 5.0, s: 0.9, d: 2.5, x: 35, cn: 5, r: 0.055, u: 360000 }
+  ['g', C.G, 1, .5, 1, 5, 1, .02, 0],
+  ['b', 0x0088ff, 1.5, .55, 1.2, 8, 2, .03, 60000],
+  ['c', C.Cy, 2, 1.6, 1.4, 10, 2, .035, 120000],
+  ['y', C.Y, 2.5, .65, 1.6, 15, 3, .04, 180000],
+  ['o', C.O, 3, .7, 1.8, 20, 3, .045, 240000],
+  ['r', C.R, 4, .8, 2, 25, 4, .05, 300000],
+  ['p', C.P, 5, .9, 2.5, 35, 5, .055, 360000]
 ];
 
 let unlockedTypes = [];
@@ -299,7 +301,7 @@ function handleEnemyDeath(e) {
 
 // Generate high-res boss texture (60x60) to avoid pixelation when scaled
 function generateBossTexture(type) {
-  const key = `boss_${type.n}`;
+  const key = `boss_${type[EN]}`;
 
   // Return if already cached
   if (s.textures.exists(key)) return key;
@@ -315,16 +317,16 @@ function generateBossTexture(type) {
   const circ = (x, y, rad) => g.fillCircle(x * c, y * c, rad * c);
   const rect = (x, y, w, h) => g.fillRect(x * c, y * c, w * c, h * c);
 
-  fs(type.c, 1);
+  fs(type[EC], 1);
 
   // Draw based on enemy type (same logic as preload)
-  if (type.n === 'g') { tri(10, 2, 2, 18, 18, 18); ey(7, 10, 13, 10); }
-  else if (type.n === 'b') { tri(10, 2, 2, 10, 10, 18); tri(10, 2, 18, 10, 10, 18); ey(8, 8, 12, 8); }
-  else if (type.n === 'c') { circ(10, 10, 9); ey(7, 9, 13, 9); fs(type.c, 0.7); circ(10, 6, 3); }
-  else if (type.n === 'y') { rect(3, 3, 14, 14); fs(C.B, 1); ey(7, 8, 13, 8); rect(6, 13, 8, 2); }
-  else if (type.n === 'o') { circ(10, 10, 9); tri(10, 1, 7, 8, 13, 8); tri(10, 19, 7, 12, 13, 12); tri(1, 10, 8, 7, 8, 13); tri(19, 10, 12, 7, 12, 13); ey(7, 8, 13, 8); }
-  else if (type.n === 'r') { circ(10, 10, 9); tri(3, 5, 5, 2, 7, 5); tri(17, 5, 15, 2, 13, 5); fs(C.R, 1); ey(7, 9, 13, 9); rect(7, 14, 6, 2); }
-  else if (type.n === 'p') { rect(4, 6, 12, 10); circ(6, 6, 3); circ(14, 6, 3); fs(C.G, 1); circ(7, 10, 3); circ(13, 10, 3); fs(C.B, 1); ey(7, 10, 13, 10); }
+  if (type[EN] === 'g') { tri(10, 2, 2, 18, 18, 18); ey(7, 10, 13, 10); }
+  else if (type[EN] === 'b') { tri(10, 2, 2, 10, 10, 18); tri(10, 2, 18, 10, 10, 18); ey(8, 8, 12, 8); }
+  else if (type[EN] === 'c') { circ(10, 10, 9); ey(7, 9, 13, 9); fs(type[EC], 0.7); circ(10, 6, 3); }
+  else if (type[EN] === 'y') { rect(3, 3, 14, 14); fs(C.B, 1); ey(7, 8, 13, 8); rect(6, 13, 8, 2); }
+  else if (type[EN] === 'o') { circ(10, 10, 9); tri(10, 1, 7, 8, 13, 8); tri(10, 19, 7, 12, 13, 12); tri(1, 10, 8, 7, 8, 13); tri(19, 10, 12, 7, 12, 13); ey(7, 8, 13, 8); }
+  else if (type[EN] === 'r') { circ(10, 10, 9); tri(3, 5, 5, 2, 7, 5); tri(17, 5, 15, 2, 13, 5); fs(C.R, 1); ey(7, 9, 13, 9); rect(7, 14, 6, 2); }
+  else if (type[EN] === 'p') { rect(4, 6, 12, 10); circ(6, 6, 3); circ(14, 6, 3); fs(C.G, 1); circ(7, 10, 3); circ(13, 10, 3); fs(C.B, 1); ey(7, 10, 13, 10); }
 
   g.generateTexture(key, 60, 60);
   g.destroy();
@@ -521,16 +523,16 @@ function preload() {
 
   // Enemy textures (one for each type) - different shapes
   const ey = (x1, y1, x2, y2) => { fs(C.W, 1).fillCircle(x1, y1, 2).fillCircle(x2, y2, 2); };
-  const dm = {
-    g: () => { ft(10, 2, 2, 18, 18, 18); ey(7, 10, 13, 10); },
-    b: () => { ft(10, 2, 2, 10, 10, 18); ft(10, 2, 18, 10, 10, 18); ey(8, 8, 12, 8); },
-    c: (col) => { fc(10, 10, 9); ey(7, 9, 13, 9); fs(col, 0.7); fc(10, 6, 3); },
-    y: () => { fr(3, 3, 14, 14); fs(C.B, 1); ey(7, 8, 13, 8); fr(6, 13, 8, 2); },
-    o: () => { fc(10, 10, 9); ft(10, 1, 7, 8, 13, 8); ft(10, 19, 7, 12, 13, 12); ft(1, 10, 8, 7, 8, 13); ft(19, 10, 12, 7, 12, 13); ey(7, 8, 13, 8); },
-    r: () => { fc(10, 10, 9); ft(3, 5, 5, 2, 7, 5); ft(17, 5, 15, 2, 13, 5); fs(C.R, 1); ey(7, 9, 13, 9); fr(7, 14, 6, 2); },
-    p: () => { fr(4, 6, 12, 10); fc(6, 6, 3); fc(14, 6, 3); fs(C.G, 1); fc(7, 10, 3); fc(13, 10, 3); fs(C.B, 1); ey(7, 10, 13, 10); }
-  };
-  enemyTypes.forEach(t => { fs(t.c, 1); dm[t.n](t.c); gt(`enemy_${t.n}`, 20, 20); });
+  const dm = [
+    () => { ft(10, 2, 2, 18, 18, 18); ey(7, 10, 13, 10); },
+    () => { ft(10, 2, 2, 10, 10, 18); ft(10, 2, 18, 10, 10, 18); ey(8, 8, 12, 8); },
+    (col) => { fc(10, 10, 9); ey(7, 9, 13, 9); fs(col, 0.7); fc(10, 6, 3); },
+    () => { fr(3, 3, 14, 14); fs(C.B, 1); ey(7, 8, 13, 8); fr(6, 13, 8, 2); },
+    () => { fc(10, 10, 9); ft(10, 1, 7, 8, 13, 8); ft(10, 19, 7, 12, 13, 12); ft(1, 10, 8, 7, 8, 13); ft(19, 10, 12, 7, 12, 13); ey(7, 8, 13, 8); },
+    () => { fc(10, 10, 9); ft(3, 5, 5, 2, 7, 5); ft(17, 5, 15, 2, 13, 5); fs(C.R, 1); ey(7, 9, 13, 9); fr(7, 14, 6, 2); },
+    () => { fr(4, 6, 12, 10); fc(6, 6, 3); fc(14, 6, 3); fs(C.G, 1); fc(7, 10, 3); fc(13, 10, 3); fs(C.B, 1); ey(7, 10, 13, 10); }
+  ];
+  enemyTypes.forEach((t,i) => { fs(t[EC], 1); dm[i](t[EC]); gt(`enemy_${t[EN]}`, 20, 20); });
 
   // Generic orb texture with glow (white for tinting)
   fs(C.W, 0.3);
@@ -993,17 +995,17 @@ function createEn(type, x, y, hpMult = 1, scale = 1) {
   x = Math.max(20, Math.min(2380, x));
   y = Math.max(20, Math.min(1780, y));
 
-  const enemy = en.create(x, y, `enemy_${type.n}`);
+  const enemy = en.create(x, y, `enemy_${type[EN]}`);
   enemy.setScale(scale);
   enemy.body.setCircle(4 * scale);
   enemy.setCollideWorldBounds(true);
-  enemy.setData('hp', difficulty.eH * type.h * hpMult); // enemyHp
-  enemy.setData('speed', difficulty.eS * type.s); // enemySpeed
-  enemy.setData('damage', difficulty.eD * type.d); // enemyDamage
-  enemy.setData('xpValue', type.x);
-  enemy.setData('coinValue', type.cn);
-  enemy.setData('dropChance', type.r);
-  enemy.setData('enemyColor', type.c);
+  enemy.setData('hp', difficulty.eH * type[EH] * hpMult); // enemyHp
+  enemy.setData('speed', difficulty.eS * type[ES]); // enemySpeed
+  enemy.setData('damage', difficulty.eD * type[ED]); // enemyDamage
+  enemy.setData('xpValue', type[EX]);
+  enemy.setData('coinValue', type[ECN]);
+  enemy.setData('dropChance', type[ER]);
+  enemy.setData('enemyColor', type[EC]);
   enemy.setData('knockbackUntil', 0);
   enemy.setData('originalScale', scale);
   return enemy;
@@ -2338,7 +2340,7 @@ function showLeaderboard(highlightPosition = null) {
 
 function updUnlockTypes() {
   enemyTypes.forEach(type => {
-    if (gameTime >= type.u && !unlockedTypes.includes(type)) {
+    if (gameTime >= type[EU] && !unlockedTypes.includes(type)) {
       unlockedTypes.push(type);
     }
   });
@@ -2379,15 +2381,15 @@ function spawnBoss() {
   const boss = en.create(x, y, bossTexKey);
   boss.body.setCircle(30);
   boss.setCollideWorldBounds(true);
-  const bhp = difficulty.eH * type.h * 10; // enemyHp
+  const bhp = difficulty.eH * type[EH] * 10; // enemyHp
   boss.setData('hp', bhp);
   boss.setData('maxHp', bhp);
-  boss.setData('speed', difficulty.eS * type.s * 0.7); // enemySpeed
-  boss.setData('damage', difficulty.eD * type.d * 2); // enemyDamage
-  boss.setData('xpValue', type.x * 10);
-  boss.setData('coinValue', type.cn * 10);
-  boss.setData('dropChance', type.r);
-  boss.setData('enemyColor', type.c);
+  boss.setData('speed', difficulty.eS * type[ES] * 0.7); // enemySpeed
+  boss.setData('damage', difficulty.eD * type[ED] * 2); // enemyDamage
+  boss.setData('xpValue', type[EX] * 10);
+  boss.setData('coinValue', type[ECN] * 10);
+  boss.setData('dropChance', type[ER]);
+  boss.setData('enemyColor', type[EC]);
   boss.setData('knockbackUntil', 0);
   boss.setData('isBoss', true);
   boss.setData('originalScale', 1.0);
