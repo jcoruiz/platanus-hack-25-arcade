@@ -1726,7 +1726,7 @@ function showMainMenu() {
   mkTxt(750, 580, 'V1.14', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
 
   // Control instructions
-  mkTxt(400, 540, 'WS: Move  SPACE: Select', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
+  mkTxt(400, 540, 'WASD: Move  SPACE: Select ESC: Back', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
 
   sI = 0;
   const opts = [
@@ -1861,13 +1861,13 @@ function showStartScreen() {
     const cx = x - 90, cy = y - 140, gc = gradients[i];
     if (d) {
       const a = ga || 0.4;
-      fs(C.P, a * 0.3).fillRoundedRect(x - 100, y - 150, 200, 300, 10);
-      fs(C.Cy, a * 0.3).fillRoundedRect(x - 105, y - 155, 210, 310, 10);
-      fs(C.P, 0.4).fillRoundedRect(x - 87, y - 137, 180, 280, 10).lineStyle(5, C.P, 0.8).strokeRoundedRect(x - 87, y - 137, 180, 280, 10);
-      fs(C.Cy, 0.4).fillRoundedRect(x - 93, y - 143, 180, 280, 10).lineStyle(5, C.Cy, 0.8).strokeRoundedRect(x - 93, y - 143, 180, 280, 10);
-      g.fillGradientStyle(gc, gc, C.B, C.B, 0.3).fillRoundedRect(cx, cy, 180, 280, 10).lineStyle(5, C.W, 1).strokeRoundedRect(cx, cy, 180, 280, 10);
+      fs(C.P, a * 0.5).fillRoundedRect(x - 100, y - 150, 200, 300, 10);
+      fs(C.Cy, a * 0.5).fillRoundedRect(x - 105, y - 155, 210, 310, 10);
+      fs(C.P, 0.6).fillRoundedRect(x - 87, y - 137, 180, 280, 10).lineStyle(5, C.P, 0.8).strokeRoundedRect(x - 87, y - 137, 180, 280, 10);
+      fs(C.Cy, 0.6).fillRoundedRect(x - 93, y - 143, 180, 280, 10).lineStyle(5, C.Cy, 0.8).strokeRoundedRect(x - 93, y - 143, 180, 280, 10);
+      g.fillGradientStyle(gc, gc, C.B, C.B, 0.75).fillRoundedRect(cx, cy, 180, 280, 10).lineStyle(5, C.W, 1).strokeRoundedRect(cx, cy, 180, 280, 10);
     } else {
-      g.fillGradientStyle(gc, gc, C.B, C.B, 0.15).fillRoundedRect(cx, cy, 180, 280, 10).lineStyle(3, gc, 0.5).strokeRoundedRect(cx, cy, 180, 280, 10);
+      g.fillGradientStyle(gc, gc, C.B, C.B, 0.35).fillRoundedRect(cx, cy, 180, 280, 10).lineStyle(3, gc, 0.5).strokeRoundedRect(cx, cy, 180, 280, 10);
     }
   };
 
