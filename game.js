@@ -679,6 +679,22 @@ function create() {
 
 // Initialize gameplay elements (called when starting game, not on load)
 function initGameplay() {
+  // Clean up existing gameplay objects if they exist (fixes ESC from char select bug)
+  if (p) { p.destroy(); p = null; }
+  if (en) { en.clear(true, true); }
+  if (pr) { pr.clear(true, true); }
+  if (xo) { xo.clear(true, true); }
+  if (co) { co.clear(true, true); }
+  if (wc) { wc.clear(true, true); }
+  if (uc) { uc.clear(true, true); }
+  if (mg) { mg.clear(true, true); }
+  if (hd) { hd.clear(true, true); }
+  if (ob) { ob.clear(true, true); }
+  if (idleTween) { idleTween.remove(); idleTween = null; }
+  if (adc) { adc.destroy(); adc = null; }
+  boomerangs = [];
+  orbitingBalls = [];
+
   // Initialize unlocked types with first type
   unlockedTypes = [enemyTypes[0]];
 
@@ -777,6 +793,7 @@ function initGameplay() {
 
 function update(_time, delta) {
   if (gameOver || levelingUp || selectingWeapon || startScreen || paused || mainMenu) return;
+  if (!p || !p.body) return; // Safety check for player initialization
 
   gameTime += delta;
   shootTimer += delta;
@@ -1608,7 +1625,7 @@ function showMainMenu() {
   });
 
   // Version text
-  mkTxt(750, 580, 'V1.15', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
+  mkTxt(750, 580, 'V1.16', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
 
   // Control instructions
   mkTxt(400, 540, INST, { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
@@ -1769,8 +1786,8 @@ function showStartScreen() {
       else if (w.i === 'b') initBoom();
     }
     cleanupMenu();
-    s.physics.resume();
     startScreen = false;
+    s.physics.resume();
     startMusic(); // Start techno music loop
   };
 
