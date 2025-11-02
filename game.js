@@ -28,8 +28,8 @@ let lastOrbSize = 0; // Track orbit ball size to avoid unnecessary updates
 let lastAreaRadius = 0; // Track area damage radius to avoid unnecessary style updates
 let s;
 
-// Music system: bgm=sequencer state, bgmInt=scheduler interval, bgmB=current beat, bgmT=next note time
-let bgm = null, bgmInt = null, bgmB = 0, bgmT = 0;
+// Music system: bgm=sequencer state, bgmInt=scheduler interval, bgmB=current beat, bgmT=next note time, musicOn=music toggle
+let bgm = null, bgmInt = null, bgmB = 0, bgmT = 0, musicOn = true;
 
 let sI = 0; // selectedIndex
 let m = []; // menu items
@@ -49,7 +49,7 @@ const F = 'fontSize', FF = 'fontFamily', A = 'Arial', CO = 'color', STR = 'strok
 // Common strings
 const AC = 'active', SSF = 'setScrollFactor', SD = 'setDepth', DS = 'destroy', SO = 'setOrigin';
 // Graphics factory functions (g=graphics reference)
-const INST = '[WASD]Move  [SPACE]Select  [ESC]Back  [P]Pause  [R]Restart';
+const INST = '[WASD]Move  [SPACE]Select  [ESC]Back  [P]Pause  [R]Restart  [M]Music';
 let g;
 const fs = (c, a = 1) => g.fillStyle(c, a);
 const gt = (...a) => (g.generateTexture(...a), g.clear());
@@ -610,7 +610,8 @@ function create() {
     },
     ac: { // Actions (events)
       p: k('P'),
-      r: k('R')
+      r: k('R'),
+      m: k('M')
     }
   };
 
@@ -729,6 +730,22 @@ function initGameplay() {
         pauseHint?.[DS]();
       }
     }
+  });
+
+  // Keyboard for music toggle (using central keys)
+  keys.ac.m.on('down', () => {
+    musicOn = !musicOn;
+    playTone(s, musicOn ? 1200 : 600, 0.1);
+
+    if (musicOn) {
+      startMusic();
+    } else {
+      stopMusic();
+    }
+
+    // Show feedback
+    const msg = mkTxt(400, 500, musicOn ? '🔊 MUSIC ON' : '🔇 MUSIC OFF', { [F]: '24px', [FF]: A, [CO]: musicOn ? CS.G : CS.R, [STR]: CS.B, [STT]: 4 }, 150);
+    s.tweens.add({ targets: msg, alpha: 0, duration: 1500, onComplete: () => msg[DS]() });
   });
 }
 
@@ -2845,7 +2862,7 @@ function scheduleMusicNotes() {
 
 // Start music system
 function startMusic() {
-  if (bgm || !s) return;
+  if (bgm || !s || !musicOn) return;
   bgm = s.sound.context;
   bgmB = 0;
   bgmT = 0;
