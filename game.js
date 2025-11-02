@@ -175,6 +175,7 @@ const inS = { // initial stats
   lC: 1.0, // lootChance
   cC: 0.05, // critChance
   cD: 1.5, // critDamage
+  mR: 50, // magnetRadius - pickup attraction radius
   xp: 0,
   c: 1000, // coins
   lv: 1, // level
@@ -941,6 +942,29 @@ function update(_time, delta) {
         Math.cos(angle) * speed,
         Math.sin(angle) * speed
       );
+    }
+  });
+
+  // Auto-magnetize items within player radius
+  const magnetRadiusSq = stats.mR * stats.mR;
+
+  xo.children.entries.forEach(orb => {
+    if (orb[AC] && !orb.getData('magnetized')) {
+      const dx = orb.x - p.x;
+      const dy = orb.y - p.y;
+      if (dx * dx + dy * dy <= magnetRadiusSq) {
+        orb.setData('magnetized', true);
+      }
+    }
+  });
+
+  co.children.entries.forEach(coin => {
+    if (coin[AC] && !coin.getData('magnetized')) {
+      const dx = coin.x - p.x;
+      const dy = coin.y - p.y;
+      if (dx * dx + dy * dy <= magnetRadiusSq) {
+        coin.setData('magnetized', true);
+      }
     }
   });
 
