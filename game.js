@@ -26,7 +26,7 @@ let warnAct = false;
 let hyperModeActive = false;
 let lastOrbSize = 0; // Track orbit ball size to avoid unnecessary updates
 let lastAreaRadius = 0; // Track area damage radius to avoid unnecessary style updates
-let scene;
+let s;
 
 let selectedIndex = 0;
 let menuOptions = [];
@@ -218,17 +218,17 @@ const rareUpgrades = [
 ];
 
 // Helper: create text with common properties
-function mkTxt(x, y, t, s, d = 101) { return scene.add.text(x, y, t, s).setOrigin(0.5)[SSF](0)[SD](d); }
+function mkTxt(x, y, t, l, d = 101) { return s.add.text(x, y, t, l).setOrigin(0.5)[SSF](0)[SD](d); }
 
 // Helper: random centering
 const r = () => Math.random() - 0.5;
 
 // Helper: create graphics with scroll/depth
-const mkGr = (d) => scene.add.graphics()[SSF](0)[SD](d);
+const mkGr = (d) => s.add.graphics()[SSF](0)[SD](d);
 
 // Helper: cleanup menu elements
 function cleanupMenu(minDepth = 100) {
-  scene.children.list.filter(c => c.depth >= minDepth).forEach(c => c[DS]());
+  s.children.list.filter(c => c.depth >= minDepth).forEach(c => c[DS]());
   menuKeys.forEach(k => k.removeAllListeners());
   menuKeys = [];
   if (pulseTween) { pulseTween.stop(); pulseTween = null; }
@@ -244,7 +244,7 @@ function procDmg(enemy, srcX, srcY, baseDmg) {
   enemy.setData('hp', hp);
   applyDmgFb(enemy, srcX, srcY, isCrit);
   if (hp <= 0) {
-    playTone(scene, 660, 0.1);
+    playTone(s, 660, 0.1);
     enemy.body.enable = false;
     handleEnemyDeath(enemy);
     return true;
@@ -254,7 +254,7 @@ function procDmg(enemy, srcX, srcY, baseDmg) {
 
 // Helper: spawn death particle explosion
 function spawnDeathParticles(x, y, color) {
-  const emitter = scene.add.particles(x, y, 'orb', {
+  const emitter = s.add.particles(x, y, 'orb', {
     speed: { min: 30, max: 80 },
     angle: { min: 0, max: 360 },
     scale: { start: 1.0, end: 0 },
@@ -262,7 +262,7 @@ function spawnDeathParticles(x, y, color) {
     quantity: 1,
     tint: color
   });
-  scene.time.delayedCall(400, () => emitter.destroy());
+  s.time.delayedCall(400, () => emitter.destroy());
 }
 
 // Helper: handle enemy death and drops
@@ -292,18 +292,18 @@ function generateBossTexture(type) {
   const key = `boss_${type.n}`;
 
   // Return if already cached
-  if (scene.textures.exists(key)) return key;
+  if (s.textures.exists(key)) return key;
 
-  const g = scene.add.graphics();
-  const s = 3; // Scale factor (20x20 -> 60x60)
+  const g = s.add.graphics();
+  const c = 3; // Scale factor (20x20 -> 60x60)
 
   // Helper functions scaled 3x
   const ey = (x1, y1, x2, y2) => {
-    g.fillStyle(C.W, 1).fillCircle(x1 * s, y1 * s, 2 * s).fillCircle(x2 * s, y2 * s, 2 * s);
+    g.fillStyle(C.W, 1).fillCircle(x1 * c, y1 * c, 2 * c).fillCircle(x2 * c, y2 * c, 2 * c);
   };
-  const tri = (x1, y1, x2, y2, x3, y3) => g.fillTriangle(x1 * s, y1 * s, x2 * s, y2 * s, x3 * s, y3 * s);
-  const circ = (x, y, rad) => g.fillCircle(x * s, y * s, rad * s);
-  const rect = (x, y, w, h) => g.fillRect(x * s, y * s, w * s, h * s);
+  const tri = (x1, y1, x2, y2, x3, y3) => g.fillTriangle(x1 * c, y1 * c, x2 * c, y2 * c, x3 * c, y3 * c);
+  const circ = (x, y, rad) => g.fillCircle(x * c, y * c, rad * c);
+  const rect = (x, y, w, h) => g.fillRect(x * c, y * c, w * c, h * c);
 
   g.fillStyle(type.c, 1);
 
@@ -363,8 +363,8 @@ function perlin(x, y) {
 // Generate procedural nebula texture
 function generateNebula() {
   // Remove old texture if exists
-  if (scene.textures.exists('nebulaNoise')) {
-    scene.textures.remove('nebulaNoise');
+  if (s.textures.exists('nebulaNoise')) {
+    s.textures.remove('nebulaNoise');
   }
   const w = 2400, h = 1800;
   const canvas = document.createElement('canvas');
@@ -420,10 +420,10 @@ function generateNebula() {
   }
 
   ctx.putImageData(imgData, 0, 0);
-  scene.textures.addCanvas('nebulaNoise', canvas);
+  s.textures.addCanvas('nebulaNoise', canvas);
 
   // Create sprite with nebula texture (full resolution, no scaling)
-  const nebula = scene.add.image(1200, 900, 'nebulaNoise');
+  const nebula = s.add.image(1200, 900, 'nebulaNoise');
   nebula.setScrollFactor(0.05);
   nebula[SD](-20);
 }
@@ -591,7 +591,7 @@ function preload() {
 }
 
 function create() {
-  scene = this;
+  s = this;
   gr = this.add.graphics();
 
   // Input: Central key registry (initialized early for menus)
@@ -655,7 +655,7 @@ function initGameplay() {
   unlockedTypes = [enemyTypes[0]];
 
   // Create physics groups
-  const addGrp = () => scene.physics.add.group();
+  const addGrp = () => s.physics.add.group();
   en = addGrp();
   pr = addGrp();
   xo = addGrp();
@@ -664,7 +664,7 @@ function initGameplay() {
   uc = addGrp();
   mg = addGrp();
   hd = addGrp();
-  ob = scene.physics.add.staticGroup();
+  ob = s.physics.add.staticGroup();
 
   // Spawn obstacles randomly across map
   for (let i = 0; i < 80; i++) {
@@ -672,37 +672,37 @@ function initGameplay() {
   }
 
   // Create player at center of world
-  p = scene.physics.add.image(1200, 900, 'p');
+  p = s.physics.add.image(1200, 900, 'p');
   p.setCollideWorldBounds(true);
   p.body.setCircle(16);
 
   // Idle animation for player
-  idleTween = scene.tweens.add({ targets: p, scaleX: 1.2, scaleY: 1.2, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', paused: true });
+  idleTween = s.tweens.add({ targets: p, scaleX: 1.2, scaleY: 1.2, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', paused: true });
 
   // Camera follows player
-  scene.cameras.main.startFollow(p);
-  scene.cameras.main.setBounds(0, 0, 2400, 1800);
+  s.cameras.main.startFollow(p);
+  s.cameras.main.setBounds(0, 0, 2400, 1800);
 
   // Backward compat for update() movement logic (keys already initialized in create())
   wasd = { w: keys.mv.w, a: keys.mv.a, s: keys.mv.s, d: keys.mv.d };
 
   // Collisions
-  const ph = scene.physics;
-  ph.add.overlap(pr, en, hitEnemy, null, scene);
-  ph.add.overlap(p, en, hitPlayer, null, scene);
-  ph.add.overlap(p, xo, collectXP, null, scene);
-  ph.add.overlap(p, co, collectCoin, null, scene);
-  ph.add.overlap(p, wc, collectChest, null, scene);
-  ph.add.overlap(p, uc, colUpgCh, null, scene);
-  ph.add.overlap(p, mg, collectMagnet, null, scene);
-  ph.add.overlap(p, hd, colHeal, null, scene);
+  const ph = s.physics;
+  ph.add.overlap(pr, en, hitEnemy, null, s);
+  ph.add.overlap(p, en, hitPlayer, null, s);
+  ph.add.overlap(p, xo, collectXP, null, s);
+  ph.add.overlap(p, co, collectCoin, null, s);
+  ph.add.overlap(p, wc, collectChest, null, s);
+  ph.add.overlap(p, uc, colUpgCh, null, s);
+  ph.add.overlap(p, mg, collectMagnet, null, s);
+  ph.add.overlap(p, hd, colHeal, null, s);
   ph.add.collider(en, en);
   ph.add.collider(p, ob);
   ph.add.collider(en, ob);
   ph.add.collider(pr, ob);
 
   // Create UI
-  createUI(scene);
+  createUI(s);
 
   // Keyboard for restart (using central keys)
   keys.ac.r.on('down', () => { if (!startScreen) restartGame(); });
@@ -713,15 +713,15 @@ function initGameplay() {
     if (!gameOver && !startScreen && !levelingUp && !selectingWeapon) {
       paused = !paused;
       if (paused) {
-        scene.physics.pause();
-        playTone(scene, 600, 0.1);
-        pauseOverlay = scene.add.graphics();
+        s.physics.pause();
+        playTone(s, 600, 0.1);
+        pauseOverlay = s.add.graphics();
         pauseOverlay.fillStyle(C.B, 0.7).fillRect(0, 0, 800, 600)[SSF](0)[SD](200);
         pauseText = mkTxt(400, 300, 'PAUSED', { [F]: '64px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 8 }, 201);
         pauseHint = mkTxt(400, 370, 'Press [P] to resume', { [F]: '24px', [FF]: A, [CO]: CS.W }, 201);
       } else {
-        scene.physics.resume();
-        playTone(scene, 800, 0.1);
+        s.physics.resume();
+        playTone(s, 800, 0.1);
         pauseOverlay?.[DS]();
         pauseText?.[DS]();
         pauseHint?.[DS]();
@@ -836,7 +836,7 @@ function update(_time, delta) {
     } else {
       showWarning('🔥💀 HYPER MODE ACTIVATED 💀🔥', C.R);
     }
-    playTone(scene, 50, 1.0);
+    playTone(s, 50, 1.0);
   }
 
   // Scale difficulty every 30 seconds
@@ -859,7 +859,7 @@ function update(_time, delta) {
   waveTimer += delta;
   if (waveTimer >= nextWaveTime - 3000 && waveTimer < nextWaveTime && !warnAct) {
     showWarning('⚠️ WAVE INCOMING!', C.Y);
-    playTone(scene, 600, 0.3);
+    playTone(s, 600, 0.3);
     warnAct = true;
   }
   if (waveTimer >= nextWaveTime) {
@@ -874,7 +874,7 @@ function update(_time, delta) {
     const isHyperModeTime = gameTime >= 595000 && gameTime < 600000;
     if (!isHyperModeTime) {
       showWarning('🔥 BOSS APPROACHING!', C.R);
-      playTone(scene, 150, 0.5);
+      playTone(s, 150, 0.5);
       warnAct = true;
     }
   }
@@ -946,7 +946,7 @@ function shoot() {
   if (!target) return;
 
   const weapon = getWeapon('p');
-  playTone(scene, 880, 0.05);
+  playTone(s, 880, 0.05);
 
   // Calculate angles for multiple pr
   const baseAngle = Phaser.Math.Angle.Between(p.x, p.y, target.x, target.y);
@@ -969,7 +969,7 @@ function shoot() {
     proj.setData('hits', 0);
 
     // Auto-destroy after 2 seconds
-    scene.time.delayedCall(2000, () => {
+    s.time.delayedCall(2000, () => {
       if (proj && proj[AC]) proj[DS]();
     });
   }
@@ -1056,7 +1056,7 @@ function hitPlayer(_pObj, enemy) {
 
   const damage = enemy.getData('damage') || difficulty.eD; // enemyDamage
   stats.hp = Math.max(0, stats.hp - damage); // Ensure HP never goes negative
-  playTone(scene, 220, 0.15);
+  playTone(s, 220, 0.15);
   enemy.setData('lastHitTime', gameTime);
 
   // Apply knockback to player (helps escape when surrounded)
@@ -1069,7 +1069,7 @@ function hitPlayer(_pObj, enemy) {
 
   // Flash player red
   p.setTintFill(C.R);
-  scene.time.delayedCall(100, () => {
+  s.time.delayedCall(100, () => {
     if (p && p[AC]) p.clearTint();
   });
 
@@ -1087,7 +1087,7 @@ const drop = (g, x, y, t, r, tn, dk, dv, im, tw) => {
   i.body.setCircle(r);
   if (dk) i.setData(dk, dv);
   if (im) { i.body.setImmovable(true); i.body.setAllowGravity(false); }
-  if (tw) scene.tweens.add({ targets: i, scale: 1.15, duration: 800, yoyo: true, repeat: -1 });
+  if (tw) s.tweens.add({ targets: i, scale: 1.15, duration: 800, yoyo: true, repeat: -1 });
 };
 
 function dropXP(x, y, xpValue) { drop(xo, x, y, 'orb', 5, C.Cy, 'xpValue', xpValue, 0, 1); }
@@ -1113,7 +1113,7 @@ function collectCoin(_pObj, coin) {
   const coinValue = coin.getData('coinValue') || 1;
   coin[DS]();
   stats.c += coinValue; // coins
-  playTone(scene, 1800, 0.15);
+  playTone(s, 1800, 0.15);
 }
 
 function dropChest(x, y) { drop(wc, x, y, 'chest', 10, 0xffdd00, 0, 0, 1); }
@@ -1121,7 +1121,7 @@ function dropChest(x, y) { drop(wc, x, y, 'chest', 10, 0xffdd00, 0, 0, 1); }
 function collectChest(_pObj, chest) {
   if (!chest[AC]) return;
   chest[DS]();
-  playTone(scene, 1500, 0.3);
+  playTone(s, 1500, 0.3);
 
   // Check if there are weapons to unlock
   const lockedWeapons = weaponTypes.filter(w => !w.u && !w.i.startsWith('placeholder'));
@@ -1142,10 +1142,10 @@ function colUpgCh(_pObj, chest) {
   if (gameOver || levelingUp || selectingWeapon || startScreen || paused) return;
 
   chest[DS]();
-  playTone(scene, 1200, 0.2);
+  playTone(s, 1200, 0.2);
 
   selectingWeapon = true;
-  scene.physics.pause();
+  s.physics.pause();
   showUpgradeMenu('selectingWeapon');
 }
 
@@ -1154,7 +1154,7 @@ function dropMagnet(x, y) { drop(mg, x, y, 'magnet', 10, 0, 0, 0, 1); }
 function collectMagnet(_pObj, magnet) {
   if (!magnet[AC]) return;
   magnet[DS]();
-  playTone(scene, 1500, 0.3);
+  playTone(s, 1500, 0.3);
 
   // Magnetize all existing XP orbs
   xo.children.entries.forEach(orb => {
@@ -1175,7 +1175,7 @@ function colHeal(_pObj, healDrop) {
   if (!healDrop[AC]) return;
   healDrop[DS]();
   stats.hp = Math.min(stats.mH, stats.hp + 30); // maxHp
-  playTone(scene, 900, 0.2);
+  playTone(s, 900, 0.2);
 }
 
 function levelUp() {
@@ -1206,9 +1206,9 @@ function levelUp() {
   }
 
   // Pause physics
-  scene.physics.pause();
+  s.physics.pause();
 
-  playTone(scene, 1200, 0.2);
+  playTone(s, 1200, 0.2);
 
   showUpgradeMenu('levelingUp');
 }
@@ -1225,7 +1225,7 @@ function getAllWeaponUpgrades(wId) {
 // Helper: render stats panel (used in upgrade and weapon selection menus)
 function renderStatsPanel() {
   // Overlay
-  const ov = scene.add.graphics();
+  const ov = s.add.graphics();
   ov.fillStyle(C.B, 0.9).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
 
   // Top panel with neon purple border
@@ -1238,7 +1238,7 @@ function renderStatsPanel() {
   mkTxt(720, 30, `Coins: ${stats.c}`, { [F]: '18px', [FF]: A, [CO]: CS.Go }, 102);
 
   // Hero sprite with purple border
-  scene.add.sprite(70, 110, selCh.texture).setScale(3)[SSF](0)[SD](102);
+  s.add.sprite(70, 110, selCh.texture).setScale(3)[SSF](0)[SD](102);
   const heroBorder = mkGr(102);
   heroBorder.lineStyle(2, C.P, 1).strokeRect(34, 74, 72, 72);
 
@@ -1255,7 +1255,7 @@ function renderStatsPanel() {
     statBox.lineStyle(2, isUpgraded ? C.Cy : 0x333333, 1).strokeRoundedRect(x - 20, y - 20, 40, 40, 4);
 
     // Icon (grayed if not upgraded)
-    const iconTxt = scene.add.text(x, y, upg.icon, { [F]: '22px' }).setOrigin(0.5)[SSF](0)[SD](102);
+    const iconTxt = s.add.text(x, y, upg.icon, { [F]: '22px' }).setOrigin(0.5)[SSF](0)[SD](102);
     if (!isUpgraded) iconTxt.setTint(0x666666);
 
     // Level number (only if upgraded)
@@ -1278,7 +1278,7 @@ function renderStatsPanel() {
       wpPanel.lineStyle(2, C.O, 1).strokeRoundedRect(x, y, 170, 100, 6);
 
       // Weapon image
-      const wpSprite = scene.add.sprite(x + 37, y + 50, w.tex).setScale(2)[SSF](0)[SD](102);
+      const wpSprite = s.add.sprite(x + 37, y + 50, w.tex).setScale(2)[SSF](0)[SD](102);
       if (w.i === 'p') wpSprite.setTint(C.O);
       if (w.i === 'a') wpSprite.setTint(C.R);
 
@@ -1296,7 +1296,7 @@ function renderStatsPanel() {
         ugBox.lineStyle(2, isUp ? C.Cy : 0x333333, 1).strokeRoundedRect(ux - 16, uy - 16, 32, 32, 3);
 
         // Icon
-        const uIcon = scene.add.text(ux, uy, upg.icon, { [F]: '18px' }).setOrigin(0.5)[SSF](0)[SD](102);
+        const uIcon = s.add.text(ux, uy, upg.icon, { [F]: '18px' }).setOrigin(0.5)[SSF](0)[SD](102);
         if (!isUp) uIcon.setTint(0x666666);
 
         // Level (if upgraded)
@@ -1329,10 +1329,10 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   if (availableUpgrades.length === 0) {
     const hpReward = 20;
     stats.hp = Math.min(stats.mH, stats.hp + hpReward); // maxHp
-    playTone(scene, 1500, 0.2);
+    playTone(s, 1500, 0.2);
     const msg = mkTxt(400, 300, `¡MAX LEVEL!\n+${hpReward} HP`, { [F]: '32px', [FF]: A, [CO]: CS.G, [STR]: CS.B, [STT]: 4 }, 150);
-    scene.tweens.add({ targets: msg, y: 250, alpha: 0, duration: 2000, onComplete: () => msg[DS]() });
-    scene.physics.resume();
+    s.tweens.add({ targets: msg, y: 250, alpha: 0, duration: 2000, onComplete: () => msg[DS]() });
+    s.physics.resume();
     if (stateVar === 'levelingUp') levelingUp = false;
     else if (stateVar === 'selectingWeapon') selectingWeapon = false;
     return;
@@ -1371,22 +1371,22 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   const doReroll = () => {
     if (stats.c < rerollCost) return;
     stats.c -= rerollCost;
-    playTone(scene, 1400, 0.1);
+    playTone(s, 1400, 0.1);
     menuOptions.forEach(opt => opt.btn[DS]());
-    scene.children.list.filter(c => c.depth === 102 && c.text && c.y >= 380 && c.y <= 460).forEach(c => c[DS]());
+    s.children.list.filter(c => c.depth === 102 && c.text && c.y >= 380 && c.y <= 460).forEach(c => c[DS]());
     const newShuffled = [...availableUpgrades].sort(r).slice(0, 3);
     menuOptions = [];
     selectedIndex = 0;
     renderUpgradeOptions(newShuffled);
     updateSelection();
-    scene.children.list.filter(c => c.depth === 102 && c.text && c.text.includes('Coins')).forEach(c => c.setText(`Coins: ${stats.c}`));
+    s.children.list.filter(c => c.depth === 102 && c.text && c.text.includes('Coins')).forEach(c => c.setText(`Coins: ${stats.c}`));
   };
 
   const selectUpgrade = (u) => {
     u.apply();
-    playTone(scene, 1000, 0.1);
+    playTone(s, 1000, 0.1);
     cleanupMenu();
-    scene.physics.resume();
+    s.physics.resume();
     if (stateVar === 'levelingUp') levelingUp = false;
     else if (stateVar === 'selectingWeapon') selectingWeapon = false;
   };
@@ -1407,7 +1407,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
         pulseOverlay.fillStyle(C.P, 0.3);
         pulseOverlay.fillRoundedRect(opt.x - 80, upgradeY - 10, 160, 110, 8);
 
-        pulseTween = scene.tweens.add({
+        pulseTween = s.tweens.add({
           targets: pulseOverlay,
           alpha: { from: 0.3, to: 0.7 },
           duration: 600,
@@ -1431,7 +1431,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     if (selectedIndex < 3) {
       selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
       updateSelection();
-      playTone(scene, 800, 0.05);
+      playTone(s, 800, 0.05);
     }
   };
 
@@ -1439,7 +1439,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     if (selectedIndex < 3) {
       selectedIndex = (selectedIndex + 1) % menuOptions.length;
       updateSelection();
-      playTone(scene, 800, 0.05);
+      playTone(s, 800, 0.05);
     }
   };
 
@@ -1447,7 +1447,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     if (selectedIndex === 3) {
       selectedIndex = menuOptions.length - 1;
       updateSelection();
-      playTone(scene, 800, 0.05);
+      playTone(s, 800, 0.05);
     }
   };
 
@@ -1455,7 +1455,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     if (selectedIndex < 3) {
       selectedIndex = 3;
       updateSelection();
-      playTone(scene, 800, 0.05);
+      playTone(s, 800, 0.05);
     }
   };
 
@@ -1479,7 +1479,7 @@ function showWeaponSelector(weapons) {
   if (gameOver || levelingUp || selectingWeapon || startScreen || paused) return;
 
   selectingWeapon = true;
-  scene.physics.pause();
+  s.physics.pause();
 
   // Clean any previous menu first
   cleanupMenu();
@@ -1497,7 +1497,7 @@ function showWeaponSelector(weapons) {
 
   const selectWeapon = (weapon) => {
     weapon.u = true;
-    playTone(scene, 1500, 0.2);
+    playTone(s, 1500, 0.2);
 
     // Initialize weapon
     if (weapon.i === 'o') {
@@ -1512,7 +1512,7 @@ function showWeaponSelector(weapons) {
     cleanupMenu();
 
     // Resume
-    scene.physics.resume();
+    s.physics.resume();
     selectingWeapon = false;
   };
 
@@ -1535,7 +1535,7 @@ function showWeaponSelector(weapons) {
         pulseOverlay.fillStyle(C.P, 0.3);
         pulseOverlay.fillRoundedRect(option.x - 90, weaponY - 10, 180, 200, 10);
 
-        pulseTween = scene.tweens.add({
+        pulseTween = s.tweens.add({
           targets: pulseOverlay,
           alpha: { from: 0.3, to: 0.7 },
           duration: 600,
@@ -1563,13 +1563,13 @@ function showWeaponSelector(weapons) {
   const goLeft = () => {
     selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
     updateSelection();
-    playTone(scene, 800, 0.05);
+    playTone(s, 800, 0.05);
   };
 
   const goRight = () => {
     selectedIndex = (selectedIndex + 1) % menuOptions.length;
     updateSelection();
-    playTone(scene, 800, 0.05);
+    playTone(s, 800, 0.05);
   };
 
   // Attach listeners to central keys
@@ -1589,7 +1589,7 @@ function showRareUpg() {
   if (gameOver || levelingUp || selectingWeapon || startScreen || paused) return;
 
   selectingWeapon = true;
-  scene.physics.pause();
+  s.physics.pause();
 
   // Clean any previous menu first
   cleanupMenu();
@@ -1603,7 +1603,7 @@ function showRareUpg() {
   });
 
   // Semi-transparent overlay
-  const overlay = scene.add.graphics();
+  const overlay = s.add.graphics();
   overlay.fillStyle(C.B, 0.85);
   overlay.fillRect(0, 0, 800, 600);
   overlay[SSF](0);
@@ -1621,13 +1621,13 @@ function showRareUpg() {
 
   const selectUpgrade = (upgrade) => {
     upgrade.apply();
-    playTone(scene, 1800, 0.1);
+    playTone(s, 1800, 0.1);
 
     // Clean up menu
     cleanupMenu();
 
     // Resume
-    scene.physics.resume();
+    s.physics.resume();
     selectingWeapon = false;
   };
 
@@ -1660,13 +1660,13 @@ function showRareUpg() {
   const goLeft = () => {
     selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
     updateSelection();
-    playTone(scene, 800, 0.05);
+    playTone(s, 800, 0.05);
   };
 
   const goRight = () => {
     selectedIndex = (selectedIndex + 1) % menuOptions.length;
     updateSelection();
-    playTone(scene, 800, 0.05);
+    playTone(s, 800, 0.05);
   };
 
   // Attach listeners to central keys
@@ -1683,9 +1683,9 @@ function showRareUpg() {
 
 // Helper: glitch text triple-layer effect (reusable)
 const gt3 = (x, y, txt, sz, d) => [
-  scene.add.text(x - 2, y - 1, txt, { [F]: sz, [FF]: A, [CO]: '#ff00ff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](d),
-  scene.add.text(x + 2, y + 1, txt, { [F]: sz, [FF]: A, [CO]: CS.Cy, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](d),
-  scene.add.text(x, y, txt, { [F]: sz, [FF]: A, [CO]: CS.W, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](d + 1)
+  s.add.text(x - 2, y - 1, txt, { [F]: sz, [FF]: A, [CO]: '#ff00ff', [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](d),
+  s.add.text(x + 2, y + 1, txt, { [F]: sz, [FF]: A, [CO]: CS.Cy, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](d),
+  s.add.text(x, y, txt, { [F]: sz, [FF]: A, [CO]: CS.W, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](d + 1)
 ];
 
 function showMainMenu() {
@@ -1693,7 +1693,7 @@ function showMainMenu() {
   cleanupMenu();
 
   // Dark background with transparency to show background
-  scene.add.graphics().fillStyle(C.B, 0.4).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
+  s.add.graphics().fillStyle(C.B, 0.4).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
 
   // Hotline Miami style title with glitch effect (multiple layers)
   // Pink/magenta shadow layer
@@ -1718,25 +1718,25 @@ function showMainMenu() {
   opts.forEach(o => o.texts = []);
 
   const dr = (i) => {
-    const s = i === selectedIndex, o = opts[i];
+    const d = i === selectedIndex, o = opts[i];
     o.texts.forEach(t => t[DS]());
     o.texts = [];
 
-    if (s) {
+    if (d) {
       o.texts.push(...gt3(400, o.y, o.txt, '40px', 101));
       if (pulseTween) { pulseTween.stop(); pulseTween = null; }
-      pulseTween = scene.tweens.add({ targets: o.texts[2], alpha: 0.7, duration: 400, yoyo: true, repeat: -1 });
+      pulseTween = s.tweens.add({ targets: o.texts[2], alpha: 0.7, duration: 400, yoyo: true, repeat: -1 });
     } else {
-      o.texts.push(scene.add.text(400, o.y, o.txt, { [F]: '32px', [FF]: A, [CO]: '#00aaaa' }).setOrigin(0.5)[SSF](0)[SD](101));
+      o.texts.push(s.add.text(400, o.y, o.txt, { [F]: '32px', [FF]: A, [CO]: '#00aaaa' }).setOrigin(0.5)[SSF](0)[SD](101));
     }
   };
 
   opts.forEach((_, i) => dr(i));
 
   // Keyboard navigation handlers
-  const gu = () => { selectedIndex = (selectedIndex - 1 + opts.length) % opts.length; opts.forEach((_, i) => dr(i)); playTone(scene, 800, 0.05); };
-  const gd = () => { selectedIndex = (selectedIndex + 1) % opts.length; opts.forEach((_, i) => dr(i)); playTone(scene, 800, 0.05); };
-  const ge = () => { playTone(scene, 1200, 0.15); cleanupMenu(); opts[selectedIndex].fn(); };
+  const gu = () => { selectedIndex = (selectedIndex - 1 + opts.length) % opts.length; opts.forEach((_, i) => dr(i)); playTone(s, 800, 0.05); };
+  const gd = () => { selectedIndex = (selectedIndex + 1) % opts.length; opts.forEach((_, i) => dr(i)); playTone(s, 800, 0.05); };
+  const ge = () => { playTone(s, 1200, 0.15); cleanupMenu(); opts[selectedIndex].fn(); };
 
   // Attach listeners to central keys
   keys.mv.w.on('down', gu);
@@ -1748,12 +1748,12 @@ function showMainMenu() {
 }
 
 function showFullLeaderboard() {
-  scene.add.graphics().fillStyle(C.B, 0.5).fillRect(0, 0, 800, 600)[SSF](0)[SD](150);
+  s.add.graphics().fillStyle(C.B, 0.5).fillRect(0, 0, 800, 600)[SSF](0)[SD](150);
   mkTxt(400, 60, 'TOP 10 LEADERBOARD', { [F]: '40px', [FF]: A, [CO]: CS.Go, [STR]: CS.B, [STT]: 6 }, 151);
   mkTxt(200, 130, '#', { [F]: '20px', [FF]: A, [CO]: '#aaa' }, 151);
   mkTxt(350, 130, 'NAME', { [F]: '20px', [FF]: A, [CO]: '#aaa' }, 151);
   mkTxt(550, 130, 'KILLS', { [F]: '20px', [FF]: A, [CO]: '#aaa' }, 151);
-  scene.add.graphics().lineStyle(2, 0x444444, 1).lineBetween(150, 150, 650, 150)[SSF](0)[SD](151);
+  s.add.graphics().lineStyle(2, 0x444444, 1).lineBetween(150, 150, 650, 150)[SSF](0)[SD](151);
 
   const t10 = loadLeaderboard().slice(0, 10);
   if (!t10.length) {
@@ -1762,18 +1762,18 @@ function showFullLeaderboard() {
     t10.forEach((e, i) => {
       const y = 180 + i * 35;
       const c = [CS.Go, CS.Si, CS.Br][i] || CS.W;
-      const s = { [F]: '18px', [FF]: A, [CO]: c, [FST]: 'bold' };
-      scene.add.text(200, y, i + 1, s).setOrigin(0.5)[SSF](0)[SD](151);
-      scene.add.text(350, y, e.name, s).setOrigin(0.5)[SSF](0)[SD](151);
-      scene.add.text(550, y, e.kills, s).setOrigin(0.5)[SSF](0)[SD](151);
+      const t = { [F]: '18px', [FF]: A, [CO]: c, [FST]: 'bold' };
+      s.add.text(200, y, i + 1, t).setOrigin(0.5)[SSF](0)[SD](151);
+      s.add.text(350, y, e.name, t).setOrigin(0.5)[SSF](0)[SD](151);
+      s.add.text(550, y, e.kills, t).setOrigin(0.5)[SSF](0)[SD](151);
     });
   }
 
   mkTxt(400, 540, 'SPACE to go back', { [F]: '16px', [FF]: A, [CO]: CS.LG }, 151);
 
-  const ek = scene.input.keyboard.addKey('SPACE');
+  const ek = s.input.keyboard.addKey('SPACE');
   ek.on('down', () => {
-    playTone(scene, 1000, 0.15);
+    playTone(s, 1000, 0.15);
     cleanupMenu(150);
     showMainMenu();
   });
@@ -1783,8 +1783,8 @@ function showFullLeaderboard() {
 // Generate HD hero textures (optimized)
 function generateHeroTexture(t, sel) {
   const k = `${t}_hd${sel ? '_s' : ''}`;
-  if (scene.textures.exists(k)) return k;
-  const g = scene.add.graphics(), s = sel ? 3.5 : 2.5, m = v => v * s;
+  if (s.textures.exists(k)) return k;
+  const g = s.add.graphics(), d = sel ? 3.5 : 2.5, m = v => v * d;
 
   if (t === 'p_b') {
     g.fillStyle(C.Y, 1).fillEllipse(m(16), m(16), m(10), m(24));
@@ -1807,7 +1807,7 @@ function generateHeroTexture(t, sel) {
     g.fillStyle(0x4444ff, 0.7).fillRect(m(12), m(13), m(3), m(3)).fillRect(m(17), m(13), m(3), m(3)).fillRect(m(22), m(13), m(3), m(3));
   }
 
-  g.generateTexture(k, 32 * s, 32 * s);
+  g.generateTexture(k, 32 * d, 32 * d);
   g.destroy();
   return k;
 }
@@ -1817,7 +1817,7 @@ function showStartScreen() {
   cleanupMenu();
 
   // Dark overlay with transparency to show background
-  scene.add.graphics().fillStyle(C.B, 0.3).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
+  s.add.graphics().fillStyle(C.B, 0.3).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
 
   // Scanlines VHS effect
   const scan = mkGr(104);
@@ -1835,10 +1835,10 @@ function showStartScreen() {
   const gradients = [0xffff00, 0xff00ff, 0x00ffff, 0x00ff00]; // Banana, Medusa, Orb, Train
 
   // L4D2-style large card rendering with glitch + glow + gradient
-  const dc = (g, x, y, s, i, ga) => {
+  const dc = (g, x, y, d, i, ga) => {
     g.clear();
     const cx = x - 90, cy = y - 140, gc = gradients[i];
-    if (s) {
+    if (d) {
       const a = ga || 0.4;
       g.fillStyle(C.P, a * 0.3).fillRoundedRect(x - 100, y - 150, 200, 300, 10);
       g.fillStyle(C.Cy, a * 0.3).fillRoundedRect(x - 105, y - 155, 210, 310, 10);
@@ -1851,7 +1851,7 @@ function showStartScreen() {
   };
 
   const sel = (ch) => {
-    playTone(scene, 1500, 0.2);
+    playTone(s, 1500, 0.2);
     selCh = ch;
     initGameplay();
     p.setTexture(ch.texture);
@@ -1863,23 +1863,23 @@ function showStartScreen() {
       else if (w.i === 'b') initBoom();
     }
     cleanupMenu();
-    scene.physics.resume();
+    s.physics.resume();
     startScreen = false;
   };
 
   let glowPulse = 0.4;
   const upd = (shake) => {
     menuOptions.forEach((o, i) => {
-      const s = i === selectedIndex;
+      const d = i === selectedIndex;
       const shakeX = shake ? r() * 4 : 0;
       const shakeY = shake ? r() * 4 : 0;
 
-      dc(o.btn, o.x + shakeX, o.y + shakeY, s, i, glowPulse);
+      dc(o.btn, o.x + shakeX, o.y + shakeY, d, i, glowPulse);
 
-      const hdTex = generateHeroTexture(o.character.texture, s);
+      const hdTex = generateHeroTexture(o.character.texture, d);
       o.sprite.setTexture(hdTex);
       o.sprite.setPosition(o.x + shakeX, o.y - 50 + shakeY);
-      o.sprite.setAngle(s ? Math.sin(Date.now() * 0.002) * 8 : 0); // Pronounced rotation
+      o.sprite.setAngle(d ? Math.sin(Date.now() * 0.002) * 8 : 0); // Pronounced rotation
 
       // Remove old text
       if (o.texts) o.texts.forEach(t => t[DS]());
@@ -1888,9 +1888,9 @@ function showStartScreen() {
       // Destroy old particles
       if (o.particles) { o.particles[DS](); o.particles = null; }
 
-      if (s) {
+      if (d) {
         // Add particle sparks for selected card
-        o.particles = scene.add.particles(o.x, o.y, 'orb', {
+        o.particles = s.add.particles(o.x, o.y, 'orb', {
           speed: { min: 20, max: 40 },
           angle: { min: 0, max: 360 },
           scale: { start: 0.3, end: 0 },
@@ -1904,21 +1904,21 @@ function showStartScreen() {
         o.texts.push(...gt3(o.x + shakeX, o.y + 83 + shakeY, o.character.name, '22px', 102));
 
         // Weapon and passive (bright)
-        o.texts.push(scene.add.text(o.x + shakeX, o.y + 108 + shakeY, o.character.desc, { [F]: '14px', [FF]: A, [CO]: CS.Cy }).setOrigin(0.5)[SSF](0)[SD](102));
-        o.texts.push(scene.add.text(o.x + shakeX, o.y + 128 + shakeY, o.character.passiveDesc, { [F]: '12px', [FF]: A, [CO]: '#ff00ff' }).setOrigin(0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x + shakeX, o.y + 108 + shakeY, o.character.desc, { [F]: '14px', [FF]: A, [CO]: CS.Cy }).setOrigin(0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x + shakeX, o.y + 128 + shakeY, o.character.passiveDesc, { [F]: '12px', [FF]: A, [CO]: '#ff00ff' }).setOrigin(0.5)[SSF](0)[SD](102));
       } else {
         // Unselected: Simple colored text
         const col = ['#ffff00', '#ff00ff', CS.Cy, '#00ff00'][i];
-        o.texts.push(scene.add.text(o.x, o.y + 83, o.character.name, { [F]: '18px', [FF]: A, [CO]: col, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102));
-        o.texts.push(scene.add.text(o.x, o.y + 108, o.character.desc, { [F]: '12px', [FF]: A, [CO]: col }).setOrigin(0.5)[SSF](0)[SD](102));
-        o.texts.push(scene.add.text(o.x, o.y + 128, o.character.passiveDesc, { [F]: '10px', [FF]: A, [CO]: col }).setOrigin(0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x, o.y + 83, o.character.name, { [F]: '18px', [FF]: A, [CO]: col, [FST]: 'bold' }).setOrigin(0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x, o.y + 108, o.character.desc, { [F]: '12px', [FF]: A, [CO]: col }).setOrigin(0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x, o.y + 128, o.character.passiveDesc, { [F]: '10px', [FF]: A, [CO]: col }).setOrigin(0.5)[SSF](0)[SD](102));
       }
     });
   };
 
   // Glow pulse animation
   if (pulseTween) { pulseTween.stop(); pulseTween = null; }
-  pulseTween = scene.tweens.add({
+  pulseTween = s.tweens.add({
     targets: { val: 0.4 },
     val: 0.8,
     duration: 600,
@@ -1934,7 +1934,7 @@ function showStartScreen() {
 
     // Generate high-res texture (non-selected) and create sprite at scale 1.0
     const hdTexture = generateHeroTexture(ch.texture, false);
-    const heroSprite = scene.add.sprite(x, y - 50, hdTexture).setScale(1)[SSF](0)[SD](102);
+    const heroSprite = s.add.sprite(x, y - 50, hdTexture).setScale(1)[SSF](0)[SD](102);
 
     menuOptions.push({ btn, character: ch, x, y, sprite: heroSprite, texts: [], particles: null });
   });
@@ -1948,14 +1948,14 @@ function showStartScreen() {
   const goLeft = () => {
     selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
     upd(true); // Shake on change
-    scene.time.delayedCall(50, () => upd(false)); // Reset shake
-    playTone(scene, 800, 0.05);
+    s.time.delayedCall(50, () => upd(false)); // Reset shake
+    playTone(s, 800, 0.05);
   };
   const goRight = () => {
     selectedIndex = (selectedIndex + 1) % menuOptions.length;
     upd(true); // Shake on change
-    scene.time.delayedCall(50, () => upd(false)); // Reset shake
-    playTone(scene, 800, 0.05);
+    s.time.delayedCall(50, () => upd(false)); // Reset shake
+    playTone(s, 800, 0.05);
   };
 
   // Attach listeners to central keys
@@ -1963,7 +1963,7 @@ function showStartScreen() {
   keys.mv.d.on('down', goRight);
   keys.mn.e.on('down', () => sel(menuOptions[selectedIndex].character));
   keys.mn.x.on('down', () => {
-    playTone(scene, 1000, 0.15);
+    playTone(s, 1000, 0.15);
     startScreen = !(mainMenu = true);
     cleanupMenu();
     showMainMenu();
@@ -1975,7 +1975,7 @@ function showStartScreen() {
 
 function createUI() {
   const txt = (x, y, t, c, sz = '16px', d = 0) => {
-    const el = scene.add.text(x, y, t, { [F]: sz, [FF]: A, [CO]: c })[SSF](0);
+    const el = s.add.text(x, y, t, { [F]: sz, [FF]: A, [CO]: c })[SSF](0);
     return d ? el[SD](d) : el;
   };
   ui.hpText = txt(10, 10, 'HP:', CS.W);
@@ -2057,10 +2057,10 @@ function drawUIBars() {
 
 function endGame() {
   gameOver = true;
-  playTone(scene, 150, 0.5);
+  playTone(s, 150, 0.5);
 
   // Overlay
-  const overlay = scene.add.graphics();
+  const overlay = s.add.graphics();
   overlay.fillStyle(C.B, 0.8);
   overlay.fillRect(0, 0, 800, 600);
   overlay[SSF](0);
@@ -2076,7 +2076,7 @@ function endGame() {
   const killsText = mkTxt(400, 400, `Kills: ${stats.k}`, { [F]: '28px', [FF]: A, [CO]: CS.G });
 
   // After 2 seconds, transition to leaderboard flow
-  scene.time.delayedCall(2000, () => {
+  s.time.delayedCall(2000, () => {
     // Clean up game over screen
     overlay[DS]();
     gameOverText[DS]();
@@ -2099,15 +2099,15 @@ function restartGame() {
   idleTween = null;
 
   // Cancel all pending delayed callbacks
-  scene.time.removeAllEvents();
-  scene.tweens.killAll();
+  s.time.removeAllEvents();
+  s.tweens.killAll();
 
   // Cleanup action key listeners (P and R)
   keys.ac.p.removeAllListeners();
   keys.ac.r.removeAllListeners();
 
   // Cleanup: destroy all game objects with depth >= 0 (preserve background at depth < 0)
-  scene.children.list.filter(c => c.depth >= 0).forEach(c => c[DS]());
+  s.children.list.filter(c => c.depth >= 0).forEach(c => c[DS]());
 
   // Clear physics groups
   if (en) [en, pr, xo, co, wc, uc, mg, hd, ob].forEach(g => g.clear(true, true));
@@ -2131,13 +2131,13 @@ function restartGame() {
   adc = null;
   // Destroy and recreate graphics object to prevent memory leak
   if (gr) { gr.destroy(); gr = null; }
-  gr = scene.add.graphics();
+  gr = s.add.graphics();
   unlockedTypes = [enemyTypes[0]];
   stats = JSON.parse(JSON.stringify(inS));
   difficulty = { ...inD };
 
   // Don't call initGameplay() here - it will be called when user selects character
-  scene.physics.pause();
+  s.physics.pause();
   showMainMenu();
 }
 
@@ -2173,7 +2173,7 @@ function showNameEntry() {
   let charIndex = 0;
 
   // Overlay
-  const overlay = scene.add.graphics();
+  const overlay = s.add.graphics();
   overlay.fillStyle(C.B, 0.85);
   overlay.fillRect(0, 0, 800, 600);
   overlay[SSF](0);
@@ -2195,7 +2195,7 @@ function showNameEntry() {
   const letters = [];
   for (let i = 0; i < 6; i++) {
     const x = startX + i * (boxWidth + boxGap);
-    const box = scene.add.graphics();
+    const box = s.add.graphics();
     box[SSF](0)[SD](151);
     boxes.push(box);
 
@@ -2230,7 +2230,7 @@ function showNameEntry() {
     charIndex = (charIndex + dir + CHARS.length) % CHARS.length;
     name[cursorPos] = CHARS[charIndex];
     updateBoxes();
-    playTone(scene, 800, 0.05);
+    playTone(s, 800, 0.05);
   };
 
   const moveRight = () => {
@@ -2238,7 +2238,7 @@ function showNameEntry() {
       cursorPos++;
       charIndex = CHARS.indexOf(name[cursorPos]);
       updateBoxes();
-      playTone(scene, 900, 0.05);
+      playTone(s, 900, 0.05);
     }
   };
 
@@ -2247,7 +2247,7 @@ function showNameEntry() {
       cursorPos--;
       charIndex = CHARS.indexOf(name[cursorPos]);
       updateBoxes();
-      playTone(scene, 700, 0.05);
+      playTone(s, 700, 0.05);
     }
   };
 
@@ -2271,7 +2271,7 @@ function showNameEntry() {
     const finalName = name.join('').trim();
     if (finalName.length) {
       cleanup();
-      playTone(scene, 1200, 0.2);
+      playTone(s, 1200, 0.2);
       const position = addToLeaderboard(finalName, stats.k);
       showLeaderboard(position);
     }
@@ -2282,7 +2282,7 @@ function showLeaderboard(highlightPosition = null) {
   const entries = loadLeaderboard();
 
   // Overlay
-  const overlay = scene.add.graphics();
+  const overlay = s.add.graphics();
   overlay.fillStyle(C.B, 0.9);
   overlay.fillRect(0, 0, 800, 600);
   overlay[SSF](0);
@@ -2297,7 +2297,7 @@ function showLeaderboard(highlightPosition = null) {
   mkTxt(550, 130, 'KILLS', { [F]: '20px', [FF]: A, [CO]: '#aaaaaa' }, 151);
 
   // Separator line
-  const line = scene.add.graphics();
+  const line = s.add.graphics();
   line.lineStyle(2, 0x444444, 1);
   line.lineBetween(150, 150, 650, 150);
   line[SSF](0)[SD](151);
@@ -2310,7 +2310,7 @@ function showLeaderboard(highlightPosition = null) {
 
     // Highlight background
     if (isHighlight) {
-      const highlight = scene.add.graphics();
+      const highlight = s.add.graphics();
       highlight.fillStyle(C.Y, 0.2);
       highlight.fillRect(150, y - 15, 500, 30);
       highlight[SSF](0)[SD](150);
@@ -2347,7 +2347,7 @@ function updUnlockTypes() {
 
 function spawnWave() {
   warnAct = false;
-  playTone(scene, 800, 0.2);
+  playTone(s, 800, 0.2);
 
   const count = 30 + ~~(Math.random() * 6);
   const angleStep = (Math.PI * 2) / count;
@@ -2363,7 +2363,7 @@ function spawnWave() {
 
 function spawnBoss() {
   warnAct = false;
-  playTone(scene, 100, 0.4);
+  playTone(s, 100, 0.4);
 
   const type = unlockedTypes[unlockedTypes.length - 1];
   const side = ~~(Math.random() * 4);
@@ -2398,7 +2398,7 @@ function showWarning(text, color) {
   warnAct = true;
 
   // Create warning overlay
-  const warning = scene.add.graphics();
+  const warning = s.add.graphics();
   warning.fillStyle(color, 0.3);
   warning.fillRect(0, 130, 800, 80);
   warning[SSF](0);
@@ -2408,7 +2408,7 @@ function showWarning(text, color) {
   const warningText = mkTxt(400, 170, text, { [F]: '42px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 6 }, 51);
 
   // Flash animation
-  scene.tweens.add({
+  s.tweens.add({
     targets: [warning, warningText],
     alpha: 0,
     duration: 500,
@@ -2419,7 +2419,7 @@ function showWarning(text, color) {
     }
   });
 
-  scene.tweens.add({
+  s.tweens.add({
     targets: [warning, warningText],
     alpha: 0.3,
     duration: 300,
@@ -2437,7 +2437,7 @@ function initOrbBalls() {
   // Create initial balls
   const weapon = getWeapon('o');
   for (let i = 0; i < weapon.c; i++) {
-    const ball = scene.physics.add.image(p.x, p.y, 'o');
+    const ball = s.physics.add.image(p.x, p.y, 'o');
 
     // Update both hitbox and visual size
     const scale = weapon.b / 8; // 8 is base radius
@@ -2449,7 +2449,7 @@ function initOrbBalls() {
   }
 
   // Set up overlap (not collider, so balls don't block)
-  scene.physics.add.overlap(orbitingBalls, en, hitEnBall, null, scene);
+  s.physics.add.overlap(orbitingBalls, en, hitEnBall, null, s);
 }
 
 function updOrbBalls(delta) {
@@ -2459,7 +2459,7 @@ function updOrbBalls(delta) {
   // Add/remove balls if count changed
   if (orbitingBalls.length < weapon.c) {
     for (let i = orbitingBalls.length; i < weapon.c; i++) {
-      const ball = scene.physics.add.image(p.x, p.y, 'o');
+      const ball = s.physics.add.image(p.x, p.y, 'o');
 
       // Update both hitbox and visual size
       const scale = weapon.b / 8; // 8 is base radius
@@ -2468,7 +2468,7 @@ function updOrbBalls(delta) {
 
       ball.setData('lastHitTime', {});
       orbitingBalls.push(ball);
-      scene.physics.add.overlap([ball], en, hitEnBall, null, scene);
+      s.physics.add.overlap([ball], en, hitEnBall, null, s);
     }
   }
 
@@ -2507,7 +2507,7 @@ function hitEnBall(ball, enemy) {
 
   lastHitTimes[enemyId] = now;
   ball.setData('lastHitTime', lastHitTimes);
-  playTone(scene, 1100, 0.05);
+  playTone(s, 1100, 0.05);
   procDmg(enemy, ball.x, ball.y, weapon.m);
 }
 
@@ -2515,7 +2515,7 @@ function initAreaDamage() {
   // Create visual circle
   if (adc) adc[DS]();
 
-  adc = scene.add.graphics();
+  adc = s.add.graphics();
   adc[SD](-10); // Above nebula background but below gameplay entities
 }
 
@@ -2551,7 +2551,7 @@ function updAreaDmg(delta) {
       }
     });
 
-    if (hitAnyEnemy) playTone(scene, 300, 0.06);
+    if (hitAnyEnemy) playTone(s, 300, 0.06);
   }
 }
 
@@ -2574,7 +2574,7 @@ function shootBoomerang() {
   const vy = Math.sin(angle) * weapon.s;
 
   // Create boomerang sprite
-  const boom = scene.physics.add.sprite(p.x, p.y, 'b');
+  const boom = s.physics.add.sprite(p.x, p.y, 'b');
   boom.setScale(weapon.z);
   boom.body.setCircle(8 * weapon.z);
   boom.body.setVelocity(vx, vy);
@@ -2591,10 +2591,10 @@ function shootBoomerang() {
   avB--;
 
   // Setup collision
-  scene.physics.add.overlap(boom, en, hitEnBoom, null, scene);
-  scene.physics.add.overlap(boom, p, colBoom, null, scene);
+  s.physics.add.overlap(boom, en, hitEnBoom, null, s);
+  s.physics.add.overlap(boom, p, colBoom, null, s);
 
-  playTone(scene, 1200, 0.1);
+  playTone(s, 1200, 0.1);
 }
 
 function updBooms(delta) {
@@ -2642,7 +2642,7 @@ function updBooms(delta) {
         boom[DS]();
         // Recharge
         avB++;
-        playTone(scene, 1500, 0.1);
+        playTone(s, 1500, 0.1);
         return false; // Remove from array
       }
 
@@ -2669,7 +2669,7 @@ function hitEnBoom(boom, enemy) {
 
   lastHitTimes[enemyId] = now;
   boom.setData('lastHitTimes', lastHitTimes);
-  playTone(scene, 1000, 0.05);
+  playTone(s, 1000, 0.05);
   procDmg(enemy, boom.x, boom.y, weapon.m);
 }
 
@@ -2689,7 +2689,7 @@ function colBoom(_pObj, boom) {
   // Recharge
   avB++;
 
-  playTone(scene, 1500, 0.1);
+  playTone(s, 1500, 0.1);
 }
 
 function applyDmgFb(enemy, sourceX, sourceY, isCrit = false) {
@@ -2701,7 +2701,7 @@ function applyDmgFb(enemy, sourceX, sourceY, isCrit = false) {
     // Scale up briefly for crit
     const originalScale = enemy.getData('originalScale') || 1;
     enemy.setScale(originalScale * 1.3);
-    scene.time.delayedCall(100, () => {
+    s.time.delayedCall(100, () => {
       if (enemy && enemy[AC]) {
         enemy.clearTint();
         enemy.setScale(originalScale);
@@ -2709,7 +2709,7 @@ function applyDmgFb(enemy, sourceX, sourceY, isCrit = false) {
     });
   } else {
     enemy.setTintFill(C.R);
-    scene.time.delayedCall(100, () => {
+    s.time.delayedCall(100, () => {
       if (enemy && enemy[AC]) {
         enemy.clearTint();
       }
