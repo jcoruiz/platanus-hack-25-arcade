@@ -28,8 +28,8 @@ let lastOrbSize = 0; // Track orbit ball size to avoid unnecessary updates
 let lastAreaRadius = 0; // Track area damage radius to avoid unnecessary style updates
 let s;
 
-let sI = 0;
-let m = [];
+let sI = 0; // selectedIndex
+let m = []; // menu items
 let menuKeys = [];
 let pulseTween = null;
 let pulseOverlay = null;
@@ -43,8 +43,6 @@ const C = { W: 0xffffff, B: 0x000000, Y: 0xffff00, R: 0xff0000, G: 0x00ff00, Cy:
 const CS = { W: '#ffffff', B: '#000000', Y: '#ffff00', R: '#ff0000', G: '#00ff00', Cy: '#00ffff', Gy: '#888888', LG: '#cccccc', Go: '#FFD700', Si: '#C0C0C0', Br: '#CD7F32' };
 // Style property shortcuts
 const F = 'fontSize', FF = 'fontFamily', A = 'Arial', CO = 'color', STR = 'stroke', STT = 'strokeThickness', FST = 'fontStyle';
-// Text style constants
-const ST = { t: { [F]: '48px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 6 }, h: { [F]: '24px', [FF]: A, [CO]: CS.W }, d: { [F]: '14px', [FF]: A, [CO]: CS.LG }, sm: { [F]: '12px', [FF]: A, [CO]: '#00ff88' }, i: { [F]: '16px', [FF]: A, [CO]: CS.W, [FST]: 'bold' }, lg: { [F]: '28px', [FF]: A } };
 // Common strings
 const AC = 'active', SSF = 'setScrollFactor', SD = 'setDepth', DS = 'destroy';
 
