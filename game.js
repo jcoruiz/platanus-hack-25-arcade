@@ -50,14 +50,13 @@ let g;
 const fs = (c, a = 1) => g.fillStyle(c, a);
 const gt = (...a) => (g.generateTexture(...a), g.clear());
 const ls = (w, c, a = 1) => g.lineStyle(w, c, a);
-// Ultra-short shape factories (meta-factory pattern)
-const mk = fn => (...a) => g[fn](...a);
-const fc = mk('fillCircle');
-const fr = mk('fillRect');
-const ft = mk('fillTriangle');
-const sr = mk('strokeRect');
-const lt = mk('lineTo');
-const fp = mk('fillPath');
+// Ultra-short shape factories (max 3 chars)
+const fc = (...a) => g.fillCircle(...a);
+const fr = (...a) => g.fillRect(...a);
+const ft = (...a) => g.fillTriangle(...a);
+const sr = (...a) => g.strokeRect(...a);
+const lt = (...a) => g.lineTo(...a);
+const fp = () => g.fillPath();
 
 // Enemy types: n=name, c=color, h=hpMult, s=speedMult, d=damageMult, x=xp, cn=coins, r=dropRate, u=unlockTime
 const enemyTypes = [
@@ -1783,27 +1782,28 @@ function generateHeroTexture(t, sel) {
   const k = `${t}_hd${sel ? '_s' : ''}`;
   if (s.textures.exists(k)) return k;
   g = s.add.graphics();
+  // d=scale factor (2.5=normal, 3.5=selected), m=multiplier helper (shadows global m[] array - safe here)
   const d = sel ? 3.5 : 2.5, m = v => v * d;
 
   if (t === 'p_b') {
     fs(C.Y, 1).fillEllipse(m(16), m(16), m(10), m(24));
     fs(0xffdd00, 1).fillEllipse(m(18), m(16), m(6), m(20));
-    fs(0x885500, 1).fillRect(m(14), m(4), m(4), m(6));
+    fs(0x885500, 1);fr(m(14), m(4), m(4), m(6));
   } else if (t === 'p_j') {
-    fs(0xff88dd, 1).fillCircle(m(16), m(12), m(10));
-    fs(0xff88dd, 0.7).fillRect(m(8), m(18), m(3), m(12)).fillRect(m(13), m(20), m(3), m(10)).fillRect(m(18), m(19), m(3), m(11));
-    fs(C.B, 1).fillCircle(m(12), m(11), m(2)).fillCircle(m(20), m(11), m(2));
+    fs(0xff88dd, 1);fc(m(16), m(12), m(10));
+    fs(0xff88dd, 0.7);fr(m(8), m(18), m(3), m(12));fr(m(13), m(20), m(3), m(10));fr(m(18), m(19), m(3), m(11));
+    fs(C.B, 1);fc(m(12), m(11), m(2));fc(m(20), m(11), m(2));
   } else if (t === 'p_o') {
-    fs(0xcc00ff, 1).slice(m(16), m(16), m(12), 1.57, 4.71, 0).fillPath();
-    fs(0x0088ff, 1).slice(m(16), m(16), m(12), 4.71, 1.57, 0).fillPath();
+    fs(0xcc00ff, 1).slice(m(16), m(16), m(12), 1.57, 4.71, 0);fp();
+    fs(0x0088ff, 1).slice(m(16), m(16), m(12), 4.71, 1.57, 0);fp();
     ls(m(2), C.W, 1).lineBetween(m(16), m(4), m(16), m(28));
-    fs(C.W, 0.8).fillCircle(m(16), m(16), m(4));
+    fs(C.W, 0.8);fc(m(16), m(16), m(4));
   } else {
     fs(0xe0e0e0, 1).fillRoundedRect(m(6), m(10), m(20), m(12), m(3));
-    fs(C.W, 1).fillTriangle(m(4), m(16), m(10), m(12), m(10), m(20));
-    fs(0x0088ff, 1).fillRect(m(8), m(15), m(18), m(2));
-    fs(C.R, 1).fillRect(m(8), m(18), m(18), m(2));
-    fs(0x4444ff, 0.7).fillRect(m(12), m(13), m(3), m(3)).fillRect(m(17), m(13), m(3), m(3)).fillRect(m(22), m(13), m(3), m(3));
+    fs(C.W, 1);ft(m(4), m(16), m(10), m(12), m(10), m(20));
+    fs(0x0088ff, 1);fr(m(8), m(15), m(18), m(2));
+    fs(C.R, 1);fr(m(8), m(18), m(18), m(2));
+    fs(0x4444ff, 0.7);fr(m(12), m(13), m(3), m(3));fr(m(17), m(13), m(3), m(3));fr(m(22), m(13), m(3), m(3));
   }
 
   g.generateTexture(k, 32 * d, 32 * d);
