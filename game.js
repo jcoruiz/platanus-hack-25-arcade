@@ -1995,7 +1995,7 @@ function updateUI() {
 }
 
 function drawUIBars() {
-  gr.clear()[SSF](0)[SD](150);
+  gr.clear()[SSF](0)[SD](99);
   // Helper: draw bar (x, y, w, h, val, max, bgCol, fgCol, borderCol, borderW)
   const bar = (x, y, w, h, v, m, bg, fg, br, bw) => {
     gr.fillStyle(bg, 1).fillRect(x, y, w, h);
@@ -2515,7 +2515,7 @@ function initAreaDamage() {
   if (adc) adc[DS]();
 
   adc = scene.add.graphics();
-  adc[SD](-50); // Far depth to avoid alpha blending interference with background layers
+  adc[SD](-10); // Above nebula background but below gameplay entities
 }
 
 function updAreaDmg(delta) {
