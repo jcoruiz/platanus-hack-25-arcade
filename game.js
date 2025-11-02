@@ -556,12 +556,37 @@ function preload() {
   sr(4, 8, 12, 4);
   gt('healthDrop', 20, 20);
 
-  // Obstacle texture (gray rock)
-  fs(C.DB, 1);
-  fc(20, 20, 20);
-  fs(0x777777, 0.5);
-  fc(15, 15, 10);
-  gt('obstacle', 40, 40);
+  // Generate 10 asteroid texture variations using Perlin noise
+  for (let v = 0; v < 10; v++) {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 40;
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.getImageData(0, 0, 40, 40);
+    const ox = Math.random() * 1000;
+    const oy = Math.random() * 1000;
+
+    for (let y = 0; y < 40; y++) {
+      for (let x = 0; x < 40; x++) {
+        const dx = x - 20;
+        const dy = y - 20;
+        const distFromCenter = Math.sqrt(dx * dx + dy * dy);
+
+        if (distFromCenter <= 20) {
+          let n = perlin((x + ox) / 12, (y + oy) / 12);
+          n = (n + 1) / 2;
+          const baseGray = 60 + n * 80;
+          const i = (y * 40 + x) * 4;
+          imgData.data[i] = baseGray * 0.95;
+          imgData.data[i + 1] = baseGray * 0.85;
+          imgData.data[i + 2] = baseGray * 1.05;
+          imgData.data[i + 3] = 255;
+        }
+      }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+    this.textures.addCanvas(`asteroid${v}`, canvas);
+  }
 
   // Generic chest texture (white for tinting)
   fs(0xcccccc, 1);
@@ -671,7 +696,7 @@ function initGameplay() {
 
   // Spawn obstacles randomly across map
   for (let i = 0; i < 80; i++) {
-    ob.create(100 + Math.random() * 2200, 100 + Math.random() * 1600, 'obstacle').setCircle(20);
+    ob.create(100 + Math.random() * 2200, 100 + Math.random() * 1600, 'asteroid' + ~~(Math.random() * 10)).setCircle(20);
   }
 
   // Create player at center of world
