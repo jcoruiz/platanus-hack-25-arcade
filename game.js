@@ -28,8 +28,8 @@ let lastOrbSize = 0; // Track orbit ball size to avoid unnecessary updates
 let lastAreaRadius = 0; // Track area damage radius to avoid unnecessary style updates
 let s;
 
-let selectedIndex = 0;
-let menuOptions = [];
+let sI = 0;
+let m = [];
 let menuKeys = [];
 let pulseTween = null;
 let pulseOverlay = null;
@@ -1343,8 +1343,8 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
 
   // Shuffle upgrades
   const shuffled = [...availableUpgrades].sort(r).slice(0, 3);
-  selectedIndex = 0;
-  menuOptions = [];
+  sI = 0;
+  m = [];
 
   // Choose upgrade section (adjusted position)
   const upgradeY = 360;
@@ -1364,7 +1364,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
       mkTxt(x, upgradeY + 30, u.icon, { [F]: '40px' }, 102);
       mkTxt(x, upgradeY + 70, u.name, { [F]: '16px', [FF]: A, [CO]: CS.W }, 102);
       mkTxt(x, upgradeY + 90, u.desc, { [F]: '12px', [FF]: A, [CO]: CS.LG }, 102);
-      menuOptions.push({ btn, u, x, y: upgradeY + 40 });
+      m.push({ btn, u, x, y: upgradeY + 40 });
     });
   };
 
@@ -1372,11 +1372,11 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     if (stats.c < rerollCost) return;
     stats.c -= rerollCost;
     playTone(s, 1400, 0.1);
-    menuOptions.forEach(opt => opt.btn[DS]());
+    m.forEach(opt => opt.btn[DS]());
     s.children.list.filter(c => c.depth === 102 && c.text && c.y >= 380 && c.y <= 460).forEach(c => c[DS]());
     const newShuffled = [...availableUpgrades].sort(r).slice(0, 3);
-    menuOptions = [];
-    selectedIndex = 0;
+    m = [];
+    sI = 0;
     renderUpgradeOptions(newShuffled);
     updateSelection();
     s.children.list.filter(c => c.depth === 102 && c.text && c.text.includes('Coins')).forEach(c => c.setText(`Coins: ${stats.c}`));
@@ -1396,8 +1396,8 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
     if (pulseTween) { pulseTween.stop(); pulseTween = null; }
     if (pulseOverlay) { pulseOverlay.destroy(); pulseOverlay = null; }
 
-    menuOptions.forEach((opt, i) => {
-      const sel = i === selectedIndex;
+    m.forEach((opt, i) => {
+      const sel = i === sI;
       opt.btn.clear().fillStyle(sel ? C.DB : C.VG, 1).fillRoundedRect(opt.x - 80, upgradeY - 10, 160, 110, 8);
       opt.btn.lineStyle(3, sel ? C.Y : C.G, 1).strokeRoundedRect(opt.x - 80, upgradeY - 10, 160, 110, 8);
 
@@ -1418,7 +1418,7 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
       }
     });
     const canRr = stats.c >= rerollCost;
-    const rrSel = selectedIndex === 3;
+    const rrSel = sI === 3;
     rerollBtn.clear().fillStyle(rrSel ? (canRr ? 0x776600 : 0x444444) : (canRr ? 0x554400 : C.VG), 1).fillRoundedRect(260, rerollY - 22, 280, 45, 8);
     rerollBtn.lineStyle(3, rrSel ? C.Y : (canRr ? CS.Go : C.DB), 1).strokeRoundedRect(260, rerollY - 22, 280, 45, 8);
   };
@@ -1428,32 +1428,32 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
 
   // Keyboard navigation handlers
   const goLeft = () => {
-    if (selectedIndex < 3) {
-      selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
+    if (sI < 3) {
+      sI = (sI - 1 + m.length) % m.length;
       updateSelection();
       playTone(s, 800, 0.05);
     }
   };
 
   const goRight = () => {
-    if (selectedIndex < 3) {
-      selectedIndex = (selectedIndex + 1) % menuOptions.length;
+    if (sI < 3) {
+      sI = (sI + 1) % m.length;
       updateSelection();
       playTone(s, 800, 0.05);
     }
   };
 
   const goUp = () => {
-    if (selectedIndex === 3) {
-      selectedIndex = menuOptions.length - 1;
+    if (sI === 3) {
+      sI = m.length - 1;
       updateSelection();
       playTone(s, 800, 0.05);
     }
   };
 
   const goDown = () => {
-    if (selectedIndex < 3) {
-      selectedIndex = 3;
+    if (sI < 3) {
+      sI = 3;
       updateSelection();
       playTone(s, 800, 0.05);
     }
@@ -1466,8 +1466,8 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   keys.mv.s.on('down', goDown);
 
   keys.mn.e.on('down', () => {
-    if (selectedIndex === 3) doReroll();
-    else if (selectedIndex < 3) selectUpgrade(menuOptions[selectedIndex].u);
+    if (sI === 3) doReroll();
+    else if (sI < 3) selectUpgrade(m[sI].u);
   });
 
   // Track keys for cleanup (references only)
@@ -1488,8 +1488,8 @@ function showWeaponSelector(weapons) {
   renderStatsPanel();
 
   // Reset menu state
-  selectedIndex = 0;
-  menuOptions = [];
+  sI = 0;
+  m = [];
 
   // Choose weapon section
   const weaponY = 360;
@@ -1521,8 +1521,8 @@ function showWeaponSelector(weapons) {
     if (pulseTween) { pulseTween.stop(); pulseTween = null; }
     if (pulseOverlay) { pulseOverlay.destroy(); pulseOverlay = null; }
 
-    menuOptions.forEach((option, i) => {
-      const isSelected = i === selectedIndex;
+    m.forEach((option, i) => {
+      const isSelected = i === sI;
       option.btn.clear();
       option.btn.fillStyle(isSelected ? C.DB : C.VG, 1);
       option.btn.fillRoundedRect(option.x - 90, weaponY - 10, 180, 200, 10);
@@ -1553,7 +1553,7 @@ function showWeaponSelector(weapons) {
     btn.fillStyle(C.VG, 1).fillRoundedRect(x - 90, weaponY - 10, 180, 200, 10).lineStyle(3, C.G, 1).strokeRoundedRect(x - 90, weaponY - 10, 180, 200, 10);
     mkTxt(x, weaponY + 50, weapon.n, { [F]: '20px', [FF]: A, [CO]: CS.W, [FST]: 'bold' }, 102);
     mkTxt(x, weaponY + 110, weapon.d, { [F]: '14px', [FF]: A, [CO]: CS.LG }, 102);
-    menuOptions.push({ btn, weapon, x });
+    m.push({ btn, weapon, x });
   });
 
   // Initial selection highlight
@@ -1561,13 +1561,13 @@ function showWeaponSelector(weapons) {
 
   // Keyboard navigation handlers
   const goLeft = () => {
-    selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
+    sI = (sI - 1 + m.length) % m.length;
     updateSelection();
     playTone(s, 800, 0.05);
   };
 
   const goRight = () => {
-    selectedIndex = (selectedIndex + 1) % menuOptions.length;
+    sI = (sI + 1) % m.length;
     updateSelection();
     playTone(s, 800, 0.05);
   };
@@ -1577,7 +1577,7 @@ function showWeaponSelector(weapons) {
   keys.mv.d.on('down', goRight);
 
   keys.mn.e.on('down', () => {
-    selectWeapon(menuOptions[selectedIndex].weapon);
+    selectWeapon(m[sI].weapon);
   });
 
   // Track keys for cleanup (references only)
@@ -1616,8 +1616,8 @@ function showRareUpg() {
   const shuffled = [...available].sort(r).slice(0, 3);
 
   // Reset menu state
-  selectedIndex = 0;
-  menuOptions = [];
+  sI = 0;
+  m = [];
 
   const selectUpgrade = (upgrade) => {
     upgrade.apply();
@@ -1632,8 +1632,8 @@ function showRareUpg() {
   };
 
   const updateSelection = () => {
-    menuOptions.forEach((option, i) => {
-      const isSelected = i === selectedIndex;
+    m.forEach((option, i) => {
+      const isSelected = i === sI;
       option.btn.clear();
       option.btn.fillStyle(isSelected ? 0x550055 : 0x330033, 1);
       option.btn.fillRoundedRect(option.x - 90, option.y - 80, 180, 160, 10);
@@ -1650,7 +1650,7 @@ function showRareUpg() {
     mkTxt(x, y - 30, upgrade.icon, { [F]: '48px' }, 102);
     mkTxt(x, y + 20, upgrade.name, { [F]: '18px', [FF]: A, [CO]: '#f0f', [FST]: 'bold' }, 102);
     mkTxt(x, y + 50, upgrade.desc, { [F]: '14px', [FF]: A, [CO]: '#faf' }, 102);
-    menuOptions.push({ btn, upgrade, x, y });
+    m.push({ btn, upgrade, x, y });
   });
 
   // Initial selection highlight
@@ -1658,13 +1658,13 @@ function showRareUpg() {
 
   // Keyboard navigation handlers
   const goLeft = () => {
-    selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
+    sI = (sI - 1 + m.length) % m.length;
     updateSelection();
     playTone(s, 800, 0.05);
   };
 
   const goRight = () => {
-    selectedIndex = (selectedIndex + 1) % menuOptions.length;
+    sI = (sI + 1) % m.length;
     updateSelection();
     playTone(s, 800, 0.05);
   };
@@ -1674,7 +1674,7 @@ function showRareUpg() {
   keys.mv.d.on('down', goRight);
 
   keys.mn.e.on('down', () => {
-    selectUpgrade(menuOptions[selectedIndex].upgrade);
+    selectUpgrade(m[sI].upgrade);
   });
 
   // Track keys for cleanup (references only)
@@ -1709,7 +1709,7 @@ function showMainMenu() {
   // Control instructions
   mkTxt(400, 540, 'WS: Move  SPACE: Select', { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
 
-  selectedIndex = 0;
+  sI = 0;
   const opts = [
     { y: 320, txt: 'START GAME', fn: () => { mainMenu = false; showStartScreen(); } },
     { y: 400, txt: 'LEADERBOARDS', fn: showFullLeaderboard }
@@ -1718,7 +1718,7 @@ function showMainMenu() {
   opts.forEach(o => o.texts = []);
 
   const dr = (i) => {
-    const d = i === selectedIndex, o = opts[i];
+    const d = i === sI, o = opts[i];
     o.texts.forEach(t => t[DS]());
     o.texts = [];
 
@@ -1734,9 +1734,9 @@ function showMainMenu() {
   opts.forEach((_, i) => dr(i));
 
   // Keyboard navigation handlers
-  const gu = () => { selectedIndex = (selectedIndex - 1 + opts.length) % opts.length; opts.forEach((_, i) => dr(i)); playTone(s, 800, 0.05); };
-  const gd = () => { selectedIndex = (selectedIndex + 1) % opts.length; opts.forEach((_, i) => dr(i)); playTone(s, 800, 0.05); };
-  const ge = () => { playTone(s, 1200, 0.15); cleanupMenu(); opts[selectedIndex].fn(); };
+  const gu = () => { sI = (sI - 1 + opts.length) % opts.length; opts.forEach((_, i) => dr(i)); playTone(s, 800, 0.05); };
+  const gd = () => { sI = (sI + 1) % opts.length; opts.forEach((_, i) => dr(i)); playTone(s, 800, 0.05); };
+  const ge = () => { playTone(s, 1200, 0.15); cleanupMenu(); opts[sI].fn(); };
 
   // Attach listeners to central keys
   keys.mv.w.on('down', gu);
@@ -1828,8 +1828,8 @@ function showStartScreen() {
   mkTxt(403, 43, 'CHOOSE CHARACTER', { [F]: '32px', [FF]: A, [CO]: '#ff00ff', [STR]: '#ff00ff', [STT]: 2 }, 101);
   mkTxt(400, 40, 'CHOOSE CHARACTER', { [F]: '32px', [FF]: A, [CO]: CS.Cy, [STR]: CS.Cy, [STT]: 2 }, 102);
 
-  selectedIndex = 0;
-  menuOptions = [];
+  sI = 0;
+  m = [];
 
   // Character gradient colors
   const gradients = [0xffff00, 0xff00ff, 0x00ffff, 0x00ff00]; // Banana, Medusa, Orb, Train
@@ -1869,8 +1869,8 @@ function showStartScreen() {
 
   let glowPulse = 0.4;
   const upd = (shake) => {
-    menuOptions.forEach((o, i) => {
-      const d = i === selectedIndex;
+    m.forEach((o, i) => {
+      const d = i === sI;
       const shakeX = shake ? r() * 4 : 0;
       const shakeY = shake ? r() * 4 : 0;
 
@@ -1936,7 +1936,7 @@ function showStartScreen() {
     const hdTexture = generateHeroTexture(ch.texture, false);
     const heroSprite = s.add.sprite(x, y - 50, hdTexture).setScale(1)[SSF](0)[SD](102);
 
-    menuOptions.push({ btn, character: ch, x, y, sprite: heroSprite, texts: [], particles: null });
+    m.push({ btn, character: ch, x, y, sprite: heroSprite, texts: [], particles: null });
   });
 
   // Initial draw
@@ -1946,13 +1946,13 @@ function showStartScreen() {
 
   // Keyboard navigation handlers
   const goLeft = () => {
-    selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
+    sI = (sI - 1 + m.length) % m.length;
     upd(true); // Shake on change
     s.time.delayedCall(50, () => upd(false)); // Reset shake
     playTone(s, 800, 0.05);
   };
   const goRight = () => {
-    selectedIndex = (selectedIndex + 1) % menuOptions.length;
+    sI = (sI + 1) % m.length;
     upd(true); // Shake on change
     s.time.delayedCall(50, () => upd(false)); // Reset shake
     playTone(s, 800, 0.05);
@@ -1961,7 +1961,7 @@ function showStartScreen() {
   // Attach listeners to central keys
   keys.mv.a.on('down', goLeft);
   keys.mv.d.on('down', goRight);
-  keys.mn.e.on('down', () => sel(menuOptions[selectedIndex].character));
+  keys.mn.e.on('down', () => sel(m[sI].character));
   keys.mn.x.on('down', () => {
     playTone(s, 1000, 0.15);
     startScreen = !(mainMenu = true);
