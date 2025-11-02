@@ -1625,7 +1625,7 @@ function showMainMenu() {
   });
 
   // Version text
-  mkTxt(750, 580, 'V1.16', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
+  mkTxt(750, 580, 'V1.17', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
 
   // Control instructions
   mkTxt(400, 540, INST, { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
