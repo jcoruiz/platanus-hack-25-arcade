@@ -143,10 +143,10 @@ const inS = { // initial stats
 let stats = JSON.parse(JSON.stringify(inS));
 
 let inD = { // initial difficulty
-  spawnRate: 500,
-  enemyHp: 20,
-  enemyDamage: 10,
-  enemySpeed: 60
+  sR: 500, // spawnRate
+  eH: 20, // enemyHp
+  eD: 10, // enemyDamage
+  eS: 60 // enemySpeed
 };
 
 let difficulty = { ...inD };
@@ -817,7 +817,7 @@ function update(_time, delta) {
   }
 
   // Spawn en
-  if (spawnTimer >= difficulty.spawnRate) {
+  if (spawnTimer >= difficulty.sR) { // spawnRate
     spawnTimer = 0;
     spawnEnemy();
   }
@@ -840,18 +840,18 @@ function update(_time, delta) {
 
   // Scale difficulty every 30 seconds
   if (~~(gameTime / 30000) > ~~((gameTime - delta) / 30000)) {
-    difficulty.spawnRate = Math.max(500, difficulty.spawnRate * 0.9);
-    difficulty.enemyHp *= 1.15;
-    difficulty.enemyDamage *= 1.1;
-    difficulty.enemySpeed = Math.min(hyperModeActive ? 9999 : 120, difficulty.enemySpeed * 1.05);
+    difficulty.sR = Math.max(500, difficulty.sR * 0.9); // spawnRate
+    difficulty.eH *= 1.15; // enemyHp
+    difficulty.eD *= 1.1; // enemyDamage
+    difficulty.eS = Math.min(hyperModeActive ? 9999 : 120, difficulty.eS * 1.05); // enemySpeed
   }
 
   // HYPER scaling every 20 seconds (only after 10 minutes)
   if (hyperModeActive && ~~(gameTime / 20000) > ~~((gameTime - delta) / 20000)) {
-    difficulty.spawnRate = Math.max(50, difficulty.spawnRate * 0.5);
-    difficulty.enemyHp *= 1.5;
-    difficulty.enemyDamage *= 1.2;
-    difficulty.enemySpeed *= 1.1;
+    difficulty.sR = Math.max(50, difficulty.sR * 0.5); // spawnRate
+    difficulty.eH *= 1.5; // enemyHp
+    difficulty.eD *= 1.2; // enemyDamage
+    difficulty.eS *= 1.1; // enemySpeed
   }
 
   // Wave system (every 60 seconds)
@@ -999,9 +999,9 @@ function createEn(type, x, y, hpMult = 1, scale = 1) {
   enemy.setScale(scale);
   enemy.body.setCircle(4 * scale);
   enemy.setCollideWorldBounds(true);
-  enemy.setData('hp', difficulty.enemyHp * type.h * hpMult);
-  enemy.setData('speed', difficulty.enemySpeed * type.s);
-  enemy.setData('damage', difficulty.enemyDamage * type.d);
+  enemy.setData('hp', difficulty.eH * type.h * hpMult); // enemyHp
+  enemy.setData('speed', difficulty.eS * type.s); // enemySpeed
+  enemy.setData('damage', difficulty.eD * type.d); // enemyDamage
   enemy.setData('xpValue', type.x);
   enemy.setData('coinValue', type.cn);
   enemy.setData('dropChance', type.r);
@@ -1053,7 +1053,7 @@ function hitPlayer(_pObj, enemy) {
   const lastHit = enemy.getData('lastHitTime') || 0;
   if (gameTime - lastHit < 500) return; // 500ms cooldown per enemy
 
-  const damage = enemy.getData('damage') || difficulty.enemyDamage;
+  const damage = enemy.getData('damage') || difficulty.eD; // enemyDamage
   stats.hp = Math.max(0, stats.hp - damage); // Ensure HP never goes negative
   playTone(scene, 220, 0.15);
   enemy.setData('lastHitTime', gameTime);
@@ -2379,11 +2379,11 @@ function spawnBoss() {
   const boss = en.create(x, y, bossTexKey);
   boss.body.setCircle(30);
   boss.setCollideWorldBounds(true);
-  const bhp = difficulty.enemyHp * type.h * 10;
+  const bhp = difficulty.eH * type.h * 10; // enemyHp
   boss.setData('hp', bhp);
   boss.setData('maxHp', bhp);
-  boss.setData('speed', difficulty.enemySpeed * type.s * 0.7);
-  boss.setData('damage', difficulty.enemyDamage * type.d * 2);
+  boss.setData('speed', difficulty.eS * type.s * 0.7); // enemySpeed
+  boss.setData('damage', difficulty.eD * type.d * 2); // enemyDamage
   boss.setData('xpValue', type.x * 10);
   boss.setData('coinValue', type.cn * 10);
   boss.setData('dropChance', type.r);
