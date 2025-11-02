@@ -58,17 +58,41 @@ const sr = (...a) => g.strokeRect(...a);
 const lt = (...a) => g.lineTo(...a);
 const fp = () => g.fillPath();
 
-// Enemy type array indices: 0=name, 1=color, 2=hpMult, 3=speedMult, 4=damageMult, 5=xp, 6=coins, 7=dropRate, 8=unlockTime
-const EN=0, EC=1, EH=2, ES=3, ED=4, EX=5, ECN=6, ER=7, EU=8;
-// Enemy types as arrays for compression
+// Enemy type array indices: 0=name, 1=color, 2=hpMult, 3=speedMult, 4=damageMult, 5=xp, 6=coins, 7=dropRate, 8=unlockTime, 9=recipe
+const EN = 0, EC = 1, EH = 2, ES = 3, ED = 4, EX = 5, ECN = 6, EDR = 7, EU = 8, ER = 9;
+// Shape library for procedural enemy textures
+const shp = [
+  s => ft(10 * s, 2 * s, 2 * s, 18 * s, 18 * s, 18 * s), // 0: triangle
+  s => { ft(10 * s, 2 * s, 2 * s, 10 * s, 10 * s, 18 * s); ft(10 * s, 2 * s, 18 * s, 10 * s, 10 * s, 18 * s); }, // 1: double triangle
+  s => { fs(C.W, 1); fc(7 * s, 10 * s, 2 * s); fc(13 * s, 10 * s, 2 * s); }, // 2: eyes y=10
+  s => { fs(C.W, 1); fc(8 * s, 8 * s, 2 * s); fc(12 * s, 8 * s, 2 * s); }, // 3: eyes b-type
+  s => { fs(C.W, 1); fc(7 * s, 9 * s, 2 * s); fc(13 * s, 9 * s, 2 * s); }, // 4: eyes y=9
+  s => { fs(C.W, 1); fc(7 * s, 8 * s, 2 * s); fc(13 * s, 8 * s, 2 * s); }, // 5: eyes y=8
+  s => fc(10 * s, 10 * s, 9 * s), // 6: large circle
+  (s, c) => { fs(c, 1); fc(10 * s, 6 * s, 3 * s); }, // 7: hat (needs color)
+  s => fr(3 * s, 3 * s, 14 * s, 14 * s), // 8: square
+  s => fs(C.B, 1), // 9: black fill
+  s => fr(6 * s, 13 * s, 8 * s, 2 * s), // 10: mouth bar
+  (s, c) => { fs(c, 1); ft(10 * s, 1 * s, 7 * s, 8 * s, 13 * s, 8 * s); ft(10 * s, 19 * s, 7 * s, 12 * s, 13 * s, 12 * s); ft(1 * s, 10 * s, 8 * s, 7 * s, 8 * s, 13 * s); ft(19 * s, 10 * s, 12 * s, 7 * s, 12 * s, 13 * s); }, // 11: 4 spikes
+  (s, c) => { fs(c, 1); ft(3 * s, 5 * s, 5 * s, 2 * s, 7 * s, 5 * s); ft(17 * s, 5 * s, 15 * s, 2 * s, 13 * s, 5 * s); }, // 12: horns
+  s => fs(C.R, 1), // 13: red fill
+  s => fr(7 * s, 14 * s, 6 * s, 2 * s), // 14: red mouth
+  s => fr(4 * s, 6 * s, 12 * s, 10 * s), // 15: body rect
+  s => { fc(6 * s, 6 * s, 3 * s); fc(14 * s, 6 * s, 3 * s); }, // 16: side circles
+  (s, c) => { fs(c, 1); fc(7 * s, 10 * s, 3 * s); fc(13 * s, 10 * s, 3 * s); } // 17: colored eye circles
+];
+// Enemy types as arrays for compression (with recipes)
 const enemyTypes = [
-  ['g', C.G, 1, .5, 1, 5, 1, .02, 0],
-  ['b', 0x0088ff, 1.5, .55, 1.2, 8, 2, .03, 60000],
-  ['c', C.Cy, 2, 1.6, 1.4, 10, 2, .035, 120000],
-  ['y', C.Y, 2.5, .65, 1.6, 15, 3, .04, 180000],
-  ['o', C.O, 3, .7, 1.8, 20, 3, .045, 240000],
-  ['r', C.R, 4, .8, 2, 25, 4, .05, 300000],
-  ['p', C.P, 5, .9, 2.5, 35, 5, .055, 360000]
+  ['g', C.G, 1, .5, 1, 5, 1, .02, 100000, [0, 2]], // tri + eyes
+  ['b', 0x0088ff, 1.5, .55, 1.2, 8, 2, .03, 100000, [1, 3]], // double-tri + b-eyes
+  ['c', C.Cy, 2, 1.6, 1.4, 10, 2, .035, 200000, [6, 4, { f: 7, p: [C.B] }]], // circle + eyes + black hat
+  ['y', C.Y, 2.5, .65, 1.6, 15, 3, .04, 30000, [8, 9, 5, 10]], // square + black + eyes + mouth
+  ['o', C.O, 3, .7, 1.8, 20, 3, .045, 40000, [6, { f: 11, p: [0x0088ff] }, 5]], // circle + blue spikes + eyes
+  ['r', C.R, 4, .8, 2, 25, 4, .05, 2000, [6, { f: 12, p: [C.Y] }, 13, 4, 14]], // circle + yellow horns + red + eyes + mouth
+  ['p', C.P, 5, .9, 2.5, 35, 5, .055, 60000, [15, 16, { f: 17, p: [C.G] }, { f: 17, p: [C.B] }, 2]], // body + circles + green eyes + blue eyes + white eyes
+  ['d', 0xff3300, 6, 1, 3, 45, 6, .06, 10000, [6, { f: 12, p: [C.Cy] }, { f: 11, p: [C.Cy] }, 13, 4, 14]], // demon: circle + cyan horns + cyan spikes + red fill + eyes + mouth
+  ['s', 0xffaa00, 7, 1.1, 3.5, 55, 7, .065, 15000, [{ f: 11, p: [C.P] }, 6, 2]], // star: purple spikes + circle + eyes
+  ['z', 0x00ff88, 8, 1.2, 4, 70, 8, .07, 0, [8, { f: 12, p: [C.R] }, 13, 5, 14, { f: 7, p: [C.R] }]] // zombie: square + red horns + red fill + eyes + mouth + red hat
 ];
 
 let unlockedTypes = [];
@@ -299,38 +323,17 @@ function handleEnemyDeath(e) {
   stats.k++; // enemies killed
 }
 
-// Generate high-res boss texture (60x60) to avoid pixelation when scaled
+// Generate high-res boss texture (60x60) using recipe system with 3x scaling
 function generateBossTexture(type) {
   const key = `boss_${type[EN]}`;
-
-  // Return if already cached
   if (s.textures.exists(key)) return key;
 
   g = s.add.graphics();
-  const c = 3; // Scale factor (20x20 -> 60x60)
-
-  // Helper functions scaled 3x
-  const ey = (x1, y1, x2, y2) => {
-    fs(C.W, 1).fillCircle(x1 * c, y1 * c, 2 * c).fillCircle(x2 * c, y2 * c, 2 * c);
-  };
-  const tri = (x1, y1, x2, y2, x3, y3) => g.fillTriangle(x1 * c, y1 * c, x2 * c, y2 * c, x3 * c, y3 * c);
-  const circ = (x, y, rad) => g.fillCircle(x * c, y * c, rad * c);
-  const rect = (x, y, w, h) => g.fillRect(x * c, y * c, w * c, h * c);
-
   fs(type[EC], 1);
-
-  // Draw based on enemy type (same logic as preload)
-  if (type[EN] === 'g') { tri(10, 2, 2, 18, 18, 18); ey(7, 10, 13, 10); }
-  else if (type[EN] === 'b') { tri(10, 2, 2, 10, 10, 18); tri(10, 2, 18, 10, 10, 18); ey(8, 8, 12, 8); }
-  else if (type[EN] === 'c') { circ(10, 10, 9); ey(7, 9, 13, 9); fs(type[EC], 0.7); circ(10, 6, 3); }
-  else if (type[EN] === 'y') { rect(3, 3, 14, 14); fs(C.B, 1); ey(7, 8, 13, 8); rect(6, 13, 8, 2); }
-  else if (type[EN] === 'o') { circ(10, 10, 9); tri(10, 1, 7, 8, 13, 8); tri(10, 19, 7, 12, 13, 12); tri(1, 10, 8, 7, 8, 13); tri(19, 10, 12, 7, 12, 13); ey(7, 8, 13, 8); }
-  else if (type[EN] === 'r') { circ(10, 10, 9); tri(3, 5, 5, 2, 7, 5); tri(17, 5, 15, 2, 13, 5); fs(C.R, 1); ey(7, 9, 13, 9); rect(7, 14, 6, 2); }
-  else if (type[EN] === 'p') { rect(4, 6, 12, 10); circ(6, 6, 3); circ(14, 6, 3); fs(C.G, 1); circ(7, 10, 3); circ(13, 10, 3); fs(C.B, 1); ey(7, 10, 13, 10); }
+  type[ER].forEach(r => typeof r === 'number' ? shp[r](3) : shp[r.f](3, ...r.p.length ? r.p : [type[EC]]));
 
   g.generateTexture(key, 60, 60);
   g.destroy();
-
   return key;
 }
 
@@ -521,18 +524,12 @@ function preload() {
   sr(12, 8, 8, 4);
   gt('b', 16, 16);
 
-  // Enemy textures (one for each type) - different shapes
-  const ey = (x1, y1, x2, y2) => { fs(C.W, 1).fillCircle(x1, y1, 2).fillCircle(x2, y2, 2); };
-  const dm = [
-    () => { ft(10, 2, 2, 18, 18, 18); ey(7, 10, 13, 10); },
-    () => { ft(10, 2, 2, 10, 10, 18); ft(10, 2, 18, 10, 10, 18); ey(8, 8, 12, 8); },
-    (col) => { fc(10, 10, 9); ey(7, 9, 13, 9); fs(col, 0.7); fc(10, 6, 3); },
-    () => { fr(3, 3, 14, 14); fs(C.B, 1); ey(7, 8, 13, 8); fr(6, 13, 8, 2); },
-    () => { fc(10, 10, 9); ft(10, 1, 7, 8, 13, 8); ft(10, 19, 7, 12, 13, 12); ft(1, 10, 8, 7, 8, 13); ft(19, 10, 12, 7, 12, 13); ey(7, 8, 13, 8); },
-    () => { fc(10, 10, 9); ft(3, 5, 5, 2, 7, 5); ft(17, 5, 15, 2, 13, 5); fs(C.R, 1); ey(7, 9, 13, 9); fr(7, 14, 6, 2); },
-    () => { fr(4, 6, 12, 10); fc(6, 6, 3); fc(14, 6, 3); fs(C.G, 1); fc(7, 10, 3); fc(13, 10, 3); fs(C.B, 1); ey(7, 10, 13, 10); }
-  ];
-  enemyTypes.forEach((t,i) => { fs(t[EC], 1); dm[i](t[EC]); gt(`enemy_${t[EN]}`, 20, 20); });
+  // Enemy textures (procedural using recipes)
+  enemyTypes.forEach(t => {
+    fs(t[EC], 1);
+    t[ER].forEach(r => typeof r === 'number' ? shp[r](1) : shp[r.f](1, ...r.p.length ? r.p : [t[EC]]));
+    gt(`enemy_${t[EN]}`, 20, 20);
+  });
 
   // Generic orb texture with glow (white for tinting)
   fs(C.W, 0.3);
@@ -1004,7 +1001,7 @@ function createEn(type, x, y, hpMult = 1, scale = 1) {
   enemy.setData('damage', difficulty.eD * type[ED]); // enemyDamage
   enemy.setData('xpValue', type[EX]);
   enemy.setData('coinValue', type[ECN]);
-  enemy.setData('dropChance', type[ER]);
+  enemy.setData('dropChance', type[EDR]);
   enemy.setData('enemyColor', type[EC]);
   enemy.setData('knockbackUntil', 0);
   enemy.setData('originalScale', scale);
@@ -1790,22 +1787,22 @@ function generateHeroTexture(t, sel) {
   if (t === 'p_b') {
     fs(C.Y, 1).fillEllipse(m(16), m(16), m(10), m(24));
     fs(0xffdd00, 1).fillEllipse(m(18), m(16), m(6), m(20));
-    fs(0x885500, 1);fr(m(14), m(4), m(4), m(6));
+    fs(0x885500, 1); fr(m(14), m(4), m(4), m(6));
   } else if (t === 'p_j') {
-    fs(0xff88dd, 1);fc(m(16), m(12), m(10));
-    fs(0xff88dd, 0.7);fr(m(8), m(18), m(3), m(12));fr(m(13), m(20), m(3), m(10));fr(m(18), m(19), m(3), m(11));
-    fs(C.B, 1);fc(m(12), m(11), m(2));fc(m(20), m(11), m(2));
+    fs(0xff88dd, 1); fc(m(16), m(12), m(10));
+    fs(0xff88dd, 0.7); fr(m(8), m(18), m(3), m(12)); fr(m(13), m(20), m(3), m(10)); fr(m(18), m(19), m(3), m(11));
+    fs(C.B, 1); fc(m(12), m(11), m(2)); fc(m(20), m(11), m(2));
   } else if (t === 'p_o') {
-    fs(0xcc00ff, 1).slice(m(16), m(16), m(12), 1.57, 4.71, 0);fp();
-    fs(0x0088ff, 1).slice(m(16), m(16), m(12), 4.71, 1.57, 0);fp();
+    fs(0xcc00ff, 1).slice(m(16), m(16), m(12), 1.57, 4.71, 0); fp();
+    fs(0x0088ff, 1).slice(m(16), m(16), m(12), 4.71, 1.57, 0); fp();
     ls(m(2), C.W, 1).lineBetween(m(16), m(4), m(16), m(28));
-    fs(C.W, 0.8);fc(m(16), m(16), m(4));
+    fs(C.W, 0.8); fc(m(16), m(16), m(4));
   } else {
     fs(0xe0e0e0, 1).fillRoundedRect(m(6), m(10), m(20), m(12), m(3));
-    fs(C.W, 1);ft(m(4), m(16), m(10), m(12), m(10), m(20));
-    fs(0x0088ff, 1);fr(m(8), m(15), m(18), m(2));
-    fs(C.R, 1);fr(m(8), m(18), m(18), m(2));
-    fs(0x4444ff, 0.7);fr(m(12), m(13), m(3), m(3));fr(m(17), m(13), m(3), m(3));fr(m(22), m(13), m(3), m(3));
+    fs(C.W, 1); ft(m(4), m(16), m(10), m(12), m(10), m(20));
+    fs(0x0088ff, 1); fr(m(8), m(15), m(18), m(2));
+    fs(C.R, 1); fr(m(8), m(18), m(18), m(2));
+    fs(0x4444ff, 0.7); fr(m(12), m(13), m(3), m(3)); fr(m(17), m(13), m(3), m(3)); fr(m(22), m(13), m(3), m(3));
   }
 
   g.generateTexture(k, 32 * d, 32 * d);
@@ -2388,7 +2385,7 @@ function spawnBoss() {
   boss.setData('damage', difficulty.eD * type[ED] * 2); // enemyDamage
   boss.setData('xpValue', type[EX] * 10);
   boss.setData('coinValue', type[ECN] * 10);
-  boss.setData('dropChance', type[ER]);
+  boss.setData('dropChance', type[EDR]);
   boss.setData('enemyColor', type[EC]);
   boss.setData('knockbackUntil', 0);
   boss.setData('isBoss', true);
