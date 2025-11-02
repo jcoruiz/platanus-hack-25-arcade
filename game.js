@@ -83,16 +83,18 @@ const shp = [
 ];
 // Enemy types as arrays for compression (with recipes)
 const enemyTypes = [
-  ['g', C.G, 1, .5, 1, 5, 1, .02, 100000, [0, 2]], // tri + eyes
-  ['b', 0x0088ff, 1.5, .55, 1.2, 8, 2, .03, 100000, [1, 3]], // double-tri + b-eyes
-  ['c', C.Cy, 2, 1.6, 1.4, 10, 2, .035, 200000, [6, 4, { f: 7, p: [C.B] }]], // circle + eyes + black hat
-  ['y', C.Y, 2.5, .65, 1.6, 15, 3, .04, 30000, [8, 9, 5, 10]], // square + black + eyes + mouth
-  ['o', C.O, 3, .7, 1.8, 20, 3, .045, 40000, [6, { f: 11, p: [0x0088ff] }, 5]], // circle + blue spikes + eyes
-  ['r', C.R, 4, .8, 2, 25, 4, .05, 2000, [6, { f: 12, p: [C.Y] }, 13, 4, 14]], // circle + yellow horns + red + eyes + mouth
-  ['p', C.P, 5, .9, 2.5, 35, 5, .055, 60000, [15, 16, { f: 17, p: [C.G] }, { f: 17, p: [C.B] }, 2]], // body + circles + green eyes + blue eyes + white eyes
-  ['d', 0xff3300, 6, 1, 3, 45, 6, .06, 10000, [6, { f: 12, p: [C.Cy] }, { f: 11, p: [C.Cy] }, 13, 4, 14]], // demon: circle + cyan horns + cyan spikes + red fill + eyes + mouth
-  ['s', 0xffaa00, 7, 1.1, 3.5, 55, 7, .065, 15000, [{ f: 11, p: [C.P] }, 6, 2]], // star: purple spikes + circle + eyes
-  ['z', 0x00ff88, 8, 1.2, 4, 70, 8, .07, 0, [8, { f: 12, p: [C.R] }, 13, 5, 14, { f: 7, p: [C.R] }]] // zombie: square + red horns + red fill + eyes + mouth + red hat
+  ['g', C.G, 1, .5, 1, 5, 1, .02, 0, [0, 2]], // tri + eyes
+  ['b', 0x0088ff, 1.5, .55, 1.2, 8, 2, .03, 60000, [1, 3]], // double-tri + b-eyes
+  ['c', C.Cy, 2, 1.6, 1.4, 10, 2, .035, 120000, [6, 4, { f: 7, p: [C.B] }]], // circle + eyes + black hat
+  ['y', C.Y, 2.5, .65, 1.6, 15, 3, .04, 180000, [8, 9, 5, 10]], // square + black + eyes + mouth
+  ['o', C.O, 3, .7, 1.8, 20, 3, .045, 240000, [6, { f: 11, p: [0x0088ff] }, 5]], // circle + blue spikes + eyes
+  ['r', C.R, 4, .8, 2, 25, 4, .05, 300000, [6, { f: 12, p: [C.Y] }, 13, 4, 14]], // circle + yellow horns + red + eyes + mouth
+  ['p', C.P, 5, .9, 2.5, 35, 5, .055, 360000, [15, 16, { f: 17, p: [C.G] }, { f: 17, p: [C.B] }, 2]], // body + circles + green eyes + blue eyes + white eyes
+  ['d', 0xff3300, 6, 1, 3, 45, 6, .06, 420000, [6, { f: 12, p: [C.Cy] }, { f: 11, p: [C.Cy] }, 13, 4, 14]], // demon: circle + cyan horns + cyan spikes + red fill + eyes + mouth
+  ['s', 0xffaa00, 7, 1.1, 3.5, 55, 7, .065, 480000, [{ f: 11, p: [C.P] }, 6, 2]], // star: purple spikes + circle + eyes
+  ['z', 0x00ff88, 8, 1.2, 4, 70, 8, .07, 540000, [8, { f: 12, p: [C.R] }, 13, 5, 14, { f: 7, p: [C.R] }]], // zombie: square + red horns + red fill + eyes + mouth + red hat
+  ['v', C.B, 10, 1.3, 5, 100, 10, .08, 600000, [8, 9, { f: 12, p: [C.R] }, { f: 11, p: [C.Cy] }, { f: 17, p: [C.R] }]],
+  ['n', C.W, 12, 1.4, 6, 150, 12, .09, 630000, [6, 1, { f: 11, p: [C.Y] }, { f: 17, p: [C.Cy] }, { f: 7, p: [C.P] }]]
 ];
 
 let unlockedTypes = [];
@@ -111,42 +113,42 @@ const iwt = [ // initial weapon types
 
 let weaponTypes = JSON.parse(JSON.stringify(iwt));
 
-const characters = [
+const c = [
   {
-    name: 'Bananza',
-    desc: 'Bananas',
-    weapon: 'b',
-    texture: 'p_b',
+    n: 'Bananza', // name
+    d: 'Bananas', // description
+    w: 'b', // weapon
+    t: 'p_b', // texture
     pt: 1, // passiveType: damage
     pv: 1.05, // passiveValue
-    passiveDesc: '+5% Daño/niv'
+    pD: '+5% Daño/niv' // passiveDescription
   },
   {
-    name: 'Medusin',
-    desc: 'Area Damage',
-    weapon: 'a',
-    texture: 'p_j',
+    n: 'Medusin',
+    d: 'Area Damage',
+    w: 'a',
+    t: 'p_j',
     pt: 2, // passiveType: regen
     pv: 5, // passiveValue
-    passiveDesc: '+5 HP/niv'
+    pD: '+5 HP/niv' // passiveDescription
   },
   {
-    name: 'Orb',
-    desc: 'Orbs',
-    weapon: 'o',
-    texture: 'p_o',
+    n: 'Orb',
+    d: 'Orbs',
+    w: 'o',
+    t: 'p_o',
     pt: 3, // passiveType: crit
     pv: 0.02, // passiveValue
-    passiveDesc: '+2% Crit/niv'
+    pD: '+2% Crit/niv' // passiveDescription
   },
   {
-    name: 'Train',
-    desc: 'Fast shoots',
-    weapon: 'p',
-    texture: 'p_t',
+    n: 'Train',
+    d: 'Fast shoots',
+    w: 'p',
+    t: 'p_t',
     pt: 4, // passiveType: speed
     pv: 1.03, // passiveValue
-    passiveDesc: '+3% Vel/niv'
+    pD: '+3% Vel/niv' // passiveDescription
   }
 ];
 
@@ -1187,7 +1189,7 @@ function levelUp() {
 
     if (passive === 1) {// damage
       // Banana: +5% weapon damage (accumulated as float for precision)
-      const weapon = getWeapon(selCh.weapon);
+      const weapon = getWeapon(selCh.w);
       if (weapon) weapon.m *= value;
     } else if (passive === 2) { // regen
       // Medusa: +5 HP regen
@@ -1234,7 +1236,7 @@ function renderStatsPanel() {
   mkTxt(720, 30, `Coins: ${stats.c}`, { [F]: '18px', [FF]: A, [CO]: CS.Go }, 102);
 
   // Hero sprite with purple border
-  s.add.sprite(70, 110, selCh.texture).setScale(3)[SSF](0)[SD](102);
+  s.add.sprite(70, 110, selCh.t).setScale(3)[SSF](0)[SD](102);
   const heroBorder = mkGr(102);
   heroBorder.lineStyle(2, C.P, 1).strokeRect(34, 74, 72, 72);
 
@@ -1852,8 +1854,8 @@ function showStartScreen() {
     playTone(s, 1500, 0.2);
     selCh = ch;
     initGameplay();
-    p.setTexture(ch.texture);
-    const w = weaponTypes.find(w => w.i === ch.weapon);
+    p.setTexture(ch.t);
+    const w = weaponTypes.find(w => w.i === ch.w);
     if (w) {
       w.u = true;
       if (w.i === 'o') initOrbBalls();
@@ -1874,7 +1876,7 @@ function showStartScreen() {
 
       dc(o.btn, o.x + shakeX, o.y + shakeY, d, i, glowPulse);
 
-      const hdTex = generateHeroTexture(o.character.texture, d);
+      const hdTex = generateHeroTexture(o.ch.t, d);
       o.sprite.setTexture(hdTex);
       o.sprite.setPosition(o.x + shakeX, o.y - 50 + shakeY);
       o.sprite.setAngle(d ? Math.sin(Date.now() * 0.002) * 8 : 0); // Pronounced rotation
@@ -1899,17 +1901,17 @@ function showStartScreen() {
         })[SSF](0)[SD](103);
 
         // Selected: Glitch text effect (triple layer)
-        o.texts.push(...gt3(o.x + shakeX, o.y + 83 + shakeY, o.character.name, '22px', 102));
+        o.texts.push(...gt3(o.x + shakeX, o.y + 83 + shakeY, o.ch.n, '22px', 102));
 
         // Weapon and passive (bright)
-        o.texts.push(s.add.text(o.x + shakeX, o.y + 108 + shakeY, o.character.desc, { [F]: '14px', [FF]: A, [CO]: CS.Cy })[SO](0.5)[SSF](0)[SD](102));
-        o.texts.push(s.add.text(o.x + shakeX, o.y + 128 + shakeY, o.character.passiveDesc, { [F]: '12px', [FF]: A, [CO]: '#ff00ff' })[SO](0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x + shakeX, o.y + 108 + shakeY, o.ch.d, { [F]: '14px', [FF]: A, [CO]: CS.Cy })[SO](0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x + shakeX, o.y + 128 + shakeY, o.ch.pD, { [F]: '12px', [FF]: A, [CO]: '#ff00ff' })[SO](0.5)[SSF](0)[SD](102));
       } else {
         // Unselected: Simple colored text
         const col = ['#ffff00', '#ff00ff', CS.Cy, '#00ff00'][i];
-        o.texts.push(s.add.text(o.x, o.y + 83, o.character.name, { [F]: '18px', [FF]: A, [CO]: col, [FST]: 'bold' })[SO](0.5)[SSF](0)[SD](102));
-        o.texts.push(s.add.text(o.x, o.y + 108, o.character.desc, { [F]: '12px', [FF]: A, [CO]: col })[SO](0.5)[SSF](0)[SD](102));
-        o.texts.push(s.add.text(o.x, o.y + 128, o.character.passiveDesc, { [F]: '10px', [FF]: A, [CO]: col })[SO](0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x, o.y + 83, o.ch.n, { [F]: '18px', [FF]: A, [CO]: col, [FST]: 'bold' })[SO](0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x, o.y + 108, o.ch.d, { [F]: '12px', [FF]: A, [CO]: col })[SO](0.5)[SSF](0)[SD](102));
+        o.texts.push(s.add.text(o.x, o.y + 128, o.ch.pD, { [F]: '10px', [FF]: A, [CO]: col })[SO](0.5)[SSF](0)[SD](102));
       }
     });
   };
@@ -1925,16 +1927,16 @@ function showStartScreen() {
     onUpdate: (tw) => { glowPulse = tw.getValue(); if (startScreen) upd(false); }
   });
 
-  characters.forEach((ch, i) => {
+  c.forEach((ch, i) => {
     const x = 100 + i * 200;
     const y = 260;
     const btn = mkGr(101);
 
     // Generate high-res texture (non-selected) and create sprite at scale 1.0
-    const hdTexture = generateHeroTexture(ch.texture, false);
+    const hdTexture = generateHeroTexture(ch.t, false);
     const heroSprite = s.add.sprite(x, y - 50, hdTexture).setScale(1)[SSF](0)[SD](102);
 
-    m.push({ btn, character: ch, x, y, sprite: heroSprite, texts: [], particles: null });
+    m.push({ btn, ch: ch, x, y, sprite: heroSprite, texts: [], particles: null });
   });
 
   // Initial draw
@@ -1959,7 +1961,7 @@ function showStartScreen() {
   // Attach listeners to central keys
   keys.mv.a.on('down', goLeft);
   keys.mv.d.on('down', goRight);
-  keys.mn.e.on('down', () => sel(m[sI].character));
+  keys.mn.e.on('down', () => sel(m[sI].ch));
   keys.mn.x.on('down', () => {
     playTone(s, 1000, 0.15);
     startScreen = !(mainMenu = true);
