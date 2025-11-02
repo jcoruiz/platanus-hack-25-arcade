@@ -177,7 +177,7 @@ const inS = { // initial stats
   cD: 1.5, // critDamage
   mR: 50, // magnetRadius - pickup attraction radius
   xp: 0,
-  c: 1000, // coins
+  c: 0, // coins
   lv: 1, // level
   xN: 10, // xpToNext
   k: 0 // enKilled - enemies killed
