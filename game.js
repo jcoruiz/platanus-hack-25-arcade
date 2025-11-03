@@ -1351,10 +1351,22 @@ function renderStatsPanel() {
   mkTxt(60, 30, `LEVEL ${stats.lv}`, { [F]: '20px', [FF]: A, [CO]: CS.Y }, 102); // level
   mkTxt(720, 30, `Coins: ${stats.c}`, { [F]: '18px', [FF]: A, [CO]: CS.Go }, 102);
 
-  // Hero sprite with purple border
-  s.add.sprite(70, 110, selCh.t).setScale(3)[SSF](0)[SD](102);
+  // Hero sprite with HD texture and purple border
+  const heroTex = generateHeroTexture(selCh.t, true);
+  const heroSprite = s.add.sprite(78, 110, heroTex)[SSF](0)[SD](102);
+
+  // Smooth rotation animation
+  const rotationTween = s.tweens.add({
+    targets: heroSprite,
+    angle: 8,
+    duration: 1500,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut'
+  });
+
   const heroBorder = mkGr(102);
-  heroBorder.lineStyle(2, C.P, 1).strokeRect(34, 74, 72, 72);
+  heroBorder.lineStyle(3, C.P, 1).strokeRect(30, 62, 96, 96);
 
   // Player stats (ALL 8 stats, always visible)
   pUpgrades.forEach((upg, i) => {
