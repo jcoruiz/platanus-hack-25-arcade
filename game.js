@@ -1659,6 +1659,9 @@ function showMainMenu() {
   // Version text
   mkTxt(750, 580, 'V1.17', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
 
+  // Credits
+  mkTxt(400, 580, 'Game by: Johnny Olivares', { [F]: '12px', [FF]: A, [CO]: '#555555' }, 102);
+
   // Control instructions
   mkTxt(400, 540, INST, { [F]: '14px', [FF]: A, [CO]: '#00aaaa' }, 101);
 
@@ -2661,7 +2664,7 @@ function applyDmgFb(enemy, sourceX, sourceY, isCrit = false) {
     // Scale up briefly for crit
     const originalScale = enemy.getData('originalScale') || 1;
     enemy.setScale(originalScale * 1.3);
-    // Show "CRITIC!" popup above enemy (using world coordinates, not UI coordinates)
+    // Show "CRIT!" popup above enemy (using world coordinates, not UI coordinates)
     const critText = s.add.text(enemy.x, enemy.y - 30, 'CRIT!', { [F]: '10px', [FF]: A, [CO]: CS.Go, [STR]: CS.R, [STT]: 3, [FST]: 'bold' })[SO](0.5)[SD](105);
     s.tweens.add({ targets: critText, y: enemy.y - 60, alpha: 0, duration: 800, onComplete: () => critText[DS]() });
     s.time.delayedCall(100, () => {
