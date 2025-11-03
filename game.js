@@ -213,10 +213,10 @@ const u = (id, n, d, ic, ml, t, prop, val, min, w) => ({
 });
 
 const pUpgrades = [
-  u('s', 'Speed', '+15% Move', '👟', 8, 1, 'sp', 1.15), // speed
-  { id: 'hp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: 10, apply: () => { stats.mH += 20; stats.hp += 20; ul.hp = (ul.hp || 0) + 1 } }, // maxHp
-  u('kb', 'Knockback', '+30% Enemy', '💨', 6, 1, 'kb', 1.3), // knockback
   u('hr', 'HP Regen', '+10 HP/min', '💚', 10, 0, 'hpRegen', 10),
+  { id: 'hp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: 10, apply: () => { stats.mH += 20; stats.hp += 20; ul.hp = (ul.hp || 0) + 1 } }, // maxHp
+  u('s', 'Speed', '+15% Move', '👟', 8, 1, 'sp', 1.15), // speed
+  u('kb', 'Knockback', '+30% Enemy', '💨', 6, 1, 'kb', 1.3), // knockback
   u('xp', 'XP Boost', '+0.5x XP', '⭐', 8, 0, 'xpMultiplier', 0.5),
   u('l', 'Luck', '+3% Chest', '🍀', 10, 0, 'lootChance', 0.03),
   u('cc', 'Crit Chance', '+5% Crit', '🎯', 10, 0, 'critChance', 0.05),
@@ -2660,6 +2660,9 @@ function applyDmgFb(enemy, sourceX, sourceY, isCrit = false) {
     // Scale up briefly for crit
     const originalScale = enemy.getData('originalScale') || 1;
     enemy.setScale(originalScale * 1.3);
+    // Show "CRITIC!" popup above enemy (using world coordinates, not UI coordinates)
+    const critText = s.add.text(enemy.x, enemy.y - 30, 'CRIT!', { [F]: '10px', [FF]: A, [CO]: CS.Go, [STR]: CS.R, [STT]: 3, [FST]: 'bold' })[SO](0.5)[SD](105);
+    s.tweens.add({ targets: critText, y: enemy.y - 60, alpha: 0, duration: 800, onComplete: () => critText[DS]() });
     s.time.delayedCall(100, () => {
       if (enemy && enemy[AC]) {
         enemy.clearTint();
