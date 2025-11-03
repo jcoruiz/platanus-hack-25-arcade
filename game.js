@@ -196,7 +196,8 @@ let difficulty = { ...inD };
 
 let ui = { bossData: [] };
 
-function getWeapon(id) {
+// getWeapon
+function gtW(id) {
   return weaponTypes.find(w => w.i === id);
 }
 
@@ -204,7 +205,7 @@ function getWeapon(id) {
 const u = (id, n, d, ic, ml, t, prop, val, min, w) => ({
   id, name: n, desc: d, icon: ic, maxLevel: ml, weaponId: w,
   apply: () => {
-    const tgt = w ? getWeapon(w) : stats;
+    const tgt = w ? gtW(w) : stats;
     if (t === 0) tgt[prop] += val;
     else if (t === 1) tgt[prop] *= val;
     else tgt[prop] = Math.max(min, tgt[prop] * val);
@@ -246,8 +247,8 @@ const areaDamageUpgrades = [
 const boomerangUpgrades = [
   u('bg', 'Boom Damage', '+8 Damage', '💥', 10, 0, 'm', 8, 0, 'b'),
   u('bz', 'Boom Size', '+30% Size', '📏', 8, 0, 'z', 0.3, 0, 'b'),
-  { id: 'bv', name: 'Boom Speed', desc: '+15% Speed', icon: '💨', weaponId: 'b', maxLevel: 8, apply: () => { const w = getWeapon('b'); w.s = w.w *= 1.15; ul.bv = (ul.bv || 0) + 1 } },
-  { id: 'bc', name: 'More Booms', desc: '+1 Boom', icon: '🔄', weaponId: 'b', maxLevel: 5, apply: () => { getWeapon('b').c++; avB++; ul.bc = (ul.bc || 0) + 1 } }
+  { id: 'bv', name: 'Boom Speed', desc: '+15% Speed', icon: '💨', weaponId: 'b', maxLevel: 8, apply: () => { const w = gtW('b'); w.s = w.w *= 1.15; ul.bv = (ul.bv || 0) + 1 } },
+  { id: 'bc', name: 'More Booms', desc: '+1 Boom', icon: '🔄', weaponId: 'b', maxLevel: 5, apply: () => { gtW('b').c++; avB++; ul.bc = (ul.bc || 0) + 1 } }
 ];
 
 const rareUpgrades = [
@@ -894,14 +895,14 @@ function update(_time, delta) {
   }
 
   // Auto shoot (projectile weapon)
-  const projectileWeapon = getWeapon('p');
+  const projectileWeapon = gtW('p');
   if (projectileWeapon.u && shootTimer >= projectileWeapon.f) {
     shootTimer = 0;
     shoot();
   }
 
   // Auto shoot (boomerang weapon)
-  const boomerangWeapon = getWeapon('b');
+  const boomerangWeapon = gtW('b');
   if (boomerangWeapon.u) {
     bTmr += delta;
     if (bTmr >= 200 && avB > 0) {
@@ -1061,7 +1062,7 @@ function shoot() {
   const target = findClosestEnemy();
   if (!target) return;
 
-  const weapon = getWeapon('p');
+  const weapon = gtW('p');
   playTone(s, 880, 0.05);
 
   // Calculate angles for multiple pr
@@ -1307,7 +1308,7 @@ function levelUp() {
 
     if (passive === 1) {// damage
       // Banana: +5% weapon damage (accumulated as float for precision)
-      const weapon = getWeapon(selCh.w);
+      const weapon = gtW(selCh.w);
       if (weapon) weapon.m *= value;
     } else if (passive === 2) { // regen
       // Medusa: +5 HP regen
@@ -1385,7 +1386,7 @@ function renderStatsPanel() {
   allWeapons.forEach((w, i) => {
     const x = 30 + i * 190;
     const y = 175;
-    const isUnlocked = getWeapon(w.i).u;
+    const isUnlocked = gtW(w.i).u;
 
     // Weapon panel
     const wpPanel = mkGr(101);
@@ -1541,10 +1542,10 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   cleanupMenu();
 
   let availableUpgrades = [...pUpgrades];
-  if (getWeapon('p').u) availableUpgrades.push(...projectileUpgrades);
-  if (getWeapon('o').u) availableUpgrades.push(...orbitingBallUpgrades);
-  if (getWeapon('a').u) availableUpgrades.push(...areaDamageUpgrades);
-  if (getWeapon('b').u) availableUpgrades.push(...boomerangUpgrades);
+  if (gtW('p').u) availableUpgrades.push(...projectileUpgrades);
+  if (gtW('o').u) availableUpgrades.push(...orbitingBallUpgrades);
+  if (gtW('a').u) availableUpgrades.push(...areaDamageUpgrades);
+  if (gtW('b').u) availableUpgrades.push(...boomerangUpgrades);
   availableUpgrades = availableUpgrades.filter(u => (ul[u.id] || 0) < u.maxLevel);
 
   if (availableUpgrades.length === 0) {
@@ -1596,7 +1597,7 @@ function showRareUpg() {
 
   const available = rareUpgrades.filter(u => {
     if (!u.weaponId) return true;
-    const isUnlocked = getWeapon(u.weaponId).u;
+    const isUnlocked = gtW(u.weaponId).u;
     const notMaxed = (ul[u.id] || 0) < u.maxLevel;
     return isUnlocked && notMaxed;
   });
@@ -2394,7 +2395,7 @@ function initOrbBalls() {
   orbitAngle = 0;
 
   // Create initial balls
-  const weapon = getWeapon('o');
+  const weapon = gtW('o');
   for (let i = 0; i < weapon.c; i++) {
     const ball = s.physics.add.image(p.x, p.y, 'o');
 
@@ -2412,7 +2413,7 @@ function initOrbBalls() {
 }
 
 function updOrbBalls(delta) {
-  const weapon = getWeapon('o');
+  const weapon = gtW('o');
   if (!weapon.u) return;
 
   // Add/remove balls if count changed
@@ -2457,7 +2458,7 @@ function updOrbBalls(delta) {
 
 function hitEnBall(ball, enemy) {
   if (!ball[AC]) return;
-  const weapon = getWeapon('o');
+  const weapon = gtW('o');
   const now = Date.now();
   const lastHitTimes = ball.getData('lastHitTime');
   const enemyId = enemy.getData('id') || enemy.body.id;
@@ -2479,7 +2480,7 @@ function initAreaDamage() {
 }
 
 function updAreaDmg(delta) {
-  const weapon = getWeapon('a');
+  const weapon = gtW('a');
   if (!weapon.u) return;
 
   // Update visual circle position (only set styles when radius changes)
@@ -2515,13 +2516,13 @@ function updAreaDmg(delta) {
 }
 
 function initBoom() {
-  const weapon = getWeapon('b');
+  const weapon = gtW('b');
   avB = weapon.c;
   boomerangs = [];
 }
 
 function shootBoomerang() {
-  const weapon = getWeapon('b');
+  const weapon = gtW('b');
   if (!weapon.u || avB <= 0) return;
 
   const target = findClosestEnemy();
@@ -2557,7 +2558,7 @@ function shootBoomerang() {
 }
 
 function updBooms(delta) {
-  const weapon = getWeapon('b');
+  const weapon = gtW('b');
   if (!weapon.u) return;
 
   // Filter out invalid boomerangs and process valid ones
@@ -2619,7 +2620,7 @@ function updBooms(delta) {
 
 function hitEnBoom(boom, enemy) {
   if (!boom[AC]) return;
-  const weapon = getWeapon('b');
+  const weapon = gtW('b');
   const now = Date.now();
   const lastHitTimes = boom.getData('lastHitTimes');
   const enemyId = enemy.getData('id') || enemy.body.id;
