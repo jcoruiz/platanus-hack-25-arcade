@@ -1646,7 +1646,7 @@ function showMainMenu() {
   mkChromaticTxt(400, 100, tlt, '80px', 100);
 
   // Version text
-  mkTxt(750, 580, 'V1.17', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
+  mkTxt(750, 580, 'V1.18', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
 
   // Credits
   mkTxt(400, 580, 'Game by: Johnny Olivares', { [F]: '12px', [FF]: A, [CO]: '#555555' }, 102);
