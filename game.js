@@ -546,6 +546,13 @@ function preload() {
   fc(6, 6, 4);
   gt('orb', 12, 12);
 
+  // Grid dot texture (tiny point with glow for tinting)
+  fs(C.W, 0.5);
+  fc(3, 3, 2.5);
+  fs(C.W, 1);
+  fc(3, 3, 1.5);
+  gt('gd', 6, 6);
+
   // Health drop texture (red medical cross)
   fs(C.W, 1);
   fc(10, 10, 10);
@@ -654,9 +661,20 @@ function create() {
     g = this.add.graphics().lineStyle(1, c, a);
     for (let x = 0; x <= 2400; x += sp) g.lineBetween(x, 0, x, 1800);
     for (let y = 0; y <= 1800; y += sp) g.lineBetween(0, y, 2400, y);
-    fs(C.W, a * 1.5);
-    for (let x = 0; x <= 2400; x += sp) for (let y = 0; y <= 1800; y += sp) fc(x, y, 2 - i * 0.5);
     g.setScrollFactor(sf)[SD](-10 + i);
+  });
+
+  // Animated Tron-style dots on grids (~130 total)
+  [[600, 0x00ffff, 0.2, 25], [360, 0xff00ff, 0.5, 45], [240, 0xffff00, 0.8, 60]].forEach(([sp, c, sf, cnt], gi) => {
+    for (let j = 0; j < cnt; j++) {
+      const isH = Math.random() < 0.5; // 50% horizontal, 50% vertical
+      const line = ~~(rnd(0, 2400) / sp) * sp; // snap to grid line
+      const startPos = rnd(0, isH ? 2400 : 1800);
+      const d = this.add.image(isH ? startPos : line, isH ? line : startPos, 'gd').setTint(c).setAlpha(0.6 + rnd(0, 0.3)).setScrollFactor(sf)[SD](-10 + gi);
+      const spd = 15 + rnd(0, 25); // 15-40 px/sec
+      const dur = ((isH ? 2400 : 1800) / spd) * 1000;
+      this.tweens.add({ targets: d, [isH ? 'x' : 'y']: isH ? 2400 : 1800, duration: dur, repeat: -1, ease: 'Linear', onRepeat: () => { d[isH ? 'x' : 'y'] = 0; } });
+    }
   });
 
   // Scanlines effect
@@ -2144,7 +2162,13 @@ function showNameEntry() {
 
   // Title & Stats
   const mins = ~~(gameTime / 60000), secs = ~~((gameTime % 60000) / 1000);
-  mkTxt(400, 80, qualForLb(stats.k) ? 'NEW HIGH SCORE!' : 'ENTER YOUR NAME', { [F]: '48px', [FF]: A, [CO]: CS.Y, [STR]: CS.B, [STT]: 6 }, 151);
+  // Chromatic aberration title (same as main menu and pause)
+  const hsTxt = qualForLb(stats.k) ? 'NEW HIGH SCORE!' : 'ENTER YOUR NAME';
+  const hs1 = mkTxt(396, 78, hsTxt, { [F]: '48px', [FF]: A, [CO]: '#ff0044', [STR]: '#ff0044', [STT]: 3 }, 151);
+  const hs2 = mkTxt(404, 82, hsTxt, { [F]: '48px', [FF]: A, [CO]: '#00ffff', [STR]: '#00ffff', [STT]: 3 }, 152);
+  const hs3 = mkTxt(400, 80, hsTxt, { [F]: '48px', [FF]: A, [CO]: CS.W, [STR]: CS.W, [STT]: 3 }, 153);
+  s.tweens.add({ targets: [hs1, hs2, hs3], rotation: 0.035, x: '+=2', duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  s.tweens.add({ targets: hs3, scaleX: 1.03, scaleY: 1.03, alpha: 0.92, duration: 1500, yoyo: true, repeat: -1, ease: 'Cubic.easeInOut' });
   mkTxt(400, 150, `Kills: ${stats.k}`, { [F]: '24px', [FF]: A, [CO]: CS.G }, 151);
   mkTxt(400, 180, `Level: ${stats.lv}  Time: ${mins}:${('0' + secs).slice(-2)}`, { [F]: '20px', [FF]: A, [CO]: CS.W }, 151); // level
 
@@ -2479,7 +2503,7 @@ function initAreaDamage() {
   if (adc) adc[DS]();
 
   adc = s.add.graphics();
-  adc[SD](-10); // Above nebula background but below gameplay entities
+  adc[SD](-50); // Above all background elements but below gameplay entities
 }
 
 function updAreaDmg(delta) {
