@@ -264,6 +264,16 @@ const rareUpgrades = [
 // Helper: create text with common properties
 function mkTxt(x, y, t, l, d = 101) { return s.add.text(x, y, t, l)[SO](0.5)[SSF](0)[SD](d); }
 
+// Helper: chromatic aberration text with animations
+function mkChromaticTxt(x, y, txt, fontSize, baseDepth) {
+  const t1 = mkTxt(x - 4, y - 2, txt, { [F]: fontSize, [FF]: A, [CO]: '#ff0044', [STR]: '#ff0044', [STT]: 3 }, baseDepth);
+  const t2 = mkTxt(x + 4, y + 2, txt, { [F]: fontSize, [FF]: A, [CO]: '#00ffff', [STR]: '#00ffff', [STT]: 3 }, baseDepth + 1);
+  const t3 = mkTxt(x, y, txt, { [F]: fontSize, [FF]: A, [CO]: CS.W, [STR]: CS.W, [STT]: 3 }, baseDepth + 2);
+  const shake = s.tweens.add({ targets: [t1, t2, t3], rotation: 0.035, x: '+=2', duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  const pulse = s.tweens.add({ targets: t3, scaleX: 1.03, scaleY: 1.03, alpha: 0.92, duration: 1500, yoyo: true, repeat: -1, ease: 'Cubic.easeInOut' });
+  return { texts: [t1, t2, t3], tweens: [shake, pulse] };
+}
+
 // Helper: random centering
 const r = () => Math.random() - 0.5;
 
@@ -784,36 +794,10 @@ function initGameplay() {
         pauseOverlay = s.add.graphics();
         pauseOverlay.fillStyle(C.B, 0.7).fillRect(0, 0, 800, 600)[SSF](0)[SD](200);
 
-        // Chromatic aberration effect for PAUSED text (matching main menu title)
-        const pt1 = mkTxt(396, 298, 'PAUSED', { [F]: '72px', [FF]: A, [CO]: '#ff0044', [STR]: '#ff0044', [STT]: 3 }, 200);
-        const pt2 = mkTxt(404, 302, 'PAUSED', { [F]: '72px', [FF]: A, [CO]: '#00ffff', [STR]: '#00ffff', [STT]: 3 }, 201);
-        const pt3 = mkTxt(400, 300, 'PAUSED', { [F]: '72px', [FF]: A, [CO]: CS.W, [STR]: CS.W, [STT]: 3 }, 202);
-        pauseTexts = [pt1, pt2, pt3];
-
-        // Shake animation on all layers
-        const shakeTween = s.tweens.add({
-          targets: pauseTexts,
-          rotation: 0.035,
-          x: '+=2',
-          duration: 1000,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut'
-        });
-
-        // Pulse animation on white layer only
-        const pulseTween = s.tweens.add({
-          targets: pt3,
-          scaleX: 1.03,
-          scaleY: 1.03,
-          alpha: 0.92,
-          duration: 1500,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Cubic.easeInOut'
-        });
-
-        pauseTweens = [shakeTween, pulseTween];
+        // Chromatic aberration effect for PAUSED text
+        const { texts, tweens } = mkChromaticTxt(400, 300, 'PAUSED', '72px', 200);
+        pauseTexts = texts;
+        pauseTweens = tweens;
         pauseHint = mkTxt(400, 370, 'Press [P] to resume', { [F]: '24px', [FF]: A, [CO]: CS.W }, 203);
       } else {
         s.physics.resume();
@@ -1648,33 +1632,7 @@ function showMainMenu() {
   s.add.graphics().fillStyle(C.B, 0.4).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
 
   let tlt = '50K Survivors';
-  // Hotline Miami style title with chromatic aberration + animated shake/pulse
-  const t1 = mkTxt(396, 98, tlt, { [F]: '80px', [FF]: A, [CO]: '#ff0044', [STR]: '#ff0044', [STT]: 3 }, 100);
-  const t2 = mkTxt(404, 102, tlt, { [F]: '80px', [FF]: A, [CO]: '#00ffff', [STR]: '#00ffff', [STT]: 3 }, 101);
-  const t3 = mkTxt(400, 100, tlt, { [F]: '80px', [FF]: A, [CO]: CS.W, [STR]: CS.W, [STT]: 3 }, 102);
-
-  // Shake effect: rotation + position offset
-  s.tweens.add({
-    targets: [t1, t2, t3],
-    rotation: 0.035,
-    x: '+=2',
-    duration: 1000,
-    yoyo: true,
-    repeat: -1,
-    ease: 'Sine.easeInOut'
-  });
-
-  // Pulse effect on main layer
-  s.tweens.add({
-    targets: t3,
-    scaleX: 1.03,
-    scaleY: 1.03,
-    alpha: 0.92,
-    duration: 1500,
-    yoyo: true,
-    repeat: -1,
-    ease: 'Cubic.easeInOut'
-  });
+  mkChromaticTxt(400, 100, tlt, '80px', 100);
 
   // Version text
   mkTxt(750, 580, 'V1.17', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
@@ -2164,13 +2122,9 @@ function showNameEntry() {
 
   // Title & Stats
   const mins = ~~(gameTime / 60000), secs = ~~((gameTime % 60000) / 1000);
-  // Chromatic aberration title (same as main menu and pause)
+  // Chromatic aberration title
   const hsTxt = qualForLb(stats.k) ? 'NEW HIGH SCORE!' : 'ENTER YOUR NAME';
-  const hs1 = mkTxt(396, 78, hsTxt, { [F]: '48px', [FF]: A, [CO]: '#ff0044', [STR]: '#ff0044', [STT]: 3 }, 151);
-  const hs2 = mkTxt(404, 82, hsTxt, { [F]: '48px', [FF]: A, [CO]: '#00ffff', [STR]: '#00ffff', [STT]: 3 }, 152);
-  const hs3 = mkTxt(400, 80, hsTxt, { [F]: '48px', [FF]: A, [CO]: CS.W, [STR]: CS.W, [STT]: 3 }, 153);
-  s.tweens.add({ targets: [hs1, hs2, hs3], rotation: 0.035, x: '+=2', duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-  s.tweens.add({ targets: hs3, scaleX: 1.03, scaleY: 1.03, alpha: 0.92, duration: 1500, yoyo: true, repeat: -1, ease: 'Cubic.easeInOut' });
+  mkChromaticTxt(400, 80, hsTxt, '48px', 151);
   mkTxt(400, 150, `Kills: ${stats.k}`, { [F]: '24px', [FF]: A, [CO]: CS.G }, 151);
   mkTxt(400, 180, `Level: ${stats.lv}  Time: ${mins}:${('0' + secs).slice(-2)}`, { [F]: '20px', [FF]: A, [CO]: CS.W }, 151); // level
 
