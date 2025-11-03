@@ -389,7 +389,7 @@ function generateNebula() {
   if (s.textures.exists('nebulaNoise')) {
     s.textures.remove('nebulaNoise');
   }
-  const w = 2400, h = 1800;
+  const w = 900, h = 700;
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
@@ -445,8 +445,10 @@ function generateNebula() {
   ctx.putImageData(imgData, 0, 0);
   s.textures.addCanvas('nebulaNoise', canvas);
 
-  // Create sprite with nebula texture (full resolution, no scaling)
-  const nebula = s.add.image(1200, 900, 'nebulaNoise');
+  // Create sprite with nebula texture (positioned for screen center with parallax)
+  const nebula = s.add.image(400, 300, 'nebulaNoise');
+  nebula.displayWidth = 1100;
+  nebula.displayHeight = 800;
   nebula.setScrollFactor(0.05);
   nebula[SD](-20);
 }
