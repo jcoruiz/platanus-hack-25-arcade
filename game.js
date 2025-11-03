@@ -21,7 +21,7 @@ let adc = null, idleTween = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, paused = false, mainMenu = true;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
-let nextWaveTime = 30000, nextBossTime = 60000;
+let nextWaveTime = 30000, nextBossTime = 8000;
 let warnAct = false;
 let hyperModeActive = false;
 let lastOrbSize = 0; // Track orbit ball size to avoid unnecessary updates
@@ -213,52 +213,43 @@ const u = (id, n, d, ic, ml, t, prop, val, min, w) => ({
   }
 });
 
+let ml = 1;
 const pUpgrades = [
-  u('hr', 'HP Regen', '+10 HP/min', '💚', 10, 0, 'hpRegen', 10),
-  { id: 'hp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: 10, apply: () => { stats.mH += 20; stats.hp += 20; ul.hp = (ul.hp || 0) + 1 } }, // maxHp
-  u('s', 'Speed', '+15% Move', '👟', 8, 1, 'sp', 1.15), // speed
-  u('kb', 'Knockback', '+30% Enemy', '💨', 6, 1, 'kb', 1.3), // knockback
-  u('xp', 'XP Boost', '+0.5x XP', '⭐', 8, 0, 'xpMultiplier', 0.5),
-  u('l', 'Luck', '+3% Chest', '🍀', 10, 0, 'lootChance', 0.03),
-  u('cc', 'Crit Chance', '+5% Crit', '🎯', 10, 0, 'critChance', 0.05),
-  u('cd', 'Crit Damage', '+25% Crit', '💢', 10, 0, 'critDamage', 0.25)
+  u('hr', 'HP Regen', '+10 HP/min', '💚', ml, 0, 'hpRegen', 10),
+  { id: 'hp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: ml, apply: () => { stats.mH += 20; stats.hp += 20; ul.hp = (ul.hp || 0) + 1 } }, // maxHp
+  u('s', 'Speed', '+15% Move', '👟', ml, 1, 'sp', 1.15), // speed
+  u('kb', 'Knockback', '+30% Enemy', '💨', ml, 1, 'kb', 1.3), // knockback
+  u('xp', 'XP Boost', '+0.5x XP', '⭐', ml, 0, 'xpMultiplier', 0.5),
+  u('l', 'Luck', '+3% Chest', '🍀', ml, 0, 'lootChance', 0.03),
+  u('cc', 'Crit Chance', '+5% Crit', '🎯', ml, 0, 'critChance', 0.05),
+  u('cd', 'Crit Damage', '+25% Crit', '💢', ml, 0, 'critDamage', 0.25)
 ];
 
 const projectileUpgrades = [
-  u('ms', 'Multi Shot', '+1 Projectile', '🔫', 10, 0, 'c', 1, 0, 'p'),
-  u('fr', 'Fire Rate', '-15% Fire', '⚡', 8, 2, 'f', 0.85, 150, 'p'),
-  u('pd', 'Projectile Damage', '+5 Damage', '🗡️', 10, 0, 'm', 5, 0, 'p'),
-  u('pn', 'Penetration', '+1 Enemy', '⚔️', 5, 0, 'e', 1, 0, 'p')
+  u('ms', 'Multi Shot', '+1 Projectile', '🔫', ml, 0, 'c', 1, 0, 'p'),
+  u('fr', 'Fire Rate', '-15% Fire', '⚡', ml, 2, 'f', 0.85, 150, 'p'),
+  u('pd', 'Projectile Damage', '+5 Damage', '🗡️', ml, 0, 'm', 5, 0, 'p'),
+  u('pn', 'Penetration', '+1 Enemy', '⚔️', ml, 0, 'e', 1, 0, 'p')
 ];
 
 const orbitingBallUpgrades = [
-  u('mb', 'More Balls', '+1 Orb', '⚪', 10, 0, 'c', 1, 0, 'o'),
-  u('rs', 'Rotation Speed', '+0.5 Rot', '🌀', 10, 0, 'r', 0.5, 0, 'o'),
-  u('bs', 'Ball Size', '+2 Radius', '⭕', 8, 0, 'b', 2, 0, 'o'),
-  u('bd', 'Ball Damage', '+8 Damage', '💥', 10, 0, 'm', 8, 0, 'o')
+  u('mb', 'More Balls', '+1 Orb', '⚪', ml, 0, 'c', 1, 0, 'o'),
+  u('rs', 'Rotation Speed', '+0.5 Rot', '🌀', ml, 0, 'r', 0.5, 0, 'o'),
+  u('bs', 'Ball Size', '+2 Radius', '⭕', ml, 0, 'b', 2, 0, 'o'),
+  u('bd', 'Ball Damage', '+8 Damage', '💥', ml, 0, 'm', 8, 0, 'o')
 ];
 
 const areaDamageUpgrades = [
-  u('ar', 'Area Radius', '+15 Range', '🔴', 5, 0, 'a', 15, 0, 'a'),
-  u('ad', 'Area DPS', '+3 DPS', '🔥', 10, 0, 'p', 3, 0, 'a'),
-  u('at', 'Tick Speed', '-15% Delay', '⚡', 8, 2, 't', 0.85, 150, 'a')
+  u('ar', 'Area Radius', '+15 Range', '🔴', ml, 0, 'a', 15, 0, 'a'),
+  u('ad', 'Area DPS', '+3 DPS', '🔥', ml, 0, 'p', 3, 0, 'a'),
+  u('at', 'Tick Speed', '-15% Delay', '⚡', ml, 2, 't', 0.85, 150, 'a')
 ];
 
 const boomerangUpgrades = [
-  u('bg', 'Boom Damage', '+8 Damage', '💥', 10, 0, 'm', 8, 0, 'b'),
-  u('bz', 'Boom Size', '+30% Size', '📏', 8, 0, 'z', 0.3, 0, 'b'),
-  { id: 'bv', name: 'Boom Speed', desc: '+15% Speed', icon: '💨', weaponId: 'b', maxLevel: 8, apply: () => { const w = gtW('b'); w.s = w.w *= 1.15; ul.bv = (ul.bv || 0) + 1 } },
-  { id: 'bc', name: 'More Booms', desc: '+1 Boom', icon: '🔄', weaponId: 'b', maxLevel: 5, apply: () => { gtW('b').c++; avB++; ul.bc = (ul.bc || 0) + 1 } }
-];
-
-const rareUpgrades = [
-  u('r1', 'Triple Shot', '+3 Proj', '🔫', 2, 0, 'c', 3, 0, 'p'),
-  u('r2', 'Rapid Fire', '-40% Fire', '⚡', 3, 2, 'f', 0.6, 100, 'p'),
-  u('r3', 'Massive Dmg', '+30 Dmg', '🗡️', 3, 0, 'm', 30, 0, 'p'),
-  u('r4', 'Double Balls', '+2 Orbs', '⚪', 2, 0, 'c', 2, 0, 'o'),
-  u('r5', 'Mega Ball Dmg', '+25 Dmg', '💥', 3, 0, 'm', 25, 0, 'o'),
-  u('r6', 'Huge Area', '+100 Range', '🔴', 2, 0, 'a', 100, 0, 'a'),
-  u('r7', 'Devastating DPS', '+15 DPS', '🔥', 3, 0, 'p', 15, 0, 'a')
+  u('bg', 'Boom Damage', '+8 Damage', '💥', ml, 0, 'm', 8, 0, 'b'),
+  u('bz', 'Boom Size', '+30% Size', '📏', ml, 0, 'z', 0.3, 0, 'b'),
+  { id: 'bv', name: 'Boom Speed', desc: '+15% Speed', icon: '💨', weaponId: 'b', maxLevel: ml, apply: () => { const w = gtW('b'); w.s = w.w *= 1.15; ul.bv = (ul.bv || 0) + 1 } },
+  { id: 'bc', name: 'More Booms', desc: '+1 Boom', icon: '🔄', weaponId: 'b', maxLevel: ml, apply: () => { gtW('b').c++; avB++; ul.bc = (ul.bc || 0) + 1 } }
 ];
 
 // Helper: create text with common properties
@@ -1250,8 +1241,10 @@ function collectChest(_pObj, chest) {
   if (lockedWeapons.length) {
     showWeaponSelector(lockedWeapons);
   } else {
-    // All weapons unlocked, show rare upgrade menu
-    showRareUpg();
+    // All weapons unlocked, show 5 normal upgrades
+    selectingWeapon = true;
+    s.physics.pause();
+    showMultipleNormalUpgrades(5);
   }
 }
 
@@ -1435,10 +1428,10 @@ function renderStatsPanel() {
 }
 
 // Lightweight selector (options array + optional reroll)
-function showSelector(opts, fullPool, hasRr, onSel) {
+function showSelector(opts, fullPool, hasRr, onSel, headerText = '▸ Choose:') {
   cleanupMenu();
   renderStatsPanel();
-  mkTxt(400, 320, '▸ Choose:', { [F]: '16px', [FF]: A, [CO]: CS.Cy }, 102);
+  mkTxt(400, 320, headerText, { [F]: '16px', [FF]: A, [CO]: CS.Cy }, 102);
 
   sI = 0;
   m = [];
@@ -1542,9 +1535,11 @@ function showSelector(opts, fullPool, hasRr, onSel) {
   menuKeys.push(keys.mn.e);
 }
 
-function showUpgradeMenu(stateVar = 'levelingUp') {
+// Core function: show normal upgrades selector (reusable)
+function showNormalUpgradesCore(onSelectCallback, onNoUpgradesCallback, extraHeaderTxt = null) {
   cleanupMenu();
 
+  // Get all available upgrades
   let availableUpgrades = [...pUpgrades];
   if (gtW('p').u) availableUpgrades.push(...projectileUpgrades);
   if (gtW('o').u) availableUpgrades.push(...orbitingBallUpgrades);
@@ -1552,27 +1547,67 @@ function showUpgradeMenu(stateVar = 'levelingUp') {
   if (gtW('b').u) availableUpgrades.push(...boomerangUpgrades);
   availableUpgrades = availableUpgrades.filter(u => (ul[u.id] || 0) < u.maxLevel);
 
+  // Handle no upgrades available
   if (availableUpgrades.length === 0) {
     const hpReward = 20;
     stats.hp = Math.min(stats.mH, stats.hp + hpReward);
     playTone(s, 1500, 0.2);
-    const msg = mkTxt(400, 300, `¡MAX LEVEL!\n+${hpReward} HP`, { [F]: '32px', [FF]: A, [CO]: CS.G, [STR]: CS.B, [STT]: 4 }, 150);
-    s.tweens.add({ targets: msg, y: 250, alpha: 0, duration: 2000, onComplete: () => msg[DS]() });
-    s.physics.resume();
-    if (stateVar === 'levelingUp') levelingUp = false;
-    else if (stateVar === 'selectingWeapon') selectingWeapon = false;
+    const msg = mkTxt(400, 300, `¡MAX LEVEL!\n+${hpReward} HP`, { [F]: '10px', [FF]: A, [CO]: CS.Go, [STR]: CS.R, [STT]: 3, [FST]: 'bold' }, 150);
+    s.tweens.add({ targets: msg, y: 250, alpha: 0, duration: 800, onComplete: () => msg[DS]() });
+    onNoUpgradesCallback();
     return;
   }
 
+  // Build dynamic header (counter + choose prompt)
+  const header = extraHeaderTxt ? `▸ Choose: ${extraHeaderTxt}` : '▸ Choose:';
+
+  // Show 3 random options with reroll
   const shuffled = [...availableUpgrades].sort(r).slice(0, 3);
   showSelector(shuffled, availableUpgrades, true, (u) => {
     u.apply();
     playTone(s, 1000, 0.1);
-    cleanupMenu();
-    s.physics.resume();
-    if (stateVar === 'levelingUp') levelingUp = false;
-    else if (stateVar === 'selectingWeapon') selectingWeapon = false;
-  });
+    onSelectCallback(u);
+  }, header);
+}
+
+function showUpgradeMenu(stateVar = 'levelingUp') {
+  showNormalUpgradesCore(
+    // onSelect: close menu and resume
+    () => {
+      cleanupMenu();
+      s.physics.resume();
+      if (stateVar === 'levelingUp') levelingUp = false;
+      else if (stateVar === 'selectingWeapon') selectingWeapon = false;
+    },
+    // onNoUpgrades: resume and clear state
+    () => {
+      s.physics.resume();
+      if (stateVar === 'levelingUp') levelingUp = false;
+      else if (stateVar === 'selectingWeapon') selectingWeapon = false;
+    }
+  );
+}
+
+function showMultipleNormalUpgrades(remaining) {
+  showNormalUpgradesCore(
+    // onSelect: recurse or close
+    () => {
+      if (remaining > 1) {
+        showMultipleNormalUpgrades(remaining - 1);
+      } else {
+        cleanupMenu();
+        s.physics.resume();
+        selectingWeapon = false;
+      }
+    },
+    // onNoUpgrades: close menu
+    () => {
+      s.physics.resume();
+      selectingWeapon = false;
+    },
+    // Show counter
+    `${remaining} upgrade${remaining > 1 ? 's' : ''} remaining`
+  );
 }
 
 function showWeaponSelector(weapons) {
@@ -1587,30 +1622,6 @@ function showWeaponSelector(weapons) {
     if (w.i === 'o') initOrbBalls();
     else if (w.i === 'a') initAreaDamage();
     else if (w.i === 'b') initBoom();
-    cleanupMenu();
-    s.physics.resume();
-    selectingWeapon = false;
-  });
-}
-
-function showRareUpg() {
-  if (gameOver || levelingUp || selectingWeapon || startScreen || paused) return;
-
-  selectingWeapon = true;
-  s.physics.pause();
-
-  const available = rareUpgrades.filter(u => {
-    if (!u.weaponId) return true;
-    const isUnlocked = gtW(u.weaponId).u;
-    const notMaxed = (ul[u.id] || 0) < u.maxLevel;
-    return isUnlocked && notMaxed;
-  });
-
-  const shuffled = [...available].sort(r).slice(0, 3);
-
-  showSelector(shuffled, shuffled, false, (u) => {
-    u.apply();
-    playTone(s, 1800, 0.1);
     cleanupMenu();
     s.physics.resume();
     selectingWeapon = false;
