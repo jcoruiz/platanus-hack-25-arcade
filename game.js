@@ -1973,7 +1973,6 @@ function createUI() {
   ui.levelText = txt(550, 10, 'Level: 1', CS.Y);
   ui.coinsText = txt(650, 10, 'Coins: 0', CS.Go);
   ui.timeText = txt(740, 10, '0:00', CS.Cy);
-  // ui.statsHint = txt(580, 580, '[P]Pause [R]Retry', CS.Gy, '14px', 10);
 }
 
 function updateUI() {
@@ -1987,13 +1986,37 @@ function updateUI() {
 
 function drawUIBars() {
   gr.clear()[SSF](0)[SD](99);
+
+  // Panel contenedor superior - fondo oscuro semi-transparente
+  gr.fillStyle(C.B, 0.6).fillRect(0, 0, 800, 40);
+  // Bordes del panel - magenta exterior, cyan interior
+  gr.lineStyle(2, C.P, 0.8).strokeRect(1, 1, 798, 38);
+  gr.lineStyle(1, C.Cy, 0.6).strokeRect(3, 3, 794, 34);
+
   // Helper: draw bar (x, y, w, h, val, max, bgCol, fgCol, borderCol, borderW)
   const bar = (x, y, w, h, v, m, bg, fg, br, bw) => {
-    gr.fillStyle(bg, 1).fillRect(x, y, w, h);
-    gr.fillStyle(fg, 1).fillRect(x, y, w * (v / m), h);
+    // Outer glow
+    gr.fillStyle(fg, 0.2).fillRect(x - 2, y - 2, w + 4, h + 4);
+
+    // Background
+    gr.fillStyle(bg, 0.8).fillRect(x, y, w, h);
+
+    // Foreground progress
+    const pw = w * (v / m);
+    gr.fillStyle(fg, 1).fillRect(x, y, pw, h);
+
+    // Inner highlight on progress bar
+    if (pw > 2) {
+      gr.fillStyle(C.W, 0.3).fillRect(x + 1, y + 1, pw - 2, h * 0.4);
+    }
+
+    // Borders - outer glow, main, inner
+    gr.lineStyle(bw + 1, fg, 0.4).strokeRect(x - 1, y - 1, w + 2, h + 2);
     gr.lineStyle(bw, br, 1).strokeRect(x, y, w, h);
+    gr.lineStyle(1, C.W, 0.5).strokeRect(x + 1, y + 1, w - 2, h - 2);
   };
-  bar(50, 10, 200, 20, stats.hp, stats.mH, C.DR, C.R, C.W, 2); // maxHp
+
+  bar(50, 10, 200, 20, stats.hp, stats.mH, C.DR, C.R, C.W, 2);
   bar(330, 10, 180, 20, stats.xp, stats.xN, 0x004444, C.Cy, C.W, 2);
 
   // Find all active bosses
@@ -2009,7 +2032,7 @@ function drawUIBars() {
 
   // Draw boss HP bars horizontally
   if (bosses.length) {
-    const w = 600 / bosses.length; // Dynamic width per boss
+    const w = 600 / bosses.length;
     bosses.forEach((boss, i) => {
       const hp = boss.getData('hp'), maxHp = boss.getData('maxHp');
       const xStart = 100 + (i * w);
@@ -2029,7 +2052,6 @@ function drawUIBars() {
         bUI.lastHp = hp;
       }
 
-      // Draw HP bar
       bar(xStart, 50, w - 10, 25, hp, maxHp, C.DR, C.R, C.Y, 3);
       rendered.push(boss);
     });
