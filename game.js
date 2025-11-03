@@ -1964,7 +1964,7 @@ function showStartScreen() {
 }
 
 function createUI() {
-  const txt = (x, y, t, c, sz = '16px', d = 0) => {
+  const txt = (x, y, t, c, sz = '16px', d = 99) => {
     const el = s.add.text(x, y, t, { [F]: sz, [FF]: A, [CO]: c })[SSF](0);
     return d ? el[SD](d) : el;
   };
