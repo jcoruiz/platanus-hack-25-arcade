@@ -26,7 +26,7 @@ let warnAct = false;
 let hyperModeActive = false;
 let lastOrbSize = 0; // Track orbit ball size to avoid unnecessary updates
 let lastAreaRadius = 0; // Track area damage radius to avoid unnecessary style updates
-let s;
+let s; // scene
 
 // Music system: bgm=sequencer state, bgmInt=scheduler interval, bgmB=current beat, bgmT=next note time, musicOn=music toggle
 let bgm = null, bgmInt = null, bgmB = 0, bgmT = 0, musicOn = true;
@@ -50,11 +50,11 @@ const F = 'fontSize', FF = 'fontFamily', A = 'Arial', CO = 'color', STR = 'strok
 const AC = 'active', SSF = 'setScrollFactor', SD = 'setDepth', DS = 'destroy', SO = 'setOrigin';
 // Graphics factory functions (g=graphics reference)
 const INST = '[WASD]Move  [SPACE]Select  [ESC]Back  [P]Pause  [R]Restart  [M]Music';
-let g;
+let g; // graphics
 const fs = (c, a = 1) => g.fillStyle(c, a);
 const gt = (...a) => (g.generateTexture(...a), g.clear());
 const ls = (w, c, a = 1) => g.lineStyle(w, c, a);
-// Ultra-short shape factories (max 3 chars)
+// Ultra-short shape factories
 const fc = (...a) => g.fillCircle(...a);
 const fr = (...a) => g.fillRect(...a);
 const ft = (...a) => g.fillTriangle(...a);
@@ -137,7 +137,7 @@ const c = [
     pD: '+5 HP/niv' // passiveDescription
   },
   {
-    n: 'Orb',
+    n: 'Ball',
     d: 'Orbs',
     w: 'o',
     t: 'p_o',
@@ -213,7 +213,7 @@ const u = (id, n, d, ic, ml, t, prop, val, min, w) => ({
   }
 });
 
-let ml = 20;
+let ml = 20; // maxLevel upgrades
 const pUpgrades = [
   u('hr', 'HP Regen', '+10 HP/min', '💚', ml, 0, 'hpRegen', 10),
   { id: 'hp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: ml, apply: () => { stats.mH += 20; stats.hp += 20; ul.hp = (ul.hp || 0) + 1 } }, // maxHp
