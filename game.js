@@ -21,7 +21,7 @@ let adc = null, idleTween = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, paused = false, mainMenu = true;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
-let nextWaveTime = 30000, nextBossTime = 8000;
+let nextWaveTime = 30000, nextBossTime = 60000;
 let warnAct = false;
 let hyperModeActive = false;
 let lastOrbSize = 0; // Track orbit ball size to avoid unnecessary updates
@@ -213,7 +213,7 @@ const u = (id, n, d, ic, ml, t, prop, val, min, w) => ({
   }
 });
 
-let ml = 1;
+let ml = 20;
 const pUpgrades = [
   u('hr', 'HP Regen', '+10 HP/min', '💚', ml, 0, 'hpRegen', 10),
   { id: 'hp', name: 'Max HP', desc: '+20 Max HP', icon: '❤️', maxLevel: ml, apply: () => { stats.mH += 20; stats.hp += 20; ul.hp = (ul.hp || 0) + 1 } }, // maxHp
@@ -939,8 +939,8 @@ function update(_time, delta) {
   // HYPER scaling every 20 seconds (only after 10 minutes)
   if (hyperModeActive && ~~(gameTime / 20000) > ~~((gameTime - delta) / 20000)) {
     difficulty.sR = Math.max(50, difficulty.sR * 0.5); // spawnRate
-    difficulty.eH *= 1.5; // enemyHp
-    difficulty.eD *= 1.2; // enemyDamage
+    difficulty.eH *= 1.1; // enemyHp
+    difficulty.eD *= 1.1; // enemyDamage
     difficulty.eS *= 1.1; // enemySpeed
   }
 
