@@ -21,7 +21,7 @@ let adc = null, idleTween = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, paused = false, mainMenu = true;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
-let nextWaveTime = 30000, nextBossTime = 60000;
+let nextWaveTime = 30000, nextBossTime = 5000;
 let warnAct = false;
 let hyperModeActive = false;
 let lastOrbSize = 0; // Track orbit ball size to avoid unnecessary updates
@@ -48,6 +48,8 @@ const CS = { W: '#ffffff', B: '#000000', Y: '#ffff00', R: '#ff0000', G: '#00ff00
 const F = 'fontSize', FF = 'fontFamily', A = 'Arial', CO = 'color', STR = 'stroke', STT = 'strokeThickness', FST = 'fontStyle';
 // Common strings
 const AC = 'active', SSF = 'setScrollFactor', SD = 'setDepth', DS = 'destroy', SO = 'setOrigin';
+// Repeated UI strings (for minification)
+const SPC = 'SPACE', LVL_TXT = 'Level: ', COIN_TXT = 'Coins: ';
 // Graphics factory functions (g=graphics reference)
 const INST = '[WASD]Move  [SPACE]Select  [ESC]Back  [P]Pause  [R]Restart  [M]Music';
 let g; // graphics
@@ -106,13 +108,13 @@ let unlockedTypes = [];
 const iwt = [ // initial weapon types
   // Weapon types: i=id, n=name, d=desc, u=unlocked
   // Projectile: c=count, f=fireRate, m=damage, e=penetration
-  { i: 'p', n: 'Projectiles', d: 'Shoots nearest', u: false, c: 1, f: 500, m: 10, e: 0 },
+  { i: 'p', n: 'Projectiles', d: 'Shoots nearest', icon: '🔫', u: false, c: 1, f: 500, m: 10, e: 0 },
   // Orbit Ball: c=count, r=rotSpeed, a=radius, b=ballRadius, m=damage
-  { i: 'o', n: 'Orbit Ball', d: 'Defensive orbit', u: false, c: 2, r: 2, a: 80, b: 8, m: 15 },
+  { i: 'o', n: 'Orbit Ball', d: 'Defensive orbit', icon: '⚪', u: false, c: 2, r: 2, a: 80, b: 8, m: 15 },
   // Area DMG: a=radius, p=dps, t=tickRate, l=lastTick
-  { i: 'a', n: 'Area DMG', d: 'Area damage', u: false, a: 75, p: 10, t: 500, l: 0 },
+  { i: 'a', n: 'Area DMG', d: 'Area damage', icon: '🔴', u: false, a: 75, p: 10, t: 500, l: 0 },
   // Boomerang: c=count, m=damage, s=speed, w=returnSpeed, x=maxDistance, z=size
-  { i: 'b', n: 'Boomerang', d: 'Returns', u: false, c: 2, m: 12, s: 350, w: 250, x: 150, z: 1 }
+  { i: 'b', n: 'Boomerang', d: 'Returns', icon: '🪃', u: false, c: 2, m: 12, s: 350, w: 250, x: 150, z: 1 }
 ];
 
 let weaponTypes = JSON.parse(JSON.stringify(iwt));
@@ -255,14 +257,17 @@ const boomerangUpgrades = [
 // Helper: create text with common properties
 function mkTxt(x, y, t, l, d = 101) { return s.add.text(x, y, t, l)[SO](0.5)[SSF](0)[SD](d); }
 
-// Helper: chromatic aberration text with animations
+// mkChromaticTxt: Create chromatic aberration effect (red/cyan offset + shake/pulse animations)
 function mkChromaticTxt(x, y, txt, fontSize, baseDepth) {
-  const t1 = mkTxt(x - 4, y - 2, txt, { [F]: fontSize, [FF]: A, [CO]: '#ff0044', [STR]: '#ff0044', [STT]: 3 }, baseDepth);
-  const t2 = mkTxt(x + 4, y + 2, txt, { [F]: fontSize, [FF]: A, [CO]: '#00ffff', [STR]: '#00ffff', [STT]: 3 }, baseDepth + 1);
+  const t1 = mkTxt(x - 4, y - 2, txt, { [F]: fontSize, [FF]: A, [CO]: '#f04', [STR]: '#f04', [STT]: 3 }, baseDepth);
+  const t2 = mkTxt(x + 4, y + 2, txt, { [F]: fontSize, [FF]: A, [CO]: '#0ff', [STR]: '#0ff', [STT]: 3 }, baseDepth + 1);
   const t3 = mkTxt(x, y, txt, { [F]: fontSize, [FF]: A, [CO]: CS.W, [STR]: CS.W, [STT]: 3 }, baseDepth + 2);
-  const shake = s.tweens.add({ targets: [t1, t2, t3], rotation: 0.035, x: '+=2', duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-  const pulse = s.tweens.add({ targets: t3, scaleX: 1.03, scaleY: 1.03, alpha: 0.92, duration: 1500, yoyo: true, repeat: -1, ease: 'Cubic.easeInOut' });
-  return { texts: [t1, t2, t3], tweens: [shake, pulse] };
+  return {
+    texts: [t1, t2, t3], tweens: [
+      s.tweens.add({ targets: [t1, t2, t3], rotation: .035, x: '+=2', duration: 1e3, yoyo: !0, repeat: -1, ease: 'Sine.easeInOut' }),
+      s.tweens.add({ targets: t3, scaleX: 1.03, scaleY: 1.03, alpha: .92, duration: 1500, yoyo: !0, repeat: -1, ease: 'Cubic.easeInOut' })
+    ]
+  };
 }
 
 // Helper: random centering
@@ -291,14 +296,14 @@ function procDmg(enemy, srcX, srcY, baseDmg) {
   if (hp <= 0) {
     playTone(s, 660, 0.1);
     enemy.body.enable = false;
-    handleEnemyDeath(enemy);
+    hnED(enemy);
     return true;
   }
   return false;
 }
 
-// Helper: spawn death particle explosion
-function spawnDeathParticles(x, y, color) {
+// spnDP: Spawn death particle explosion on enemy kill
+function spnDP(x, y, color) {
   const emitter = s.add.particles(x, y, 'orb', {
     speed: { min: 30, max: 80 },
     angle: { min: 0, max: 360 },
@@ -310,15 +315,15 @@ function spawnDeathParticles(x, y, color) {
   s.time.delayedCall(400, () => emitter.destroy());
 }
 
-// Helper: handle enemy death and drops
-function handleEnemyDeath(e) {
+// hnED: Handle enemy death, drops (XP, coins, chests), and particle effects
+function hnED(e) {
   const xp = e.getData('xpValue') || 5;
   const cn = e.getData('coinValue') || 1;
   const iB = e.getData('isBoss');
   const dc = e.getData('dropChance') || 0;
   const color = e.getData('enemyColor') || C.W;
 
-  spawnDeathParticles(e.x, e.y, color);
+  spnDP(e.x, e.y, color);
 
   dropXP(e.x, e.y, xp);
   if (Math.random() < 0.25) dropCoin(e.x, e.y, cn);
@@ -332,8 +337,8 @@ function handleEnemyDeath(e) {
   stats.k++; // enemies killed
 }
 
-// Generate high-res boss texture (60x60) using recipe system with 3x scaling
-function generateBossTexture(type) {
+// genBT: Generate boss texture (60x60 HD) using recipe system with 3x scaling
+function genBT(type) {
   const key = `boss_${type[EN]}`;
   if (s.textures.exists(key)) return key;
 
@@ -384,8 +389,8 @@ function perlin(x, y) {
   );
 }
 
-// Generate procedural nebula texture
-function generateNebula() {
+// genNeb: Generate procedural nebula background texture using Perlin noise
+function genNeb() {
   // Remove old texture if exists
   if (s.textures.exists('nebulaNoise')) {
     s.textures.remove('nebulaNoise');
@@ -642,7 +647,7 @@ function create() {
       d: k('D')
     },
     mn: { // Menu navigation (events)
-      e: k('SPACE'),
+      e: k(SPC),
       x: k('ESC')
     },
     ac: { // Actions (events)
@@ -657,7 +662,7 @@ function create() {
   const nc = [0x00ffff, 0xff00ff, 0xffff00];
 
   // Generate Perlin noise nebula background
-  generateNebula();
+  genNeb();
 
   // Cyberpunk neon grid background with parallax
   [[200, 0x00ffff, 0.3, 0.2], [120, 0xff00ff, 0.5, 0.5], [80, 0xffff00, 0.4, 0.8]].forEach(([sp, c, a, sf], i) => {
@@ -695,7 +700,7 @@ function create() {
   // Expand world bounds
   this.physics.world.setBounds(0, 0, 2400, 1800);
   this.physics.pause();
-  this.time.delayedCall(0, showMainMenu);
+  this.time.delayedCall(0, shwMM);
   playTone(this, 440, 0.1);
 }
 
@@ -769,7 +774,7 @@ function initGameplay() {
   ph.add.collider(pr, ob);
 
   // Create UI
-  createUI(s);
+  crtUI();
 
   // Keyboard for restart (using central keys)
   keys.ac.r.on('down', () => { if (!startScreen) restartGame(); });
@@ -1047,10 +1052,10 @@ function update(_time, delta) {
   updBooms(delta);
 
   // Update UI
-  updateUI();
+  updUI();
 
   // Draw UI bars
-  drawUIBars();
+  drwUI();
 }
 
 function shoot() {
@@ -1187,7 +1192,7 @@ function hitPlayer(_pObj, enemy) {
 
   if (stats.hp <= 0) {
     // Update UI one last time to show HP at 0
-    drawUIBars();
+    drwUI();
     endGame();
   }
 }
@@ -1239,7 +1244,7 @@ function collectChest(_pObj, chest) {
   const lockedWeapons = weaponTypes.filter(w => !w.u && !w.i.startsWith('placeholder'));
 
   if (lockedWeapons.length) {
-    showWeaponSelector(lockedWeapons);
+    shwWS(lockedWeapons);
   } else {
     // All weapons unlocked, show 5 normal upgrades
     selectingWeapon = true;
@@ -1260,7 +1265,7 @@ function colUpgCh(_pObj, chest) {
 
   selectingWeapon = true;
   s.physics.pause();
-  showUpgradeMenu('selectingWeapon');
+  shwUM('selectingWeapon');
 }
 
 function dropMagnet(x, y) { drop(mg, x, y, 'magnet', 10, 0, 0, 0, 1); }
@@ -1324,7 +1329,7 @@ function levelUp() {
 
   playTone(s, 1200, 0.2);
 
-  showUpgradeMenu('levelingUp');
+  shwUM('levelingUp');
 }
 
 // Helper: get ALL weapon upgrades for a weapon
@@ -1349,10 +1354,10 @@ function renderStatsPanel() {
 
   // Header text + Coins
   mkTxt(60, 30, `LEVEL ${stats.lv}`, { [F]: '20px', [FF]: A, [CO]: CS.Y }, 102); // level
-  mkTxt(720, 30, `Coins: ${stats.c}`, { [F]: '18px', [FF]: A, [CO]: CS.Go }, 102);
+  mkTxt(720, 30, COIN_TXT + stats.c, { [F]: '18px', [FF]: A, [CO]: CS.Go }, 102);
 
   // Hero sprite with HD texture and purple border
-  const heroTex = generateHeroTexture(selCh.t, true);
+  const heroTex = genHT(selCh.t, true);
   const heroSprite = s.add.sprite(78, 110, heroTex)[SSF](0)[SD](102);
 
   // Smooth rotation animation
@@ -1391,7 +1396,7 @@ function renderStatsPanel() {
   });
 
   // Weapons section (4 columns, always visible)
-  const allWeapons = [{ i: 'p', ic: '🔫', tex: 'orb' }, { i: 'o', ic: '⚪', tex: 'o' }, { i: 'a', ic: '🔴', tex: 'orb' }, { i: 'b', ic: '🪃', tex: 'b' }];
+  const allWeapons = weaponTypes.map(w => ({ i: w.i, ic: w.icon, tex: w.i === 'o' ? 'o' : w.i === 'b' ? 'b' : 'orb' }));
   allWeapons.forEach((w, i) => {
     const x = 30 + i * 190;
     const y = 175;
@@ -1570,7 +1575,7 @@ function showSelector(opts, fullPool, hasRr, onSel, headerText = '▸ Choose:') 
       sI = 0;
       renderOpts(newOpts);
       updSel();
-      s.children.list.filter(c => c.depth === 102 && c.text && c.text.includes('Coins')).forEach(c => c.setText(`Coins: ${stats.c}`));
+      s.children.list.filter(c => c.depth === 102 && c.text && c.text.includes('Coins')).forEach(c => c.setText(COIN_TXT + stats.c));
     } else onSel(m[sI].it);
   });
 
@@ -1612,7 +1617,8 @@ function showNormalUpgradesCore(onSelectCallback, onNoUpgradesCallback, extraHea
   }, header);
 }
 
-function showUpgradeMenu(stateVar = 'levelingUp') {
+// shwUM: Show upgrade menu (level up - choose upgrade or weapon)
+function shwUM(stateVar = 'levelingUp') {
   showNormalUpgradesCore(
     // onSelect: close menu and resume
     () => {
@@ -1652,7 +1658,8 @@ function showMultipleNormalUpgrades(remaining) {
   );
 }
 
-function showWeaponSelector(weapons) {
+// shwWS: Show weapon selector (first unlock - choose initial weapon)
+function shwWS(weapons) {
   if (gameOver || levelingUp || selectingWeapon || startScreen || paused) return;
 
   selectingWeapon = true;
@@ -1677,7 +1684,8 @@ const gt3 = (x, y, txt, sz, d) => [
   s.add.text(x, y, txt, { [F]: sz, [FF]: A, [CO]: CS.W, [FST]: 'bold' })[SO](0.5)[SSF](0)[SD](d + 1)
 ];
 
-function showMainMenu() {
+// shwMM: Show main menu (START, CREDITS, LEADERBOARD options)
+function shwMM() {
   // Clean any previous menu first
   cleanupMenu();
 
@@ -1698,7 +1706,7 @@ function showMainMenu() {
 
   sI = 0;
   const opts = [
-    { y: 320, txt: 'START GAME', fn: () => { mainMenu = false; showStartScreen(); } },
+    { y: 320, txt: 'START GAME', fn: () => { mainMenu = false; shwSS(); } },
     { y: 400, txt: 'LEADERBOARDS', fn: showFullLeaderboard }
   ];
 
@@ -1758,17 +1766,18 @@ function showFullLeaderboard() {
 
   mkTxt(400, 540, 'SPACE to go back', { [F]: '16px', [FF]: A, [CO]: CS.LG }, 151);
 
-  const ek = s.input.keyboard.addKey('SPACE');
+  const ek = s.input.keyboard.addKey(SPC);
   ek.on('down', () => {
     playTone(s, 1000, 0.15);
     cleanupMenu(150);
-    showMainMenu();
+    shwMM();
   });
   menuKeys.push(ek);
 }
 
 // Generate HD hero textures (optimized)
-function generateHeroTexture(t, sel) {
+// genHT: Generate hero texture (HD quality for character select)
+function genHT(t, sel) {
   const k = `${t}_hd${sel ? '_s' : ''}`;
   if (s.textures.exists(k)) return k;
   g = s.add.graphics();
@@ -1801,7 +1810,8 @@ function generateHeroTexture(t, sel) {
   return k;
 }
 
-function showStartScreen() {
+// shwSS: Show start screen (character selection)
+function shwSS() {
   // Clean any previous menu first
   cleanupMenu();
 
@@ -1866,7 +1876,7 @@ function showStartScreen() {
 
       dc(o.btn, o.x + shakeX, o.y + shakeY, d, i, glowPulse);
 
-      const hdTex = generateHeroTexture(o.ch.t, d);
+      const hdTex = genHT(o.ch.t, d);
       o.sprite.setTexture(hdTex);
       o.sprite.setPosition(o.x + shakeX, o.y - 50 + shakeY);
       o.sprite.setAngle(d ? Math.sin(Date.now() * 0.002) * 8 : 0); // Pronounced rotation
@@ -1923,7 +1933,7 @@ function showStartScreen() {
     const btn = mkGr(101);
 
     // Generate high-res texture (non-selected) and create sprite at scale 1.0
-    const hdTexture = generateHeroTexture(ch.t, false);
+    const hdTexture = genHT(ch.t, false);
     const heroSprite = s.add.sprite(x, y - 50, hdTexture).setScale(1)[SSF](0)[SD](102);
 
     m.push({ btn, ch: ch, x, y, sprite: heroSprite, texts: [], particles: null });
@@ -1956,35 +1966,38 @@ function showStartScreen() {
     playTone(s, 1000, 0.15);
     startScreen = !(mainMenu = true);
     cleanupMenu();
-    showMainMenu();
+    shwMM();
   });
 
   // Track keys for cleanup (references only)
   menuKeys.push(keys.mv.a, keys.mv.d, keys.mn.e, keys.mn.x);
 }
 
-function createUI() {
+// crtUI: Create UI text elements at game start
+function crtUI() {
   const txt = (x, y, t, c, sz = '16px', d = 99) => {
     const el = s.add.text(x, y, t, { [F]: sz, [FF]: A, [CO]: c })[SSF](0);
     return d ? el[SD](d) : el;
   };
   ui.hpText = txt(10, 10, 'HP:', CS.W);
   ui.xpText = txt(300, 10, 'XP:', CS.W);
-  ui.levelText = txt(550, 10, 'Level: 1', CS.Y);
-  ui.coinsText = txt(650, 10, 'Coins: 0', CS.Go);
+  ui.levelText = txt(550, 10, LVL_TXT + '1', CS.Y);
+  ui.coinsText = txt(650, 10, COIN_TXT + '0', CS.Go);
   ui.timeText = txt(740, 10, '0:00', CS.Cy);
 }
 
-function updateUI() {
-  ui.levelText.setText(`Level: ${stats.lv}`); // level
-  ui.coinsText.setText(`Coins: ${stats.c}`);
+// updUI: Update UI text elements (level, coins, time)
+function updUI() {
+  ui.levelText.setText(LVL_TXT + stats.lv); // level
+  ui.coinsText.setText(COIN_TXT + stats.c);
 
   const minutes = ~~(gameTime / 60000);
   const seconds = ~~((gameTime % 60000) / 1000);
   ui.timeText.setText(`${minutes}:${('0' + seconds).slice(-2)}`);
 }
 
-function drawUIBars() {
+// drwUI: Draw UI bars (HP, XP, boss bars) - called every frame
+function drwUI() {
   gr.clear()[SSF](0)[SD](99);
 
   // Panel contenedor superior - fondo oscuro semi-transparente
@@ -1993,78 +2006,44 @@ function drawUIBars() {
   gr.lineStyle(2, C.P, 0.8).strokeRect(1, 1, 798, 38);
   gr.lineStyle(1, C.Cy, 0.6).strokeRect(3, 3, 794, 34);
 
-  // Helper: draw bar (x, y, w, h, val, max, bgCol, fgCol, borderCol, borderW)
+  // Helper: draw bar with glow, progress fill, highlight, and triple borders
   const bar = (x, y, w, h, v, m, bg, fg, br, bw) => {
-    // Outer glow
-    gr.fillStyle(fg, 0.2).fillRect(x - 2, y - 2, w + 4, h + 4);
-
-    // Background
-    gr.fillStyle(bg, 0.8).fillRect(x, y, w, h);
-
-    // Foreground progress
-    const pw = w * (v / m);
+    const pw = w * (v / m); // Progress width
+    // Outer glow + background
+    gr.fillStyle(fg, .2).fillRect(x - 2, y - 2, w + 4, h + 4);
+    gr.fillStyle(bg, .8).fillRect(x, y, w, h);
+    // Foreground progress + inner highlight
     gr.fillStyle(fg, 1).fillRect(x, y, pw, h);
-
-    // Inner highlight on progress bar
-    if (pw > 2) {
-      gr.fillStyle(C.W, 0.3).fillRect(x + 1, y + 1, pw - 2, h * 0.4);
-    }
-
-    // Borders - outer glow, main, inner
-    gr.lineStyle(bw + 1, fg, 0.4).strokeRect(x - 1, y - 1, w + 2, h + 2);
+    pw > 2 && gr.fillStyle(C.W, .3).fillRect(x + 1, y + 1, pw - 2, h * .4);
+    // Triple border (outer glow, main, inner)
+    gr.lineStyle(bw + 1, fg, .4).strokeRect(x - 1, y - 1, w + 2, h + 2);
     gr.lineStyle(bw, br, 1).strokeRect(x, y, w, h);
-    gr.lineStyle(1, C.W, 0.5).strokeRect(x + 1, y + 1, w - 2, h - 2);
+    gr.lineStyle(1, C.W, .5).strokeRect(x + 1, y + 1, w - 2, h - 2);
   };
 
   bar(50, 10, 200, 20, stats.hp, stats.mH, C.DR, C.R, C.W, 2);
   bar(330, 10, 180, 20, stats.xp, stats.xN, 0x004444, C.Cy, C.W, 2);
 
-  // Find all active bosses
-  let bosses = [];
-  en.children.entries.forEach(enemy => {
-    if (enemy[AC] && enemy.getData('isBoss')) {
-      bosses.push(enemy);
-    }
-  });
-
-  // Track rendered bosses for cleanup
-  const rendered = [];
-
-  // Draw boss HP bars horizontally
-  if (bosses.length) {
-    const w = 600 / bosses.length;
-    bosses.forEach((boss, i) => {
-      const hp = boss.getData('hp'), maxHp = boss.getData('maxHp');
-      const xStart = 100 + (i * w);
-      const xCenter = xStart + (w / 2);
-
-      // Find or create boss UI entry
-      let bUI = ui.bossData.find(b => b.enemy === boss);
-      if (!bUI) {
-        bUI = { enemy: boss, hpText: null, lastHp: null };
-        ui.bossData.push(bUI);
+  // Boss bars: find active bosses, render bars, cleanup dead ones
+  const bs = [];
+  en.children.entries.forEach(e => e[AC] && e.getData('isBoss') && bs.push(e));
+  const rd = [];
+  if (bs.length) {
+    const w = 600 / bs.length;
+    bs.forEach((b, i) => {
+      const hp = b.getData('hp'), mh = b.getData('maxHp'), x = 100 + i * w, xc = x + w / 2;
+      let u = ui.bossData.find(d => d.enemy === b);
+      if (!u) ui.bossData.push(u = { enemy: b, hpText: null, lastHp: null });
+      if (!u.hpText || u.lastHp !== hp) {
+        u.hpText?.[DS]();
+        u.hpText = mkTxt(xc, 62, `${~~hp}/${~~mh}`, { [F]: '14px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 3 }, 99);
+        u.lastHp = hp;
       }
-
-      // Update HP text if changed
-      if (!bUI.hpText || bUI.lastHp !== hp) {
-        if (bUI.hpText) bUI.hpText[DS]();
-        bUI.hpText = mkTxt(xCenter, 62, `${~~hp} / ${~~maxHp}`, { [F]: '14px', [FF]: A, [CO]: CS.W, [STR]: CS.B, [STT]: 3 }, 99);
-        bUI.lastHp = hp;
-      }
-
-      bar(xStart, 50, w - 10, 25, hp, maxHp, C.DR, C.R, C.Y, 3);
-      rendered.push(boss);
+      bar(x, 50, w - 10, 25, hp, mh, C.DR, C.R, C.Y, 3);
+      rd.push(b);
     });
   }
-
-  // Cleanup dead boss UI
-  ui.bossData = ui.bossData.filter(bUI => {
-    if (!rendered.includes(bUI.enemy)) {
-      if (bUI.hpText) bUI.hpText[DS]();
-      return false;
-    }
-    return true;
-  });
+  ui.bossData = ui.bossData.filter(u => { if (!rd.includes(u.enemy)) { u.hpText?.[DS](); return !1 } return !0 });
 }
 
 function endGame() {
@@ -2085,7 +2064,7 @@ function endGame() {
   // Stats
   const mins = ~~(gameTime / 60000), secs = ~~((gameTime % 60000) / 1000);
   const timeText = mkTxt(400, 300, `Time: ${mins}:${('0' + secs).slice(-2)}`, { [F]: '28px', [FF]: A, [CO]: CS.Cy });
-  const levelText = mkTxt(400, 350, `Level: ${stats.lv}`, { [F]: '28px', [FF]: A, [CO]: CS.Y }); // level
+  const levelText = mkTxt(400, 350, LVL_TXT + stats.lv, { [F]: '28px', [FF]: A, [CO]: CS.Y }); // level
   const killsText = mkTxt(400, 400, `Kills: ${stats.k}`, { [F]: '28px', [FF]: A, [CO]: CS.G });
 
   // After 2 seconds, transition to leaderboard flow
@@ -2154,7 +2133,7 @@ function restartGame() {
 
   // Don't call initGameplay() here - it will be called when user selects character
   s.physics.pause();
-  showMainMenu();
+  shwMM();
 }
 
 // Leaderboard functions
@@ -2201,7 +2180,7 @@ function showNameEntry() {
   const hsTxt = qualForLb(stats.k) ? 'NEW HIGH SCORE!' : 'ENTER YOUR NAME';
   mkChromaticTxt(400, 80, hsTxt, '48px', 151);
   mkTxt(400, 150, `Kills: ${stats.k}`, { [F]: '24px', [FF]: A, [CO]: CS.G }, 151);
-  mkTxt(400, 180, `Level: ${stats.lv}  Time: ${mins}:${('0' + secs).slice(-2)}`, { [F]: '20px', [FF]: A, [CO]: CS.W }, 151); // level
+  mkTxt(400, 180, LVL_TXT + stats.lv + `  Time: ${mins}:${('0' + secs).slice(-2)}`, { [F]: '20px', [FF]: A, [CO]: CS.W }, 151); // level
 
   // Name input boxes
   const boxesY = 280;
@@ -2392,7 +2371,7 @@ function spawnBoss() {
   else if (side === 2) { x = p.x - 500; y = p.y; }
   else { x = p.x + 500; y = p.y; }
 
-  const bossTexKey = generateBossTexture(type);
+  const bossTexKey = genBT(type);
   x = Math.max(30, Math.min(2370, x));
   y = Math.max(30, Math.min(1770, y));
   const boss = en.create(x, y, bossTexKey);
