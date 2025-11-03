@@ -1461,10 +1461,10 @@ function showSelector(opts, fullPool, hasRr, onSel, headerText = '▸ Choose:') 
       const x = 150 + i * 250;
       const btn = mkGr(101);
       btn.fillStyle(C.VG, 1).fillRoundedRect(x - 80, y - 10, 160, 110, 8).lineStyle(3, C.G, 1).strokeRoundedRect(x - 80, y - 10, 160, 110, 8);
-      mkTxt(x, y + 30, it.icon || it.n[0], { [F]: '40px' }, 102);
-      mkTxt(x, y + 70, it.name || it.n, { [F]: '16px', [FF]: A, [CO]: CS.W }, 102);
-      mkTxt(x, y + 90, it.desc || it.d, { [F]: '12px', [FF]: A, [CO]: CS.LG }, 102);
-      m.push({ btn, it, x });
+      const icon = mkTxt(x, y + 30, it.icon || it.n[0], { [F]: '40px' }, 102);
+      const name = mkTxt(x, y + 70, it.name || it.n, { [F]: '16px', [FF]: A, [CO]: CS.W }, 102);
+      const desc = mkTxt(x, y + 90, it.desc || it.d, { [F]: '12px', [FF]: A, [CO]: CS.LG }, 102);
+      m.push({ btn, it, x, icon, name, desc, iconTween: null });
     });
   };
 
@@ -1474,13 +1474,43 @@ function showSelector(opts, fullPool, hasRr, onSel, headerText = '▸ Choose:') 
 
     m.forEach((o, i) => {
       const sel = i === sI;
-      o.btn.clear().fillStyle(sel ? C.DB : C.VG, 1).fillRoundedRect(o.x - 80, y - 10, 160, 110, 8);
-      o.btn.lineStyle(3, sel ? C.Y : C.G, 1).strokeRoundedRect(o.x - 80, y - 10, 160, 110, 8);
+
+      // Stop previous icon animation
+      if (o.iconTween) { o.iconTween.stop(); o.iconTween = null; }
+      o.icon.setScale(1).setAngle(0);
+
+      o.btn.clear();
 
       if (sel) {
+        // Multiple glow layers (hero selector style)
+        const a = 0.4;
+        o.btn.fillStyle(C.P, a * 0.5).fillRoundedRect(o.x - 85, y - 15, 170, 120, 8);
+        o.btn.fillStyle(C.Cy, a * 0.5).fillRoundedRect(o.x - 88, y - 18, 176, 126, 8);
+        o.btn.fillStyle(C.P, 0.6).fillRoundedRect(o.x - 77, y - 7, 154, 104, 8).lineStyle(4, C.P, 0.8).strokeRoundedRect(o.x - 77, y - 7, 154, 104, 8);
+        o.btn.fillStyle(C.Cy, 0.6).fillRoundedRect(o.x - 82, y - 12, 164, 114, 8).lineStyle(4, C.Cy, 0.8).strokeRoundedRect(o.x - 82, y - 12, 164, 114, 8);
+        // Main box with gradient
+        o.btn.fillGradientStyle(C.P, C.P, C.B, C.B, 0.75).fillRoundedRect(o.x - 80, y - 10, 160, 110, 8);
+        o.btn.lineStyle(4, C.W, 1).strokeRoundedRect(o.x - 80, y - 10, 160, 110, 8);
+
+        // Pulsing overlay
         pulseOverlay = mkGr(103);
         pulseOverlay.fillStyle(C.P, 0.3).fillRoundedRect(o.x - 80, y - 10, 160, 110, 8);
-        pulseTween = s.tweens.add({ targets: pulseOverlay, alpha: { from: 0.3, to: 0.7 }, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        pulseTween = s.tweens.add({ targets: pulseOverlay, alpha: { from: 0.3, to: 0.6 }, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+        // Animate icon
+        o.iconTween = s.tweens.add({
+          targets: o.icon,
+          scale: { from: 1.0, to: 1.15 },
+          angle: { from: -5, to: 5 },
+          duration: 800,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+      } else {
+        // Not selected: subtle gradient
+        o.btn.fillGradientStyle(C.P, C.P, C.B, C.B, 0.35).fillRoundedRect(o.x - 80, y - 10, 160, 110, 8);
+        o.btn.lineStyle(3, C.P, 0.5).strokeRoundedRect(o.x - 80, y - 10, 160, 110, 8);
       }
     });
 
