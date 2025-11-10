@@ -21,7 +21,7 @@ let adc = null, idleTween = null;
 let gameOver = false, levelingUp = false, selectingWeapon = false, startScreen = true, paused = false, mainMenu = true;
 let gameTime = 0, shootTimer = 0, spawnTimer = 0, regenTimer = 0;
 let waveTimer = 0, bossTimer = 0;
-let nextWaveTime = 30000, nextBossTime = 5000;
+let nextWaveTime = 30000, nextBossTime = 60000;
 let warnAct = false;
 let hyperModeActive = false;
 let lastOrbSize = 0; // Track orbit ball size to avoid unnecessary updates
@@ -50,8 +50,14 @@ const F = 'fontSize', FF = 'fontFamily', A = 'Arial', CO = 'color', STR = 'strok
 const AC = 'active', SSF = 'setScrollFactor', SD = 'setDepth', DS = 'destroy', SO = 'setOrigin';
 // Repeated UI strings (for minification)
 const SPC = 'SPACE', LVL_TXT = 'Level: ', COIN_TXT = 'Coins: ';
+
+// Arcade Controls: P1U/P1D/P1L/P1R(Joy), P1A(Select), START1(Pause)
+// Local test keys: WASD/Arrows(move), U/Space(select), P/Enter(pause)
+// Deep clone helper (used 4x in code)
+const dc=o=>JSON.parse(JSON.stringify(o));
+
 // Graphics factory functions (g=graphics reference)
-const INST = '[WASD]Move  [SPACE]Select  [ESC]Back  [P]Pause  [R]Restart  [M]Music';
+const INST = 'Joy:Move [A]Select [START]Pause [ESC]Back [M]Music';
 let g; // graphics
 const fs = (c, a = 1) => g.fillStyle(c, a);
 const gt = (...a) => (g.generateTexture(...a), g.clear());
@@ -110,14 +116,14 @@ const iwt = [ // initial weapon types
   // Projectile: c=count, f=fireRate, m=damage, e=penetration
   { i: 'p', n: 'Projectiles', d: 'Shoots nearest', icon: '🔫', u: false, c: 1, f: 500, m: 10, e: 0 },
   // Orbit Ball: c=count, r=rotSpeed, a=radius, b=ballRadius, m=damage
-  { i: 'o', n: 'Orbit Ball', d: 'Defensive orbit', icon: '⚪', u: false, c: 2, r: 2, a: 80, b: 8, m: 15 },
+  { i: 'o', n: 'Orbit Ball', d: 'Defensive orbit', icon: '⚪', u: false, c: 4, r: 2, a: 80, b: 8, m: 15 },
   // Area DMG: a=radius, p=dps, t=tickRate, l=lastTick
   { i: 'a', n: 'Area DMG', d: 'Area damage', icon: '🔴', u: false, a: 75, p: 10, t: 500, l: 0 },
   // Boomerang: c=count, m=damage, s=speed, w=returnSpeed, x=maxDistance, z=size
   { i: 'b', n: 'Boomerang', d: 'Returns', icon: '🪃', u: false, c: 2, m: 12, s: 350, w: 250, x: 150, z: 1 }
 ];
 
-let weaponTypes = JSON.parse(JSON.stringify(iwt));
+let weaponTypes = dc(iwt);
 
 const c = [
   {
@@ -185,7 +191,7 @@ const inS = { // initial stats
   k: 0 // enKilled - enemies killed
 };
 
-let stats = JSON.parse(JSON.stringify(inS));
+let stats = dc(inS);
 
 let inD = { // initial difficulty
   sR: 500, // spawnRate
@@ -640,20 +646,29 @@ function create() {
   // Input: Central key registry (initialized early for menus)
   const k = key => this.input.keyboard.addKey(key);
   keys = {
-    mv: { // Movement (polling)
+    mv: { // Movement (polling) - supports both keyboard and arcade
       w: k('W'),
       a: k('A'),
       s: k('S'),
-      d: k('D')
+      d: k('D'),
+      // Arcade joystick codes
+      p1u: k('P1U'),
+      p1d: k('P1D'),
+      p1l: k('P1L'),
+      p1r: k('P1R')
     },
     mn: { // Menu navigation (events)
       e: k(SPC),
-      x: k('ESC')
+      x: k('ESC'),
+      // Arcade button A for selection
+      p1a: k('P1A')
     },
     ac: { // Actions (events)
       p: k('P'),
       r: k('R'),
-      m: k('M')
+      m: k('M'),
+      // Arcade START button for pause/restart
+      start: k('START1')
     }
   };
 
@@ -776,12 +791,14 @@ function initGameplay() {
   // Create UI
   crtUI();
 
-  // Keyboard for restart (using central keys)
-  keys.ac.r.on('down', () => { if (!startScreen) restartGame(); });
+  // Keyboard for restart (using central keys + arcade START button)
+  const restartHandler = () => { if (!startScreen) restartGame(); };
+  keys.ac.r.on('down', restartHandler);
+  keys.ac.start.on('down', restartHandler);  // Arcade START button also restarts
 
-  // Keyboard for pause (using central keys)
+  // Keyboard for pause (using central keys + arcade START button)
   let pauseOverlay = null, pauseTexts = null, pauseTweens = null, pauseHint = null;
-  keys.ac.p.on('down', () => {
+  const pauseHandler = () => {
     if (!gameOver && !startScreen && !levelingUp && !selectingWeapon) {
       paused = !paused;
       if (paused) {
@@ -794,7 +811,7 @@ function initGameplay() {
         const { texts, tweens } = mkChromaticTxt(400, 300, 'PAUSED', '72px', 200);
         pauseTexts = texts;
         pauseTweens = tweens;
-        pauseHint = mkTxt(400, 370, 'Press [P] to resume', { [F]: '24px', [FF]: A, [CO]: CS.W }, 203);
+        pauseHint = mkTxt(400, 370, 'Press [P] or [START] to resume', { [F]: '24px', [FF]: A, [CO]: CS.W }, 203);
       } else {
         s.physics.resume();
         playTone(s, 800, 0.1);
@@ -804,7 +821,9 @@ function initGameplay() {
         pauseHint?.[DS]();
       }
     }
-  });
+  };
+  keys.ac.p.on('down', pauseHandler);
+  keys.ac.start.on('down', pauseHandler);  // Arcade START button also pauses
 
   // Keyboard for music toggle (using central keys)
   keys.ac.m.on('down', () => {
@@ -839,23 +858,23 @@ function update(_time, delta) {
     stats.hp = Math.min(stats.mH, stats.hp + healAmount); // maxHp
   }
 
-  // Player movement
+  // Player movement (supports both keyboard WASD and arcade joystick)
   p.body.setVelocity(0, 0);
   let moving = false;
 
-  if (wasd.a.isDown) {
+  if (wasd.a.isDown || keys.mv.p1l.isDown) {
     p.body.setVelocityX(-stats.sp); // speed
     moving = true;
   }
-  if (wasd.d.isDown) {
+  if (wasd.d.isDown || keys.mv.p1r.isDown) {
     p.body.setVelocityX(stats.sp); // speed
     moving = true;
   }
-  if (wasd.w.isDown) {
+  if (wasd.w.isDown || keys.mv.p1u.isDown) {
     p.body.setVelocityY(-stats.sp); // speed
     moving = true;
   }
-  if (wasd.s.isDown) {
+  if (wasd.s.isDown || keys.mv.p1d.isDown) {
     p.body.setVelocityY(stats.sp); // speed
     moving = true;
   }
@@ -1021,26 +1040,8 @@ function update(_time, delta) {
 
   // Auto-magnetize items within player radius
   const magnetRadiusSq = stats.mR * stats.mR;
-
-  xo.children.entries.forEach(orb => {
-    if (orb[AC] && !orb.getData('magnetized')) {
-      const dx = orb.x - p.x;
-      const dy = orb.y - p.y;
-      if (dx * dx + dy * dy <= magnetRadiusSq) {
-        orb.setData('magnetized', true);
-      }
-    }
-  });
-
-  co.children.entries.forEach(coin => {
-    if (coin[AC] && !coin.getData('magnetized')) {
-      const dx = coin.x - p.x;
-      const dy = coin.y - p.y;
-      if (dx * dx + dy * dy <= magnetRadiusSq) {
-        coin.setData('magnetized', true);
-      }
-    }
-  });
+  const mag=g=>g.children.entries.forEach(o=>{if(o[AC]&&!o.getData('magnetized')){const dx=o.x-p.x,dy=o.y-p.y;if(dx*dx+dy*dy<=magnetRadiusSq)o.setData('magnetized',true)}});
+  mag(xo);mag(co);
 
   // Update orbiting balls
   updOrbBalls(delta);
@@ -1549,7 +1550,9 @@ function showSelector(opts, fullPool, hasRr, onSel, headerText = '▸ Choose:') 
 
   keys.mv.a.on('down', goL);
   keys.mv.d.on('down', goR);
-  menuKeys.push(keys.mv.a, keys.mv.d);
+  keys.mv.p1l.on('down', goL);  // Arcade left
+  keys.mv.p1r.on('down', goR);  // Arcade right
+  menuKeys.push(keys.mv.a, keys.mv.d, keys.mv.p1l, keys.mv.p1r);
 
   if (hasRr) {
     const goU = () => {
@@ -1560,10 +1563,12 @@ function showSelector(opts, fullPool, hasRr, onSel, headerText = '▸ Choose:') 
     };
     keys.mv.w.on('down', goU);
     keys.mv.s.on('down', goD);
-    menuKeys.push(keys.mv.w, keys.mv.s);
+    keys.mv.p1u.on('down', goU);  // Arcade up
+    keys.mv.p1d.on('down', goD);  // Arcade down
+    menuKeys.push(keys.mv.w, keys.mv.s, keys.mv.p1u, keys.mv.p1d);
   }
 
-  keys.mn.e.on('down', () => {
+  const selectAction = () => {
     if (hasRr && sI === opts.length) {
       if (stats.c < rrCost) return;
       stats.c -= rrCost;
@@ -1577,9 +1582,12 @@ function showSelector(opts, fullPool, hasRr, onSel, headerText = '▸ Choose:') 
       updSel();
       s.children.list.filter(c => c.depth === 102 && c.text && c.text.includes('Coins')).forEach(c => c.setText(COIN_TXT + stats.c));
     } else onSel(m[sI].it);
-  });
+  };
 
-  menuKeys.push(keys.mn.e);
+  keys.mn.e.on('down', selectAction);
+  keys.mn.p1a.on('down', selectAction);  // Arcade button A for selection
+
+  menuKeys.push(keys.mn.e, keys.mn.p1a);
 }
 
 // Core function: show normal upgrades selector (reusable)
@@ -1696,7 +1704,7 @@ function shwMM() {
   mkChromaticTxt(400, 100, tlt, '80px', 100);
 
   // Version text
-  mkTxt(750, 580, 'V1.19', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
+  mkTxt(750, 580, 'V1.20', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
 
   // Credits
   mkTxt(400, 580, 'Game by: Johnny Olivares', { [F]: '12px', [FF]: A, [CO]: '#555555' }, 102);
@@ -1733,13 +1741,16 @@ function shwMM() {
   const gd = () => { sI = (sI + 1) % opts.length; opts.forEach((_, i) => dr(i)); playTone(s, 800, 0.05); };
   const ge = () => { playTone(s, 1200, 0.15); cleanupMenu(); opts[sI].fn(); };
 
-  // Attach listeners to central keys
+  // Attach listeners to central keys (both keyboard and arcade)
   keys.mv.w.on('down', gu);
   keys.mv.s.on('down', gd);
+  keys.mv.p1u.on('down', gu);  // Arcade up
+  keys.mv.p1d.on('down', gd);  // Arcade down
   keys.mn.e.on('down', ge);
+  keys.mn.p1a.on('down', ge);  // Arcade button A for selection
 
   // Track keys for cleanup (references only)
-  menuKeys.push(keys.mv.w, keys.mv.s, keys.mn.e);
+  menuKeys.push(keys.mv.w, keys.mv.s, keys.mv.p1u, keys.mv.p1d, keys.mn.e, keys.mn.p1a);
 }
 
 function showFullLeaderboard() {
@@ -1764,7 +1775,7 @@ function showFullLeaderboard() {
     });
   }
 
-  mkTxt(400, 540, 'SPACE to go back', { [F]: '16px', [FF]: A, [CO]: CS.LG }, 151);
+  mkTxt(400, 540, 'SPC:Back', { [F]: '16px', [FF]: A, [CO]: CS.LG }, 151);
 
   const ek = s.input.keyboard.addKey(SPC);
   ek.on('down', () => {
@@ -2120,7 +2131,7 @@ function restartGame() {
   startScreen = mainMenu = true;
   gameTime = shootTimer = spawnTimer = regenTimer = waveTimer = bossTimer = orbitAngle = avB = bTmr = lastOrbSize = lastAreaRadius = 0;
   ul = {};
-  weaponTypes = JSON.parse(JSON.stringify(iwt));
+  weaponTypes = dc(iwt);
   orbitingBalls = boomerangs = [];
   adc?.[DS]();
   adc = null;
@@ -2128,7 +2139,7 @@ function restartGame() {
   if (gr) { gr.destroy(); gr = null; }
   gr = s.add.graphics();
   unlockedTypes = [enemyTypes[0]];
-  stats = JSON.parse(JSON.stringify(inS));
+  stats = dc(inS);
   difficulty = { ...inD };
 
   // Don't call initGameplay() here - it will be called when user selects character
@@ -2217,8 +2228,8 @@ function showNameEntry() {
   };
 
   // Hints
-  mkTxt(400, 380, 'WS: Letter  AD: Move  SPC: OK', { [F]: '18px', [FF]: A, [CO]: '#aaaaaa' }, 151);
-  mkTxt(400, 410, 'Press SPACE to Submit Name', { [F]: '18px', [FF]: A, [CO]: '#ffaa00' }, 151);
+  mkTxt(400, 380, 'WS:Letter AD:Move SPC:OK', { [F]: '18px', [FF]: A, [CO]: '#aaaaaa' }, 151);
+  mkTxt(400, 410, 'SPC:Submit', { [F]: '18px', [FF]: A, [CO]: '#ffaa00' }, 151);
 
   updateBoxes();
 
@@ -2331,7 +2342,7 @@ function showLeaderboard(highlightPosition = null) {
   }
 
   // Hint
-  mkTxt(400, 550, 'Press R', { [F]: '24px', [FF]: A, [CO]: CS.W }, 151);
+  mkTxt(400, 550, 'R:Restart', { [F]: '24px', [FF]: A, [CO]: CS.W }, 151);
 }
 
 function updUnlockTypes() {

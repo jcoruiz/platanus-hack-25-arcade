@@ -2,7 +2,7 @@
 import { readFileSync } from 'fs';
 import { minify } from '@swc/core';
 
-const MAX_SIZE_KB = 70;
+const MAX_SIZE_KB = 50;
 const MAX_SIZE_BYTES = MAX_SIZE_KB * 1024;
 
 export interface RestrictionResult {
@@ -105,7 +105,7 @@ export async function checkRestrictions(gameJsPath: string = './game.js'): Promi
       compress: true,
       mangle: true
     });
-    
+
     minifiedCode = minifyResult.code || '';
     minifiedSize = Buffer.byteLength(minifiedCode, 'utf-8');
     const sizeKB = minifiedSize / 1024;
