@@ -1175,6 +1175,7 @@ function hitPlayer(_pObj, enemy) {
   const damage = enemy.getData('damage') || difficulty.eD; // enemyDamage
   stats.hp = Math.max(0, stats.hp - damage); // Ensure HP never goes negative
   playTone(s, 220, 0.15);
+  s.cameras.main.shake(100, 0.01);
   enemy.setData('lastHitTime', gameTime);
 
   // Apply knockback to player (helps escape when surrounded)
