@@ -54,7 +54,8 @@ const SPC = 'SPACE', LVL_TXT = 'Level: ', COIN_TXT = 'Coins: ';
 // Arcade Controls: P1U/P1D/P1L/P1R(Joy), P1A(Select), START1(Pause)
 // Local test keys: WASD/Arrows(move), U/Space(select), P/Enter(pause)
 // Deep clone helper (used 4x in code)
-const dc=o=>JSON.parse(JSON.stringify(o));
+
+const dc = o => JSON.parse(JSON.stringify(o));
 
 // Graphics factory functions (g=graphics reference)
 const INST = 'Joy:Move [A]Select [START]Pause [ESC]Back [M]Music';
@@ -1040,8 +1041,8 @@ function update(_time, delta) {
 
   // Auto-magnetize items within player radius
   const magnetRadiusSq = stats.mR * stats.mR;
-  const mag=g=>g.children.entries.forEach(o=>{if(o[AC]&&!o.getData('magnetized')){const dx=o.x-p.x,dy=o.y-p.y;if(dx*dx+dy*dy<=magnetRadiusSq)o.setData('magnetized',true)}});
-  mag(xo);mag(co);
+  const mag = g => g.children.entries.forEach(o => { if (o[AC] && !o.getData('magnetized')) { const dx = o.x - p.x, dy = o.y - p.y; if (dx * dx + dy * dy <= magnetRadiusSq) o.setData('magnetized', true) } });
+  mag(xo); mag(co);
 
   // Update orbiting balls
   updOrbBalls(delta);
