@@ -1702,7 +1702,7 @@ function shwMM() {
   // Dark background with transparency to show background
   s.add.graphics().fillStyle(C.B, 0.4).fillRect(0, 0, 800, 600)[SSF](0)[SD](100);
 
-  let tlt = '50K Survivors';
+  let tlt = '50KB Survivor';
   mkChromaticTxt(400, 100, tlt, '80px', 100);
 
   // Version text
