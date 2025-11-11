@@ -58,7 +58,7 @@ const SPC = 'SPACE', LVL_TXT = 'Level: ', COIN_TXT = 'Coins: ';
 const dc = o => JSON.parse(JSON.stringify(o));
 
 // Graphics factory functions (g=graphics reference)
-const INST = 'Joy:Move [A]Select [START]Pause [ESC]Back [M]Music';
+const INST = 'WASD/Joy:Move  SPC/A:Select  P/START:Pause  ESC/B:Back  M:Music';
 let g; // graphics
 const fs = (c, a = 1) => g.fillStyle(c, a);
 const gt = (...a) => (g.generateTexture(...a), g.clear());
@@ -115,7 +115,7 @@ let unlockedTypes = [];
 const iwt = [ // initial weapon types
   // Weapon types: i=id, n=name, d=desc, u=unlocked
   // Projectile: c=count, f=fireRate, m=damage, e=penetration
-  { i: 'p', n: 'Projectiles', d: 'Shoots nearest', icon: '🔫', u: false, c: 1, f: 500, m: 10, e: 0 },
+  { i: 'p', n: 'Guns', d: 'Shoots nearest', icon: '🔫', u: false, c: 1, f: 500, m: 10, e: 0 },
   // Orbit Ball: c=count, r=rotSpeed, a=radius, b=ballRadius, m=damage
   { i: 'o', n: 'Orbit Ball', d: 'Defensive orbit', icon: '⚪', u: false, c: 4, r: 2, a: 80, b: 8, m: 15 },
   // Area DMG: a=radius, p=dps, t=tickRate, l=lastTick
@@ -243,7 +243,7 @@ const projectileUpgrades = [
 
 const orbitingBallUpgrades = [
   u('mb', 'More Balls', '+1 Orb', '⚪', ml, 0, 'c', 1, 0, 'o'),
-  u('rs', 'Rotation Speed', '+0.5 Rot', '🌀', ml, 0, 'r', 0.5, 0, 'o'),
+  u('rs', 'Ball Rotation', '+0.5 Rot', '🌀', ml, 0, 'r', 0.5, 0, 'o'),
   u('bs', 'Ball Size', '+2 Radius', '⭕', ml, 0, 'b', 2, 0, 'o'),
   u('bd', 'Ball Damage', '+8 Damage', '💥', ml, 0, 'm', 8, 0, 'o')
 ];
@@ -251,7 +251,7 @@ const orbitingBallUpgrades = [
 const areaDamageUpgrades = [
   u('ar', 'Area Radius', '+15 Range', '🔴', ml, 0, 'a', 15, 0, 'a'),
   u('ad', 'Area DPS', '+3 DPS', '🔥', ml, 0, 'p', 3, 0, 'a'),
-  u('at', 'Tick Speed', '-15% Delay', '⚡', ml, 2, 't', 0.85, 150, 'a')
+  u('at', 'Area Tick Speed', '-15% Delay', '⚡', ml, 2, 't', 0.85, 150, 'a')
 ];
 
 const boomerangUpgrades = [
@@ -662,7 +662,8 @@ function create() {
       e: k(SPC),
       x: k('ESC'),
       // Arcade button A for selection
-      p1a: k('P1A')
+      p1a: k('P1A'),
+      p1b: k('P1B')
     },
     ac: { // Actions (events)
       p: k('P'),
@@ -792,12 +793,11 @@ function initGameplay() {
   // Create UI
   crtUI();
 
-  // Keyboard for restart (using central keys + arcade START button)
+  // Restart handler (R key)
   const restartHandler = () => { if (!startScreen) restartGame(); };
   keys.ac.r.on('down', restartHandler);
-  keys.ac.start.on('down', restartHandler);  // Arcade START button also restarts
 
-  // Keyboard for pause (using central keys + arcade START button)
+  // Pause handler (P key)
   let pauseOverlay = null, pauseTexts = null, pauseTweens = null, pauseHint = null;
   const pauseHandler = () => {
     if (!gameOver && !startScreen && !levelingUp && !selectingWeapon) {
@@ -812,7 +812,7 @@ function initGameplay() {
         const { texts, tweens } = mkChromaticTxt(400, 300, 'PAUSED', '72px', 200);
         pauseTexts = texts;
         pauseTweens = tweens;
-        pauseHint = mkTxt(400, 370, 'Press [P] or [START] to resume', { [F]: '24px', [FF]: A, [CO]: CS.W }, 203);
+        pauseHint = mkTxt(400, 370, 'P/START:Resume', { [F]: '24px', [FF]: A, [CO]: CS.W }, 203);
       } else {
         s.physics.resume();
         playTone(s, 800, 0.1);
@@ -824,9 +824,17 @@ function initGameplay() {
     }
   };
   keys.ac.p.on('down', pauseHandler);
-  keys.ac.start.on('down', pauseHandler);  // Arcade START button also pauses
 
-  // Keyboard for music toggle (using central keys)
+  // START: pause/resume during play, restart when over
+  keys.ac.start.on('down', () => {
+    if (gameOver || startScreen) {
+      restartHandler();
+    } else {
+      pauseHandler();
+    }
+  });
+
+  // Music toggle (M key)
   keys.ac.m.on('down', () => {
     musicOn = !musicOn;
     playTone(s, musicOn ? 1200 : 600, 0.1);
@@ -838,7 +846,7 @@ function initGameplay() {
     }
 
     // Show feedback
-    const msg = mkTxt(400, 500, musicOn ? '🔊 MUSIC ON' : '🔇 MUSIC OFF', { [F]: '24px', [FF]: A, [CO]: musicOn ? CS.G : CS.R, [STR]: CS.B, [STT]: 4 }, 150);
+    const msg = mkTxt(400, 500, musicOn ? '🔊 MUSIC' : '🔇 MUSIC', { [F]: '24px', [FF]: A, [CO]: musicOn ? CS.G : CS.R, [STR]: CS.B, [STT]: 4 }, 150);
     s.tweens.add({ targets: msg, alpha: 0, duration: 1500, onComplete: () => msg[DS]() });
   });
 }
@@ -945,11 +953,7 @@ function update(_time, delta) {
     hyperModeActive = true;
     // Detectar si coincide con boss spawn (bossTimer cerca de nextBossTime)
     const isBossTime = bossTimer >= nextBossTime - 1000;
-    if (isBossTime) {
-      showWarning('🔥💀 HYPER MODE + MEGA BOSS! 💀🔥', C.R);
-    } else {
-      showWarning('🔥💀 HYPER MODE ACTIVATED 💀🔥', C.R);
-    }
+    showWarning('🔥💀 HYPERMODE ACTIVATED 💀🔥', C.R);
     playTone(s, 50, 1.0);
   }
 
@@ -1706,7 +1710,7 @@ function shwMM() {
   mkChromaticTxt(400, 100, tlt, '80px', 100);
 
   // Version text
-  mkTxt(750, 580, 'V1.20', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
+  mkTxt(750, 580, 'V1.21', { [F]: '14px', [FF]: A, [CO]: '#666666' }, 102);
 
   // Credits
   mkTxt(400, 580, 'Game by: Johnny Olivares', { [F]: '12px', [FF]: A, [CO]: '#555555' }, 102);
@@ -1780,12 +1784,14 @@ function showFullLeaderboard() {
   mkTxt(400, 540, 'SPC:Back', { [F]: '16px', [FF]: A, [CO]: CS.LG }, 151);
 
   const ek = s.input.keyboard.addKey(SPC);
-  ek.on('down', () => {
+  const goBack = () => {
     playTone(s, 1000, 0.15);
     cleanupMenu(150);
     shwMM();
-  });
-  menuKeys.push(ek);
+  };
+  ek.on('down', goBack);
+  keys.mn.p1b.on('down', goBack);
+  menuKeys.push(ek, keys.mn.p1b);
 }
 
 // Generate HD hero textures (optimized)
@@ -1975,15 +1981,17 @@ function shwSS() {
   keys.mv.a.on('down', goLeft);
   keys.mv.d.on('down', goRight);
   keys.mn.e.on('down', () => sel(m[sI].ch));
-  keys.mn.x.on('down', () => {
+  const goBack = () => {
     playTone(s, 1000, 0.15);
     startScreen = !(mainMenu = true);
     cleanupMenu();
     shwMM();
-  });
+  };
+  keys.mn.x.on('down', goBack);
+  keys.mn.p1b.on('down', goBack);
 
   // Track keys for cleanup (references only)
-  menuKeys.push(keys.mv.a, keys.mv.d, keys.mn.e, keys.mn.x);
+  menuKeys.push(keys.mv.a, keys.mv.d, keys.mn.e, keys.mn.x, keys.mn.p1b);
 }
 
 // crtUI: Create UI text elements at game start
@@ -2110,9 +2118,10 @@ function restartGame() {
   s.time.removeAllEvents();
   s.tweens.killAll();
 
-  // Cleanup action key listeners (P and R)
+  // Cleanup action keys (P, R, START)
   keys.ac.p.removeAllListeners();
   keys.ac.r.removeAllListeners();
+  keys.ac.start.removeAllListeners();
 
   // Cleanup: destroy all game objects with depth >= 0 (preserve background at depth < 0)
   s.children.list.filter(c => c.depth >= 0).forEach(c => c[DS]());
@@ -2230,7 +2239,7 @@ function showNameEntry() {
   };
 
   // Hints
-  mkTxt(400, 380, 'WS:Letter AD:Move SPC:OK', { [F]: '18px', [FF]: A, [CO]: '#aaaaaa' }, 151);
+  mkTxt(400, 380, 'WASD:Letter Move', { [F]: '18px', [FF]: A, [CO]: '#aaaaaa' }, 151);
   mkTxt(400, 410, 'SPC:Submit', { [F]: '18px', [FF]: A, [CO]: '#ffaa00' }, 151);
 
   updateBoxes();
